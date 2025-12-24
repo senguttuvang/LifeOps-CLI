@@ -13,6 +13,7 @@ import { NodeRuntime } from "@effect/platform-node";
 import { DatabaseLive } from "../infrastructure/db/client";
 import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
 import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
+import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
 
 // Domain layers
 import { SyncServiceLive } from "../domain/whatsapp/sync.service";
@@ -20,6 +21,7 @@ import { SyncServiceLive } from "../domain/whatsapp/sync.service";
 // Commands
 import { syncCommand } from "./commands/sync.command";
 import { healthCommand } from "./commands/health.command";
+import { importAndroidCommand } from "./commands/import-android.command";
 
 /**
  * Assemble all service layers
@@ -29,6 +31,7 @@ const MainLive = Layer.mergeAll(
   DatabaseLive,
   WhatsAppServiceLive,
   WhatsAppAdapterLive,
+  AndroidImportServiceLive,
   SyncServiceLive.pipe(
     Layer.provide(DatabaseLive),
     Layer.provide(WhatsAppServiceLive),
@@ -56,12 +59,36 @@ const program = Effect.gen(function* () {
       break;
     }
 
+    case "import-android": {
+      const dbArg = args.find((arg) => arg.startsWith("--db="));
+      const limitArg = args.find((arg) => arg.startsWith("--limit="));
+
+      if (!dbArg) {
+        console.error("Error: --db argument is required");
+        console.log("\nUsage: bun run cli import-android --db=\"/path/to/msgstore.db\" [--limit=1000]");
+        process.exit(1);
+      }
+
+      const db = dbArg.split("=")[1]?.replace(/"/g, '');
+      const limit = limitArg ? parseInt(limitArg.split("=")[1] || "0") : undefined;
+
+      if (!db) {
+        console.error("Error: Invalid --db path");
+        process.exit(1);
+      }
+
+      yield* importAndroidCommand({ db, limit });
+      break;
+    }
+
     default: {
       console.log("LifeOps - Personal Relationship Management\n");
       console.log("Usage: bun run cli <command> [options]\n");
       console.log("Commands:");
-      console.log("  sync [--days=30]  Sync WhatsApp messages");
-      console.log("  health            Check system health");
+      console.log("  sync [--days=30]                Sync WhatsApp messages from CLI");
+      console.log("  import-android --db=<path>      Import from Android msgstore.db");
+      console.log("                 [--limit=1000]   Limit messages for testing");
+      console.log("  health                          Check system health");
       break;
     }
   }

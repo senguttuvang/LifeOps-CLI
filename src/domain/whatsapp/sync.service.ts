@@ -55,6 +55,12 @@ export interface SyncService {
   readonly syncMessages: (options?: SyncOptions) => Effect.Effect<SyncStats, Error, never>;
 
   /**
+   * Sync from pre-fetched WhatsApp data (e.g., Android import)
+   * Bypasses WhatsApp CLI and uses provided data directly
+   */
+  readonly syncFromData: (whatsappData: import('../../infrastructure/whatsapp/whatsapp.types').WhatsAppSyncResult) => Effect.Effect<SyncStats, Error, never>;
+
+  /**
    * Get current sync state
    */
   readonly getSyncState: () => Effect.Effect<
@@ -79,20 +85,14 @@ export const SyncServiceLive = Layer.effect(
     const whatsapp = yield* WhatsAppServiceTag;
     const adapter = yield* WhatsAppAdapterTag;
 
-    const syncMessages = (options: SyncOptions = {}) =>
+    /**
+     * Shared persistence logic - stores domain entities in database
+     * Used by both syncMessages and syncFromData
+     */
+    const persistDomainData = (domainData: import('../../infrastructure/adapters/whatsapp/whatsapp.adapter').TranslatedSyncResult) =>
       Effect.gen(function* () {
-        // 1. Fetch from WhatsApp via CLI (infrastructure layer)
-        const whatsappData = yield* whatsapp.syncMessages({
-          days: options.days || 30,
-          chatJid: options.chatJid,
-        });
 
-        // 2. Translate WhatsApp → Domain entities (anti-corruption layer)
-        const domainData = yield* adapter.translateSyncResult(whatsappData);
-
-        // 3. Store domain entities in database
-
-        // 3a. Store contacts (upsert by identifier to avoid duplicates)
+        // Store domain entities in database
         let contactsAdded = 0;
         for (const contact of domainData.contacts) {
           yield* Effect.tryPromise({
@@ -266,6 +266,40 @@ export const SyncServiceLive = Layer.effect(
         return { contactsAdded, conversationsAdded, messagesAdded, callsAdded, syncedAt };
       });
 
+    /**
+     * Sync from WhatsApp CLI (original flow)
+     */
+    const syncMessages = (options: SyncOptions = {}) =>
+      Effect.gen(function* () {
+        // 1. Fetch from WhatsApp via CLI (infrastructure layer)
+        const whatsappData = yield* whatsapp.syncMessages({
+          days: options.days || 30,
+          chatJid: options.chatJid,
+        });
+
+        // 2. Translate WhatsApp → Domain entities (anti-corruption layer)
+        const domainData = yield* adapter.translateSyncResult(whatsappData);
+
+        // 3. Persist domain entities
+        const stats = yield* persistDomainData(domainData);
+
+        return stats;
+      });
+
+    /**
+     * Sync from pre-fetched data (e.g., Android import)
+     */
+    const syncFromData = (whatsappData: import('../../infrastructure/whatsapp/whatsapp.types').WhatsAppSyncResult) =>
+      Effect.gen(function* () {
+        // 1. Translate WhatsApp → Domain entities (anti-corruption layer)
+        const domainData = yield* adapter.translateSyncResult(whatsappData);
+
+        // 2. Persist domain entities
+        const stats = yield* persistDomainData(domainData);
+
+        return stats;
+      });
+
     const getSyncState = () =>
       Effect.tryPromise({
         try: async () => {
@@ -288,6 +322,7 @@ export const SyncServiceLive = Layer.effect(
 
     return {
       syncMessages,
+      syncFromData,
       getSyncState,
     };
   })
