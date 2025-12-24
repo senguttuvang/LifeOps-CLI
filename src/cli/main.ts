@@ -2,8 +2,8 @@
 /**
  * LifeOps CLI Entry Point
  *
- * Simplified entry point - commands will be added in subsequent batches.
- * For now, just verify the infrastructure layers load correctly.
+ * Simple command dispatcher using Effect-TS.
+ * Commands: sync, health
  */
 
 import { Effect, Layer } from "effect";
@@ -16,22 +16,49 @@ import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client"
 // Domain layers
 import { SyncServiceLive } from "../domain/whatsapp/sync.service";
 
+// Commands
+import { syncCommand } from "./commands/sync.command";
+import { healthCommand } from "./commands/health.command";
+
 /**
  * Assemble all service layers
- * SyncServiceLive depends on DatabaseLive and WhatsAppServiceLive,
- * so we provide those dependencies first
+ * Merge all layers so they're all available to commands
  */
-const MainLive = SyncServiceLive.pipe(
-  Layer.provide(DatabaseLive),
-  Layer.provide(WhatsAppServiceLive)
+const MainLive = Layer.mergeAll(
+  DatabaseLive,
+  WhatsAppServiceLive,
+  SyncServiceLive.pipe(Layer.provide(DatabaseLive), Layer.provide(WhatsAppServiceLive))
 );
 
 /**
- * Simple test program
+ * Parse CLI arguments and dispatch to command
  */
 const program = Effect.gen(function* () {
-  console.log("✓ LifeOps infrastructure loaded successfully");
-  console.log("Commands will be added in next batches");
+  const args = process.argv.slice(2);
+  const command = args[0];
+
+  switch (command) {
+    case "sync": {
+      const daysArg = args.find((arg) => arg.startsWith("--days="));
+      const days = daysArg ? parseInt(daysArg.split("=")[1] || "30") : 30;
+      yield* syncCommand({ days });
+      break;
+    }
+
+    case "health": {
+      yield* healthCommand();
+      break;
+    }
+
+    default: {
+      console.log("LifeOps - Personal Relationship Management\n");
+      console.log("Usage: bun run cli <command> [options]\n");
+      console.log("Commands:");
+      console.log("  sync [--days=30]  Sync WhatsApp messages");
+      console.log("  health            Check system health");
+      break;
+    }
+  }
 });
 
 /**
