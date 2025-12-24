@@ -12,6 +12,7 @@ import { NodeRuntime } from "@effect/platform-node";
 // Infrastructure layers
 import { DatabaseLive } from "../infrastructure/db/client";
 import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
+import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
 
 // Domain layers
 import { SyncServiceLive } from "../domain/whatsapp/sync.service";
@@ -27,7 +28,12 @@ import { healthCommand } from "./commands/health.command";
 const MainLive = Layer.mergeAll(
   DatabaseLive,
   WhatsAppServiceLive,
-  SyncServiceLive.pipe(Layer.provide(DatabaseLive), Layer.provide(WhatsAppServiceLive))
+  WhatsAppAdapterLive,
+  SyncServiceLive.pipe(
+    Layer.provide(DatabaseLive),
+    Layer.provide(WhatsAppServiceLive),
+    Layer.provide(WhatsAppAdapterLive)
+  )
 );
 
 /**
