@@ -69,6 +69,14 @@ export interface DomainConversation {
   lastActivityAt: Date;
 }
 
+export interface DomainConversationParticipant {
+  conversationId: string; // UUID (linked to DomainConversation)
+  contactId: string; // UUID (linked to DomainContact)
+  role: 'member' | 'admin' | 'owner' | null;
+  joinedAt: Date;
+  leftAt: Date | null;
+}
+
 export interface DomainInteraction {
   id: string; // UUID (generated)
   conversationId: string; // UUID (linked to DomainConversation)
@@ -104,6 +112,7 @@ export interface DomainCall {
 export interface TranslatedSyncResult {
   contacts: DomainContact[];
   conversations: DomainConversation[];
+  conversationParticipants: DomainConversationParticipant[];
   interactions: DomainInteraction[];
   messages: DomainMessage[];
   calls: DomainCall[];
@@ -129,18 +138,22 @@ export class WhatsAppAdapter {
    */
   translateSyncResult(whatsappData: WhatsAppSyncResult): Effect.Effect<TranslatedSyncResult, Error> {
     return Effect.gen(function* (this: WhatsAppAdapter) {
-      // Step 1: Extract unique contacts from chats + messages
+      // Step 1: Extract unique contacts from chats + messages + group participants
       const contacts = yield* this.extractContacts(whatsappData);
 
       // Step 2: Translate chats → conversations
       const conversations = yield* this.translateChats(whatsappData.chats);
 
-      // Step 3: Translate messages → interactions + messages
+      // Step 3: Extract group participants
+      const conversationParticipants = yield* this.extractConversationParticipants(whatsappData.chats);
+
+      // Step 4: Translate messages → interactions + messages
       const { interactions, messages } = yield* this.translateMessages(whatsappData.messages);
 
       return {
         contacts,
         conversations,
+        conversationParticipants,
         interactions,
         messages,
         calls: [], // No call data in current sync (future: extract from msgstore.db)
@@ -165,7 +178,13 @@ export class WhatsAppAdapter {
         jidSet.add(chat.jid);
         jidToName.set(chat.jid, chat.name);
 
-        // Future: extract participant JIDs from group chats
+        // Extract participant JIDs from group chats
+        if (chat.participants) {
+          for (const participantJid of chat.participants) {
+            jidSet.add(participantJid);
+            // Participants don't have names in the participants array, will be inferred later
+          }
+        }
       }
 
       // Collect JIDs from messages
@@ -230,6 +249,50 @@ export class WhatsAppAdapter {
             : new Date(),
         };
       });
+    });
+  }
+
+  /**
+   * Extract conversation participants from group chats
+   *
+   * For each group chat with participants, creates participant records linking
+   * conversation UUID to contact UUIDs.
+   */
+  private extractConversationParticipants(chats: WhatsAppChatData[]): Effect.Effect<DomainConversationParticipant[], Error> {
+    return Effect.try(() => {
+      const participants: DomainConversationParticipant[] = [];
+
+      for (const chat of chats) {
+        // Only process group chats with participant data
+        if (!chat.isGroup || !chat.participants || chat.participants.length === 0) {
+          continue;
+        }
+
+        const conversationUuid = this.conversationJidToUuid.get(chat.jid);
+        if (!conversationUuid) {
+          console.warn(`No conversation UUID found for chat ${chat.jid}`);
+          continue;
+        }
+
+        // Create participant entry for each group member
+        for (const participantJid of chat.participants) {
+          const contactUuid = this.contactJidToUuid.get(participantJid);
+          if (!contactUuid) {
+            console.warn(`No contact UUID found for participant ${participantJid}`);
+            continue;
+          }
+
+          participants.push({
+            conversationId: conversationUuid,
+            contactId: contactUuid,
+            role: null, // Role not available in basic participant list (would need admin metadata)
+            joinedAt: new Date(), // Default to current time (msgstore.db doesn't have historical join dates)
+            leftAt: null, // Active members only
+          });
+        }
+      }
+
+      return participants;
     });
   }
 

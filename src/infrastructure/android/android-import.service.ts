@@ -59,6 +59,15 @@ interface AndroidJid {
 }
 
 /**
+ * Android group participant row from msgstore.db
+ */
+interface AndroidGroupParticipant {
+  gjid: number; // Group JID row ID
+  jid: number; // Participant JID row ID
+  admin: number; // 0 = member, 1 = admin
+}
+
+/**
  * Service interface
  */
 export interface AndroidImportService {
@@ -141,7 +150,32 @@ export const AndroidImportServiceLive = Layer.succeed(
 
           console.log(`   • Loaded ${jids.length} JID mappings`);
 
-          // Step 2: Load chats
+          // Step 2: Load group participants (if table exists)
+          const groupParticipantsMap = new Map<number, string[]>(); // chat._id → participant JIDs
+          try {
+            const participantRows = db
+              .prepare(
+                `SELECT gjid, jid, admin
+                 FROM group_participants`
+              )
+              .all() as AndroidGroupParticipant[];
+
+            for (const participant of participantRows) {
+              const participantJid = jidMap.get(participant.jid);
+              if (participantJid) {
+                const existing = groupParticipantsMap.get(participant.gjid) || [];
+                existing.push(participantJid);
+                groupParticipantsMap.set(participant.gjid, existing);
+              }
+            }
+
+            console.log(`   • Loaded ${participantRows.length} group participant memberships`);
+          } catch (e) {
+            // group_participants table might not exist in all msgstore.db versions
+            console.log(`   • No group_participants table found (skipping)`);
+          }
+
+          // Step 3: Load chats
           const chatRows = db
             .prepare(
               `SELECT c._id, c.jid_row_id, c.subject, c.archived, c.sort_timestamp
@@ -156,18 +190,21 @@ export const AndroidImportServiceLive = Layer.succeed(
               throw new Error(`Missing JID for chat ${chat._id}`);
             }
 
+            const participants = groupParticipantsMap.get(chat.jid_row_id);
+
             return {
               jid,
               name: chat.subject || undefined,
               isGroup: jid.includes('@g.us'),
               lastMessageTime: chat.sort_timestamp,
               unreadCount: 0,
+              participants, // May be undefined for 1:1 chats or if no participants found
             };
           });
 
           console.log(`   • Loaded ${chats.length} chats`);
 
-          // Step 3: Load messages
+          // Step 4: Load messages
           const limit = options.limit || 1000000; // Default: all messages
           const messageRows = db
             .prepare(

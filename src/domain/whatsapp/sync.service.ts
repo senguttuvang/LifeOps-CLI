@@ -32,6 +32,7 @@ import { eq, and } from 'drizzle-orm';
 export interface SyncStats {
   readonly contactsAdded: number;
   readonly conversationsAdded: number;
+  readonly participantsAdded: number;
   readonly messagesAdded: number;
   readonly callsAdded: number;
   readonly syncedAt: Date;
@@ -191,7 +192,35 @@ export const SyncServiceLive = Layer.effect(
           });
         }
 
-        // 3c. Store interactions (skip duplicates via source_interaction_id check)
+        // 3c. Store conversation participants (skip duplicates)
+        let participantsAdded = 0;
+        for (const participant of domainData.conversationParticipants) {
+          yield* Effect.tryPromise({
+            try: async () => {
+              // Check if participant already exists (conversation + contact pair is unique)
+              const existing = await db
+                .select()
+                .from(conversationParticipants)
+                .where(
+                  and(
+                    eq(conversationParticipants.conversationId, participant.conversationId),
+                    eq(conversationParticipants.contactId, participant.contactId)
+                  )
+                )
+                .limit(1);
+
+              if (existing.length === 0) {
+                // New participant
+                await db.insert(conversationParticipants).values(participant);
+                participantsAdded++;
+              }
+              // If already exists, skip (no need to update - participant data is static)
+            },
+            catch: (e) => new Error(`Failed to store conversation participant: ${e}`),
+          });
+        }
+
+        // 3d. Store interactions (skip duplicates via source_interaction_id check)
         let messagesAdded = 0;
         let callsAdded = 0;
 
@@ -263,7 +292,7 @@ export const SyncServiceLive = Layer.effect(
           catch: (e) => new Error(`Failed to update sync state: ${e}`),
         });
 
-        return { contactsAdded, conversationsAdded, messagesAdded, callsAdded, syncedAt };
+        return { contactsAdded, conversationsAdded, participantsAdded, messagesAdded, callsAdded, syncedAt };
       });
 
     /**
