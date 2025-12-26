@@ -85,10 +85,13 @@ const program = Effect.gen(function* () {
       console.log("LifeOps - Personal Relationship Management\n");
       console.log("Usage: bun run cli <command> [options]\n");
       console.log("Commands:");
-      console.log("  sync [--days=30]                Sync WhatsApp messages from CLI");
-      console.log("  import-android --db=<path>      Import from Android msgstore.db");
+      console.log("  sync [--days=30]                Sync WhatsApp via QR code (iPhone + Android)");
+      console.log("  import-android --db=<path>      Import from Android backup (msgstore.db)");
       console.log("                 [--limit=1000]   Limit messages for testing");
       console.log("  health                          Check system health");
+      console.log("\nPlatform Notes:");
+      console.log("  • 'sync' works with BOTH iPhone and Android (scan QR code from WhatsApp app)");
+      console.log("  • 'import-android' is Android-only (msgstore.db is Android backup format)");
       break;
     }
   }

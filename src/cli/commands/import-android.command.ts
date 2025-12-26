@@ -1,8 +1,16 @@
 /**
  * Android Import Command
  *
- * Imports WhatsApp data from Android msgstore.db backup
+ * Imports WhatsApp data from Android msgstore.db backup (Android-only format)
+ *
+ * PLATFORM NOTES:
+ * - Android users: Use this command to import historical WhatsApp backup
+ * - iPhone users: Use 'bun run cli sync' instead (WhatsApp Web via QR code)
+ *
  * Usage: bun run cli import-android --db="/path/to/msgstore.db" [--limit=1000]
+ *
+ * Why "android" in the name? Because msgstore.db is Android's SQLite backup format.
+ * iOS uses encrypted iTunes/iCloud backups which require a different import approach.
  */
 
 import { Effect } from 'effect';
