@@ -10,21 +10,21 @@
  * - Source-agnostic design (works for any future data source)
  */
 
-import { Context, Effect, Layer } from 'effect';
-import { WhatsAppServiceTag } from '../../infrastructure/whatsapp/whatsapp.client';
-import { WhatsAppAdapterTag } from '../../infrastructure/adapters/whatsapp/whatsapp.adapter';
-import { DatabaseService } from '../../infrastructure/db/client';
+import { and, eq } from "drizzle-orm";
+import { Context, Effect, Layer } from "effect";
+import { WhatsAppAdapterTag } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";
+import { DatabaseService } from "../../infrastructure/db/client";
 import {
-  contacts,
+  calls,
   contactIdentifiers,
-  conversations,
+  contacts,
   conversationParticipants,
+  conversations,
   interactions,
   messages,
-  calls,
   syncState,
-} from '../../infrastructure/db/schema';
-import { eq, and } from 'drizzle-orm';
+} from "../../infrastructure/db/schema";
+import { WhatsAppServiceTag } from "../../infrastructure/whatsapp/whatsapp.client";
 
 /**
  * Sync statistics returned after sync operation
@@ -59,22 +59,20 @@ export interface SyncService {
    * Sync from pre-fetched WhatsApp data (e.g., Android import)
    * Bypasses WhatsApp CLI and uses provided data directly
    */
-  readonly syncFromData: (whatsappData: import('../../infrastructure/whatsapp/whatsapp.types').WhatsAppSyncResult) => Effect.Effect<SyncStats, Error, never>;
+  readonly syncFromData: (
+    whatsappData: import("../../infrastructure/whatsapp/whatsapp.types").WhatsAppSyncResult,
+  ) => Effect.Effect<SyncStats, Error, never>;
 
   /**
    * Get current sync state
    */
-  readonly getSyncState: () => Effect.Effect<
-    { lastSyncAt: Date | null; cursor: string | null } | null,
-    Error,
-    never
-  >;
+  readonly getSyncState: () => Effect.Effect<{ lastSyncAt: Date | null; cursor: string | null } | null, Error, never>;
 }
 
 /**
  * Service Tag
  */
-export class SyncServiceTag extends Context.Tag('SyncService')<SyncServiceTag, SyncService>() {}
+export class SyncServiceTag extends Context.Tag("SyncService")<SyncServiceTag, SyncService>() {}
 
 /**
  * Live Implementation
@@ -90,9 +88,10 @@ export const SyncServiceLive = Layer.effect(
      * Shared persistence logic - stores domain entities in database
      * Used by both syncMessages and syncFromData
      */
-    const persistDomainData = (domainData: import('../../infrastructure/adapters/whatsapp/whatsapp.adapter').TranslatedSyncResult) =>
+    const persistDomainData = (
+      domainData: import("../../infrastructure/adapters/whatsapp/whatsapp.adapter").TranslatedSyncResult,
+    ) =>
       Effect.gen(function* () {
-
         // Store domain entities in database
         let contactsAdded = 0;
         for (const contact of domainData.contacts) {
@@ -111,8 +110,8 @@ export const SyncServiceLive = Layer.effect(
                 .where(
                   and(
                     eq(contactIdentifiers.source, firstIdentifier.source),
-                    eq(contactIdentifiers.identifier, firstIdentifier.identifier)
-                  )
+                    eq(contactIdentifiers.identifier, firstIdentifier.identifier),
+                  ),
                 )
                 .limit(1);
 
@@ -162,8 +161,8 @@ export const SyncServiceLive = Layer.effect(
                 .where(
                   and(
                     eq(conversations.source, conversation.source),
-                    eq(conversations.sourceConversationId, conversation.sourceConversationId)
-                  )
+                    eq(conversations.sourceConversationId, conversation.sourceConversationId),
+                  ),
                 )
                 .limit(1);
 
@@ -204,8 +203,8 @@ export const SyncServiceLive = Layer.effect(
                 .where(
                   and(
                     eq(conversationParticipants.conversationId, participant.conversationId),
-                    eq(conversationParticipants.contactId, participant.contactId)
-                  )
+                    eq(conversationParticipants.contactId, participant.contactId),
+                  ),
                 )
                 .limit(1);
 
@@ -234,8 +233,8 @@ export const SyncServiceLive = Layer.effect(
                 .where(
                   and(
                     eq(interactions.source, interaction.source),
-                    eq(interactions.sourceInteractionId, interaction.sourceInteractionId)
-                  )
+                    eq(interactions.sourceInteractionId, interaction.sourceInteractionId),
+                  ),
                 )
                 .limit(1);
 
@@ -244,15 +243,13 @@ export const SyncServiceLive = Layer.effect(
                 await db.insert(interactions).values(interaction);
 
                 // Insert corresponding message or call (subtype)
-                if (interaction.interactionType === 'message') {
-                  const message = domainData.messages.find(
-                    (m) => m.interactionId === interaction.id
-                  );
+                if (interaction.interactionType === "message") {
+                  const message = domainData.messages.find((m) => m.interactionId === interaction.id);
                   if (message) {
                     await db.insert(messages).values(message);
                     messagesAdded++;
                   }
-                } else if (interaction.interactionType === 'call') {
+                } else if (interaction.interactionType === "call") {
                   const call = domainData.calls.find((c) => c.interactionId === interaction.id);
                   if (call) {
                     await db.insert(calls).values(call);
@@ -273,10 +270,10 @@ export const SyncServiceLive = Layer.effect(
             await db
               .insert(syncState)
               .values({
-                id: 'whatsapp',
-                source: 'whatsapp',
+                id: "whatsapp",
+                source: "whatsapp",
                 lastSyncAt: syncedAt,
-                lastSyncStatus: 'success',
+                lastSyncStatus: "success",
                 cursor: null,
                 errorMessage: null,
               })
@@ -284,7 +281,7 @@ export const SyncServiceLive = Layer.effect(
                 target: syncState.id,
                 set: {
                   lastSyncAt: syncedAt,
-                  lastSyncStatus: 'success',
+                  lastSyncStatus: "success",
                   errorMessage: null,
                 },
               });
@@ -318,7 +315,7 @@ export const SyncServiceLive = Layer.effect(
     /**
      * Sync from pre-fetched data (e.g., Android import)
      */
-    const syncFromData = (whatsappData: import('../../infrastructure/whatsapp/whatsapp.types').WhatsAppSyncResult) =>
+    const syncFromData = (whatsappData: import("../../infrastructure/whatsapp/whatsapp.types").WhatsAppSyncResult) =>
       Effect.gen(function* () {
         // 1. Translate WhatsApp → Domain entities (anti-corruption layer)
         const domainData = yield* adapter.translateSyncResult(whatsappData);
@@ -332,10 +329,7 @@ export const SyncServiceLive = Layer.effect(
     const getSyncState = () =>
       Effect.tryPromise({
         try: async () => {
-          const result = await db
-            .select()
-            .from(syncState)
-            .where(eq(syncState.id, 'whatsapp'));
+          const result = await db.select().from(syncState).where(eq(syncState.id, "whatsapp"));
 
           if (result.length === 0) {
             return null;
@@ -354,5 +348,5 @@ export const SyncServiceLive = Layer.effect(
       syncFromData,
       getSyncState,
     };
-  })
+  }),
 );

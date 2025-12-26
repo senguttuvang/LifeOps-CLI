@@ -14,12 +14,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { Context, Effect, Layer } from "effect";
-import type {
-  WhatsAppAuthStatus,
-  WhatsAppChatData,
-  WhatsAppSyncOptions,
-  WhatsAppSyncResult,
-} from "./whatsapp.types";
+import type { WhatsAppAuthStatus, WhatsAppChatData, WhatsAppSyncOptions, WhatsAppSyncResult } from "./whatsapp.types";
 
 const execAsync = promisify(exec);
 
@@ -46,9 +41,7 @@ export interface WhatsAppService {
   /**
    * Sync messages from WhatsApp
    */
-  readonly syncMessages: (
-    options?: WhatsAppSyncOptions
-  ) => Effect.Effect<WhatsAppSyncResult, Error>;
+  readonly syncMessages: (options?: WhatsAppSyncOptions) => Effect.Effect<WhatsAppSyncResult, Error>;
 
   /**
    * List all chats
@@ -58,19 +51,13 @@ export interface WhatsAppService {
   /**
    * Health check - verify CLI is available and authenticated
    */
-  readonly healthCheck: () => Effect.Effect<
-    { available: boolean; authenticated: boolean; error?: string },
-    never
-  >;
+  readonly healthCheck: () => Effect.Effect<{ available: boolean; authenticated: boolean; error?: string }, never>;
 }
 
 /**
  * Service Tag
  */
-export class WhatsAppServiceTag extends Context.Tag("WhatsAppService")<
-  WhatsAppServiceTag,
-  WhatsAppService
->() {}
+export class WhatsAppServiceTag extends Context.Tag("WhatsAppService")<WhatsAppServiceTag, WhatsAppService>() {}
 
 /**
  * Live Implementation

@@ -13,9 +13,9 @@
  * iOS uses encrypted iTunes/iCloud backups which require a different import approach.
  */
 
-import { Effect } from 'effect';
-import { AndroidImportServiceTag } from '../../infrastructure/android/android-import.service';
-import { SyncServiceTag } from '../../domain/whatsapp/sync.service';
+import { Effect } from "effect";
+import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
+import { AndroidImportServiceTag } from "../../infrastructure/android/android-import.service";
 
 export interface ImportAndroidCommandOptions {
   readonly db: string;
