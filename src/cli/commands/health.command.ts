@@ -6,8 +6,8 @@
  */
 
 import { Effect } from "effect";
-import { WhatsAppServiceTag } from "../../infrastructure/whatsapp/whatsapp.client";
 import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
+import { WhatsAppServiceTag } from "../../infrastructure/whatsapp/whatsapp.client";
 
 export const healthCommand = () =>
   Effect.gen(function* () {
@@ -18,10 +18,10 @@ export const healthCommand = () =>
 
     // WhatsApp CLI
     const waHealth = yield* whatsapp.healthCheck();
-    console.log(`WhatsApp CLI: ${waHealth.available ? "✅" : "❌"} ${waHealth.available ? "Available" : "Not available"}`);
     console.log(
-      `Authenticated: ${waHealth.authenticated ? "✅" : "❌"} ${waHealth.authenticated ? "Yes" : "No"}`
+      `WhatsApp CLI: ${waHealth.available ? "✅" : "❌"} ${waHealth.available ? "Available" : "Not available"}`,
     );
+    console.log(`Authenticated: ${waHealth.authenticated ? "✅" : "❌"} ${waHealth.authenticated ? "Yes" : "No"}`);
 
     if (waHealth.error) {
       console.log(`   Error: ${waHealth.error}`);
