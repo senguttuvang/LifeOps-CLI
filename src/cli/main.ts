@@ -16,6 +16,9 @@ import { AndroidImportServiceLive } from "../infrastructure/android/android-impo
 // Infrastructure layers
 import { DatabaseLive } from "../infrastructure/db/client";
 import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
+import { extractEventsCommand } from "./commands/extract-events.command";
+import { extractImageEventsCommand } from "./commands/extract-image-events.command";
+import { extractVisionEventsCommand } from "./commands/extract-vision-events.command";
 import { healthCommand } from "./commands/health.command";
 import { importAndroidCommand } from "./commands/import-android.command";
 // Commands
@@ -79,6 +82,21 @@ const program = Effect.gen(function* () {
       break;
     }
 
+    case "extract-events": {
+      yield* extractEventsCommand();
+      break;
+    }
+
+    case "extract-image-events": {
+      yield* extractImageEventsCommand();
+      break;
+    }
+
+    case "extract-vision-events": {
+      yield* extractVisionEventsCommand();
+      break;
+    }
+
     default: {
       console.log("LifeOps - Personal Relationship Management\n");
       console.log("Usage: bun run cli <command> [options]\n");
@@ -87,6 +105,10 @@ const program = Effect.gen(function* () {
       console.log("                                   • First time: Gets ALL message history");
       console.log("                                   • After: Real-time updates only");
       console.log("  health                          Check system health");
+      console.log("\nEvent Extraction:");
+      console.log("  extract-events                  Extract events from text messages");
+      console.log("  extract-image-events            Extract events from image captions");
+      console.log("  extract-vision-events           Extract events from actual images (vision AI)");
       console.log("\nDeveloper/Testing Commands:");
       console.log("  import-android --db=<path>      Import from Android msgstore.db backup");
       console.log("                 [--limit=1000]    (Not for end users - testing only)");
