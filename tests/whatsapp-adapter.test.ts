@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { Effect } from "effect";
 import { WhatsAppAdapter } from "../src/infrastructure/adapters/whatsapp/whatsapp.adapter";
 import type { WhatsAppChatData, WhatsAppMessageData, WhatsAppSyncResult } from "../src/infrastructure/whatsapp/whatsapp.types";
