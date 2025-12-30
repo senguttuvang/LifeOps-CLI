@@ -12,18 +12,29 @@ import { handleAnalyze } from "./handlers/analyze";
 import { handleMemory } from "./handlers/memory";
 import { handleDraft } from "./handlers/draft";
 import { handleDashboard } from "./handlers/dashboard";
+import { AnalysisServiceTag } from "../../relationship/analysis.service";
+import { VectorStoreService } from "../../../infrastructure/rag/vector.store";
+import { AIServiceTag } from "../../../infrastructure/llm/ai.service";
+import { DatabaseService } from "../../../infrastructure/db/client";
 
 /**
  * Dispatch command to appropriate handler
  *
  * @param command - Parsed command
  * @param chatId - WhatsApp chat ID where command was received
- * @returns Effect that resolves to response string
+ * @returns Effect that resolves to response string, requiring necessary services
  */
 export const dispatchCommand = (
   command: ParsedCommand,
   chatId: string
-): Effect.Effect<string, Error, never> => {
+): Effect.Effect<
+  string,
+  Error,
+  | typeof AnalysisServiceTag
+  | typeof VectorStoreService
+  | typeof AIServiceTag
+  | typeof DatabaseService
+> => {
   switch (command.name) {
     case "help":
       return handleHelp();
