@@ -12,8 +12,10 @@
 import { Effect, Schedule } from "effect";
 import { WhatsAppServiceTag } from "../../../infrastructure/whatsapp/whatsapp.client";
 import { AnalysisServiceTag } from "../../relationship/analysis.service";
+import { SignalEnhancedDraftServiceTag } from "./signal-enhanced-draft.service";
 import { DatabaseService } from "../../../infrastructure/db/client";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
+import { conversations, conversationParticipants } from "../../../infrastructure/db/schema";
 
 export interface AutoDraftConfig {
   /**
@@ -76,7 +78,45 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
   const pollOnce = Effect.gen(function* () {
     const whatsapp = yield* WhatsAppServiceTag;
     const analysis = yield* AnalysisServiceTag;
+    const signalDraft = yield* SignalEnhancedDraftServiceTag;
     const db = yield* DatabaseService;
+
+    // Get contact ID for signal loading (needed for signal-enhanced generation)
+    let userId: string | undefined;
+    try {
+      const conversation = yield* Effect.tryPromise({
+        try: () =>
+          db
+            .select()
+            .from(conversations)
+            .where(eq(conversations.sourceConversationId, config.girlfriendChatId))
+            .limit(1)
+            .execute(),
+        catch: () => new Error("Failed to fetch conversation"),
+      });
+
+      if (conversation.length > 0) {
+        // Get first participant (assuming 1:1 chat)
+        const participants = yield* Effect.tryPromise({
+          try: () =>
+            db
+              .select()
+              .from(conversationParticipants)
+              .where(eq(conversationParticipants.conversationId, conversation[0].id))
+              .limit(1)
+              .execute(),
+          catch: () => new Error("Failed to fetch participants"),
+        });
+
+        if (participants.length > 0) {
+          userId = participants[0].contactId;
+        }
+      }
+    } catch (e) {
+      if (config.verbose) {
+        console.log(`[AutoDraft] Could not resolve user ID, will use basic RAG`);
+      }
+    }
 
     if (config.verbose) {
       console.log(`[AutoDraft] Polling for new messages from ${config.girlfriendName}...`);
@@ -120,19 +160,38 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
       }
 
       try {
-        // Generate draft response
-        // Intent: "respond to: <her message>"
-        const draft = yield* analysis.draftResponse(
-          config.girlfriendChatId,
-          `respond to: ${message.text}`
-        );
+        // Generate draft response using RAG+Signals (if user ID available)
+        let draft: string;
+        let qualityScore: number | undefined;
+        let mode: "signal-enhanced" | "basic" = "basic";
+
+        if (userId) {
+          // Use signal-enhanced generation
+          const result = yield* signalDraft.generateDraft(userId, config.girlfriendChatId, message.text, {
+            verbose: config.verbose,
+          });
+
+          draft = result.draft;
+          qualityScore = result.qualityScore;
+          mode = result.mode;
+
+          if (config.verbose) {
+            console.log(`[AutoDraft] Generated ${mode} draft (quality: ${qualityScore}/100, ${result.tier})`);
+          }
+        } else {
+          // Fallback to basic RAG without signals
+          draft = yield* analysis.draftResponse(config.girlfriendChatId, `respond to: ${message.text}`);
+
+          if (config.verbose) {
+            console.log(`[AutoDraft] Generated basic draft (no signals available)`);
+          }
+        }
 
         // Format draft message for self-DM
-        const draftMessage = formatDraftMessage(
-          config.girlfriendName,
-          message.text,
-          draft
-        );
+        const draftMessage = formatDraftMessage(config.girlfriendName, message.text, draft, {
+          mode,
+          qualityScore,
+        });
 
         // Send draft to self-DM
         yield* whatsapp.sendMessage({
@@ -186,20 +245,26 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
 const formatDraftMessage = (
   girlfriendName: string,
   incomingMessage: string,
-  draft: string
+  draft: string,
+  metadata?: {
+    mode?: "signal-enhanced" | "basic";
+    qualityScore?: number;
+  }
 ): string => {
   const truncatedIncoming =
-    incomingMessage.length > 100
-      ? incomingMessage.substring(0, 100) + "..."
-      : incomingMessage;
+    incomingMessage.length > 100 ? incomingMessage.substring(0, 100) + "..." : incomingMessage;
 
-  return `💬 Draft reply to ${girlfriendName}:
+  const modeEmoji = metadata?.mode === "signal-enhanced" ? "🎯" : "💬";
+  const qualityInfo =
+    metadata?.qualityScore !== undefined ? `\n📊 Quality: ${metadata.qualityScore}/100` : "";
+
+  return `${modeEmoji} Draft reply to ${girlfriendName}:
 
 ${draft}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📩 Reply to:
-"${truncatedIncoming}"
+"${truncatedIncoming}"${qualityInfo}
 
 💡 Tap to copy, modify, or ignore
 ━━━━━━━━━━━━━━━━━━━━━━━━`;
