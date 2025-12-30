@@ -56,7 +56,7 @@ class SignalCache {
    * @param userId - User ID
    * @param signals - User signals
    */
-  set(userId: string, signals: UserSignals): void => {
+  set(userId: string, signals: UserSignals): void {
     // Enforce max cache size (LRU-style)
     if (this.cache.size >= MAX_CACHE_SIZE && !this.cache.has(userId)) {
       const oldestKey = this.cache.keys().next().value;
@@ -76,14 +76,14 @@ class SignalCache {
    *
    * @param userId - User ID
    */
-  invalidate(userId: string): void => {
+  invalidate(userId: string): void {
     this.cache.delete(userId);
   }
 
   /**
    * Clear entire cache
    */
-  clear(): void => {
+  clear(): void {
     this.cache.clear();
   }
 
@@ -106,7 +106,7 @@ class SignalCache {
   /**
    * Remove expired entries
    */
-  cleanup(): void => {
+  cleanup(): void {
     const now = Date.now();
     for (const [userId, entry] of this.cache.entries()) {
       const age = now - entry.timestamp;
