@@ -17,7 +17,7 @@ const args = process.argv.slice(2);
 const command = args[0];
 
 // Pure commands - no service dependencies
-const PURE_COMMANDS = ["decode"];
+const PURE_COMMANDS = ["decode", "remember"];
 
 if (PURE_COMMANDS.includes(command ?? "")) {
   runPureCommand(command!, args);
@@ -34,6 +34,12 @@ async function runPureCommand(cmd: string, cmdArgs: string[]) {
       const { decodeCommand } = await import("./commands/decode.command");
       const message = cmdArgs.slice(1).join(" ");
       await Effect.runPromise(decodeCommand(message));
+      break;
+    }
+    case "remember": {
+      const { rememberCommand } = await import("./commands/remember.command");
+      const content = cmdArgs.slice(1).join(" ");
+      await Effect.runPromise(rememberCommand(content));
       break;
     }
   }
