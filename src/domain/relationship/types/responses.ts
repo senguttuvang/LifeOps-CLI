@@ -22,8 +22,8 @@ export type DecodedMeaning =
   | "TEST_IN_PROGRESS"; // P(0.07) - Your response is being evaluated
 
 /**
- * When she says "It's fine", this is the probability distribution.
- * Based on empirical data (read: painful experience).
+ * When someone says "It's fine", this is the probability distribution.
+ * Based on empirical data (read: painful experience across relationships).
  *
  * Your mileage WILL vary. That's the point.
  */
