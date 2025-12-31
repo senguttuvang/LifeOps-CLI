@@ -25,7 +25,7 @@ export class ForgotAnniversaryError extends Data.TaggedError("Relationship/Forgo
   readonly recoveryDifficulty: "high" | "extreme" | "legendary";
   readonly suggestedBudget: number;
 }> {
-  override override get message(): string {
+  override get message(): string {
     return (
       `Anniversary forgotten: ${this.type} (${this.daysLate} days late). ` +
       `Recovery difficulty: ${this.recoveryDifficulty}. ` +
