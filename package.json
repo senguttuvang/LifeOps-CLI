@@ -1,0 +1,40 @@
+{
+  "name": "@lifeops/cli",
+  "version": "1.0.0",
+  "description": "Relationship intelligence CLI. Because 'fine' rarely means fine.",
+  "type": "module",
+  "private": true,
+  "main": "src/cli/main.ts",
+  "scripts": {
+    "cli": "bun run src/cli/main.ts",
+    "sync": "bun run cli sync",
+    "decode": "bun run cli decode",
+    "remember": "bun run cli remember",
+    "health": "bun run cli health",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "bun run tsc --noEmit",
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@effect/cli": "^0.73.0",
+    "@effect/platform": "^0.94.1",
+    "@effect/platform-node": "^0.104.0",
+    "@effect/schema": "^0.75.5",
+    "@lancedb/lancedb": "^0.23.0",
+    "better-sqlite3": "^12.5.0",
+    "drizzle-orm": "^0.45.1",
+    "effect": "^3.19.14",
+    "openai": "^6.15.0",
+    "pino": "^10.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.31.8"
+  }
+}
