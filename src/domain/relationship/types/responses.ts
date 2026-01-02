@@ -6,7 +6,28 @@
  *
  * Note: These are real types that compile to normal TypeScript.
  * The humor is in the documentation and naming, not in complexity.
+ *
+ * @version 1.0.0-uncomplicate
+ * @codename "Uncomplicate"
  */
+
+// ============================================================================
+// VERSION METADATA
+// ============================================================================
+
+/** Current decoder version - because even feelings need semver */
+export const FINE_DECODER_VERSION = "1.0.0-uncomplicate" as const;
+
+/** Release codenames - named after relationship states */
+export const DECODER_CODENAMES = {
+  "1.0.0-uncomplicate": "Uncomplicate",
+  "1.1.0": "Emotional Regex",
+  "1.2.0": "Pattern Match My Heart",
+  "2.0.0": "Neural Notwork",
+} as const;
+
+/** Memory module version */
+export const MEMORY_MODULE_VERSION = "1.0.0-elephants-wish" as const;
 
 /**
  * What "fine" actually means.
