@@ -18,13 +18,16 @@ export interface VectorStore {
 // Service Tag
 export class VectorStoreService extends Context.Tag("VectorStoreService")<VectorStoreService, VectorStore>() {}
 
+// Vector store path - configurable via environment variable
+const LANCEDB_PATH = process.env.LIFEOPS_VECTOR_PATH ?? "data/lancedb";
+
 // Implementation
 export const VectorStoreLive = Layer.effect(
   VectorStoreService,
   Effect.gen(function* (_) {
     // Initialize LanceDB
     const db = yield* Effect.tryPromise({
-      try: () => lancedb.connect("data/lancedb"),
+      try: () => lancedb.connect(LANCEDB_PATH),
       catch: (e) => new Error(`Failed to connect to LanceDB: ${e}`),
     });
 
