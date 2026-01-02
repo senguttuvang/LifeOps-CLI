@@ -9,11 +9,14 @@ export class DatabaseService extends Context.Tag("DatabaseService")<
   ReturnType<typeof drizzle<typeof schema>>
 >() {}
 
+// Database path - configurable via environment variable
+const DB_PATH = process.env.LIFEOPS_DB_PATH ?? "lifeops.db";
+
 // Define the Live Layer
 export const DatabaseLive = Layer.effect(
   DatabaseService,
   Effect.sync(() => {
-    const sqlite = new Database("lifeops3.db");
+    const sqlite = new Database(DB_PATH);
     // Enable WAL mode for better concurrency
     sqlite.exec("PRAGMA journal_mode = WAL;");
     return drizzle(sqlite, { schema });
