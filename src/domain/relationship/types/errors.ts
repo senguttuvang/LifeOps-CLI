@@ -6,6 +6,11 @@
  *
  * These are real, functional errors with helpful recovery information.
  * The humor is in the naming and documentation.
+ *
+ * Note: Unlike production errors, these cannot be silently swallowed.
+ * They must be acknowledged and handled with emotional intelligence.
+ *
+ * @version 1.0.0-uncomplicate
  */
 
 import { Data } from "effect";
@@ -93,6 +98,12 @@ export class SaidCalmDownError extends Data.TaggedError("Relationship/SaidCalmDo
     "your mom",
     "whatever",
   ] as const;
+
+  /** Recovery guide - memorize this */
+  static readonly RECOVERY_GUIDE = "Step 1: Stop talking. Step 2: Keep not talking. Step 3: Flowers." as const;
+
+  /** Time estimate - spoiler: it's long */
+  static readonly ESTIMATED_RECOVERY = "Unknown. Check back in a week." as const;
 }
 
 /**
@@ -168,6 +179,14 @@ export class TriedToFixError extends Data.TaggedError("Relationship/TriedToFixEr
 
   /** The magic question to ask before offering solutions */
   static readonly ASK_FIRST = "Do you want me to help fix this, or do you just want me to listen?" as const;
+
+  /** What to say instead of solutions */
+  static readonly SAFE_RESPONSES = [
+    "That sounds really hard.",
+    "I'm sorry you're going through this.",
+    "That must be frustrating.",
+    "I'm here for you.",
+  ] as const;
 }
 
 /**
@@ -188,6 +207,12 @@ export class UsedLogicOnFeelingsError extends Data.TaggedError("Relationship/Use
       `Feelings don't have to make sense. Validate first, discuss later.`
     );
   }
+
+  /** The fundamental theorem of emotional arguments */
+  static readonly THEOREM = "Being right ≠ Being helpful" as const;
+
+  /** Remember: feelings are not bugs to be fixed */
+  static readonly REMINDER = "Feelings are features, not bugs." as const;
 }
 
 /**
