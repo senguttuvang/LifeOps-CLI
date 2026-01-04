@@ -4,10 +4,18 @@
  * Reads WhatsApp backup from Android msgstore.db and converts to WhatsAppSyncResult format
  * that can be processed by the existing WhatsAppAdapter.
  *
- * msgstore.db schema:
+ * PLATFORM COMPATIBILITY:
+ * - ✅ Android: msgstore.db is Android's SQLite backup format (this service)
+ * - ❌ iPhone: iOS uses encrypted iTunes/iCloud backups (different format, not yet implemented)
+ * - ✅ Both: For live sync, use whatsmeow (QR code scanning) which works for both platforms
+ *
+ * msgstore.db schema (Android-specific):
  * - message table: chat_row_id, sender_jid_row_id, from_me, timestamp, message_type, text_data
  * - chat table: _id, jid_row_id, subject, archived, sort_timestamp
  * - jid table: _id, user, server, raw_string (reconstructed JID)
+ *
+ * NOTE: The name "android-import" is intentional and accurate - this imports Android backup files.
+ * For iPhone/iOS users, use the 'sync' command which works via QR code (WhatsApp Web protocol).
  */
 
 import { Effect, Context, Layer } from 'effect';
