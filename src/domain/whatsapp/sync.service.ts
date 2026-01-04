@@ -1,22 +1,39 @@
 /**
- * WhatsApp Sync Domain Service
+ * WhatsApp Sync Domain Service (v2 - Domain Model)
  *
- * Orchestrates the sync flow: WhatsApp CLI → Database
- * This is domain logic that coordinates infrastructure services.
+ * Orchestrates the sync flow: WhatsApp CLI → Adapter → Domain Entities → Database
+ * Uses anti-corruption layer to isolate WhatsApp protocol from domain model.
+ *
+ * Key Changes from v1:
+ * - Uses WhatsAppAdapter to translate WhatsApp → Domain entities
+ * - Stores in domain tables (contacts, interactions) not WhatsApp tables
+ * - Source-agnostic design (works for any future data source)
  */
 
-import { Context, Effect, Layer } from "effect";
-import { WhatsAppServiceTag } from "../../infrastructure/whatsapp/whatsapp.client";
-import { DatabaseService } from "../../infrastructure/db/client";
-import { whatsappChats, whatsappMessages, whatsappSyncState } from "../../infrastructure/db/schema";
-import { eq } from "drizzle-orm";
+import { Context, Effect, Layer } from 'effect';
+import { WhatsAppServiceTag } from '../../infrastructure/whatsapp/whatsapp.client';
+import { WhatsAppAdapterTag } from '../../infrastructure/adapters/whatsapp/whatsapp.adapter';
+import { DatabaseService } from '../../infrastructure/db/client';
+import {
+  contacts,
+  contactIdentifiers,
+  conversations,
+  conversationParticipants,
+  interactions,
+  messages,
+  calls,
+  syncState,
+} from '../../infrastructure/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 /**
  * Sync statistics returned after sync operation
  */
 export interface SyncStats {
+  readonly contactsAdded: number;
+  readonly conversationsAdded: number;
   readonly messagesAdded: number;
-  readonly chatsAdded: number;
+  readonly callsAdded: number;
   readonly syncedAt: Date;
 }
 
@@ -50,7 +67,7 @@ export interface SyncService {
 /**
  * Service Tag
  */
-export class SyncServiceTag extends Context.Tag("SyncService")<SyncServiceTag, SyncService>() {}
+export class SyncServiceTag extends Context.Tag('SyncService')<SyncServiceTag, SyncService>() {}
 
 /**
  * Live Implementation
@@ -60,77 +77,163 @@ export const SyncServiceLive = Layer.effect(
   Effect.gen(function* () {
     const db = yield* DatabaseService;
     const whatsapp = yield* WhatsAppServiceTag;
+    const adapter = yield* WhatsAppAdapterTag;
 
     const syncMessages = (options: SyncOptions = {}) =>
       Effect.gen(function* () {
-        // 1. Fetch from WhatsApp via CLI
-        const syncResult = yield* whatsapp.syncMessages({
+        // 1. Fetch from WhatsApp via CLI (infrastructure layer)
+        const whatsappData = yield* whatsapp.syncMessages({
           days: options.days || 30,
           chatJid: options.chatJid,
         });
 
-        // 2. Store chats (upsert)
-        let chatsAdded = 0;
-        for (const chatData of syncResult.chats || []) {
+        // 2. Translate WhatsApp → Domain entities (anti-corruption layer)
+        const domainData = yield* adapter.translateSyncResult(whatsappData);
+
+        // 3. Store domain entities in database
+
+        // 3a. Store contacts (upsert by identifier to avoid duplicates)
+        let contactsAdded = 0;
+        for (const contact of domainData.contacts) {
           yield* Effect.tryPromise({
             try: async () => {
-              await db
-                .insert(whatsappChats)
-                .values({
-                  id: chatData.jid,
-                  name: chatData.name || null,
-                  isGroup: chatData.isGroup || false,
-                  lastMessageAt: chatData.lastMessageTime
-                    ? new Date(chatData.lastMessageTime * 1000)
-                    : null,
-                  unreadCount: chatData.unreadCount || 0,
-                  participantCount: chatData.participants?.length || 0,
-                  archived: false, // Not provided by CLI
-                  pinned: false, // Not provided by CLI
-                  updatedAt: new Date(),
-                })
-                .onConflictDoUpdate({
-                  target: whatsappChats.id,
-                  set: {
-                    name: chatData.name || null,
-                    lastMessageAt: chatData.lastMessageTime
-                      ? new Date(chatData.lastMessageTime * 1000)
-                      : null,
-                    unreadCount: chatData.unreadCount || 0,
-                    participantCount: chatData.participants?.length || 0,
-                    updatedAt: new Date(),
-                  },
+              // Check if contact already exists by any identifier
+              const firstIdentifier = contact.identifiers[0];
+              if (!firstIdentifier) {
+                console.warn(`Contact ${contact.id} has no identifiers, skipping`);
+                return;
+              }
+
+              const existingIdentifier = await db
+                .select({ contactId: contactIdentifiers.contactId })
+                .from(contactIdentifiers)
+                .where(
+                  and(
+                    eq(contactIdentifiers.source, firstIdentifier.source),
+                    eq(contactIdentifiers.identifier, firstIdentifier.identifier)
+                  )
+                )
+                .limit(1);
+
+              if (existingIdentifier.length === 0) {
+                // New contact - insert
+                await db.insert(contacts).values({
+                  id: contact.id,
+                  displayName: contact.displayName,
+                  preferredName: null,
+                  type: contact.type,
+                  notes: null,
                 });
-              chatsAdded++;
+
+                // Insert identifier
+                for (const identifier of contact.identifiers) {
+                  await db.insert(contactIdentifiers).values(identifier);
+                }
+
+                contactsAdded++;
+              } else {
+                // Existing contact - update name if changed
+                const existing = existingIdentifier[0];
+                if (existing) {
+                  await db
+                    .update(contacts)
+                    .set({
+                      displayName: contact.displayName,
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(contacts.id, existing.contactId));
+                }
+              }
             },
-            catch: (e) => new Error(`Failed to store chat: ${e}`),
+            catch: (e) => new Error(`Failed to store contact: ${e}`),
           });
         }
 
-        // 3. Store messages (skip duplicates via onConflictDoNothing)
-        let messagesAdded = 0;
-        for (const msgData of syncResult.messages || []) {
+        // 3b. Store conversations (upsert by source_conversation_id)
+        let conversationsAdded = 0;
+        for (const conversation of domainData.conversations) {
           yield* Effect.tryPromise({
             try: async () => {
-              await db
-                .insert(whatsappMessages)
-                .values({
-                  id: msgData.id,
-                  chatId: msgData.chatJid,
-                  senderId: msgData.senderJid || msgData.chatJid,
-                  fromMe: msgData.isFromMe || false,
-                  content: msgData.text || null,
-                  messageType: msgData.messageType || "text",
-                  timestamp: new Date(msgData.timestamp * 1000),
-                  mediaUrl: msgData.mediaUrl || null,
-                  mediaMimeType: msgData.mediaMimeType || null,
-                  rawJson: JSON.stringify(msgData),
-                  isIndexed: false,
-                })
-                .onConflictDoNothing();
-              messagesAdded++;
+              // Check if conversation exists
+              const existing = await db
+                .select({ id: conversations.id })
+                .from(conversations)
+                .where(
+                  and(
+                    eq(conversations.source, conversation.source),
+                    eq(conversations.sourceConversationId, conversation.sourceConversationId)
+                  )
+                )
+                .limit(1);
+
+              if (existing.length === 0) {
+                // New conversation
+                await db.insert(conversations).values(conversation);
+                conversationsAdded++;
+              } else {
+                // Update existing conversation
+                const existingConv = existing[0];
+                if (existingConv) {
+                  await db
+                    .update(conversations)
+                    .set({
+                      title: conversation.title,
+                      lastActivityAt: conversation.lastActivityAt,
+                      isArchived: conversation.isArchived,
+                      isPinned: conversation.isPinned,
+                      updatedAt: new Date(),
+                    })
+                    .where(eq(conversations.id, existingConv.id));
+                }
+              }
             },
-            catch: (e) => new Error(`Failed to store message: ${e}`),
+            catch: (e) => new Error(`Failed to store conversation: ${e}`),
+          });
+        }
+
+        // 3c. Store interactions (skip duplicates via source_interaction_id check)
+        let messagesAdded = 0;
+        let callsAdded = 0;
+
+        for (const interaction of domainData.interactions) {
+          yield* Effect.tryPromise({
+            try: async () => {
+              // Check if interaction already exists
+              const existing = await db
+                .select({ id: interactions.id })
+                .from(interactions)
+                .where(
+                  and(
+                    eq(interactions.source, interaction.source),
+                    eq(interactions.sourceInteractionId, interaction.sourceInteractionId)
+                  )
+                )
+                .limit(1);
+
+              if (existing.length === 0) {
+                // New interaction - insert
+                await db.insert(interactions).values(interaction);
+
+                // Insert corresponding message or call (subtype)
+                if (interaction.interactionType === 'message') {
+                  const message = domainData.messages.find(
+                    (m) => m.interactionId === interaction.id
+                  );
+                  if (message) {
+                    await db.insert(messages).values(message);
+                    messagesAdded++;
+                  }
+                } else if (interaction.interactionType === 'call') {
+                  const call = domainData.calls.find((c) => c.interactionId === interaction.id);
+                  if (call) {
+                    await db.insert(calls).values(call);
+                    callsAdded++;
+                  }
+                }
+              }
+              // Skip if duplicate (onConflictDoNothing equivalent)
+            },
+            catch: (e) => new Error(`Failed to store interaction: ${e}`),
           });
         }
 
@@ -139,23 +242,28 @@ export const SyncServiceLive = Layer.effect(
         yield* Effect.tryPromise({
           try: async () => {
             await db
-              .insert(whatsappSyncState)
+              .insert(syncState)
               .values({
-                id: "main",
+                id: 'whatsapp',
+                source: 'whatsapp',
                 lastSyncAt: syncedAt,
+                lastSyncStatus: 'success',
                 cursor: null,
+                errorMessage: null,
               })
               .onConflictDoUpdate({
-                target: whatsappSyncState.id,
+                target: syncState.id,
                 set: {
                   lastSyncAt: syncedAt,
+                  lastSyncStatus: 'success',
+                  errorMessage: null,
                 },
               });
           },
           catch: (e) => new Error(`Failed to update sync state: ${e}`),
         });
 
-        return { messagesAdded, chatsAdded, syncedAt };
+        return { contactsAdded, conversationsAdded, messagesAdded, callsAdded, syncedAt };
       });
 
     const getSyncState = () =>
@@ -163,8 +271,8 @@ export const SyncServiceLive = Layer.effect(
         try: async () => {
           const result = await db
             .select()
-            .from(whatsappSyncState)
-            .where(eq(whatsappSyncState.id, "main"));
+            .from(syncState)
+            .where(eq(syncState.id, 'whatsapp'));
 
           if (result.length === 0) {
             return null;

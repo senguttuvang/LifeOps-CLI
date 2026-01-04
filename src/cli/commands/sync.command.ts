@@ -22,7 +22,9 @@ export const syncCommand = (options: SyncCommandOptions = {}) =>
     const result = yield* syncService.syncMessages({ days });
 
     console.log(`\n✅ Sync complete:`);
+    console.log(`   • Contacts: ${result.contactsAdded}`);
+    console.log(`   • Conversations: ${result.conversationsAdded}`);
     console.log(`   • Messages: ${result.messagesAdded}`);
-    console.log(`   • Chats: ${result.chatsAdded}`);
+    console.log(`   • Calls: ${result.callsAdded}`);
     console.log(`   • Synced at: ${result.syncedAt.toISOString()}`);
   });

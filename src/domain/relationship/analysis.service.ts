@@ -3,7 +3,7 @@ import { eq, and, desc, inArray, asc } from 'drizzle-orm';
 import { DatabaseService } from '../../infrastructure/db/client';
 import { VectorStoreService } from '../../infrastructure/rag/vector.store';
 import { AIServiceTag } from '../../infrastructure/llm/ai.service';
-import { whatsappMessages } from '../../infrastructure/db/schema';
+import { messages, interactions } from '../../infrastructure/db/schema';
 
 // --- Interface ---
 
@@ -27,18 +27,25 @@ export const AnalysisLive = Layer.effect(
     const vectorStore = yield* _(VectorStoreService);
     const ai = yield* _(AIServiceTag);
 
-    const indexChat = (chatId: string) =>
+    const indexChat = (conversationId: string) =>
       Effect.gen(function* (_) {
         // 1. Fetch unindexed messages
         const unindexedMessages = yield* Effect.tryPromise({
           try: () =>
             db
-              .select()
-              .from(whatsappMessages)
+              .select({
+                id: messages.interactionId,
+                content: messages.content,
+                interactionId: messages.interactionId,
+                timestamp: interactions.occurredAt,
+                direction: interactions.direction,
+              })
+              .from(messages)
+              .innerJoin(interactions, eq(messages.interactionId, interactions.id))
               .where(
                 and(
-                  eq(whatsappMessages.chatId, chatId),
-                  eq(whatsappMessages.isIndexed, false)
+                  eq(interactions.conversationId, conversationId),
+                  eq(interactions.isIndexed, false)
                 )
               )
               .execute(),
@@ -52,11 +59,11 @@ export const AnalysisLive = Layer.effect(
         // 2. Prepare Documents
         const docs = unindexedMessages.map((msg) => ({
           id: msg.id,
-          text: `${msg.fromMe ? 'Me' : 'Partner'}: ${msg.content || '[Media]'}`,
+          text: `${msg.direction === 'outbound' ? 'Me' : 'Partner'}: ${msg.content || '[Media]'}`,
           metadata: {
-            timestamp: msg.timestamp.toISOString(),
-            sender: msg.fromMe ? 'me' : 'them',
-            chatId: msg.chatId,
+            timestamp: msg.timestamp?.toISOString() || new Date().toISOString(),
+            sender: msg.direction === 'outbound' ? 'me' : 'them',
+            conversationId,
           },
         }));
 
@@ -64,28 +71,33 @@ export const AnalysisLive = Layer.effect(
         yield* vectorStore.addDocuments(docs);
 
         // 4. Mark as Indexed
-        const ids = unindexedMessages.map((m) => m.id);
+        const ids = unindexedMessages.map((m) => m.interactionId);
         yield* Effect.tryPromise({
           try: () =>
             db
-              .update(whatsappMessages)
+              .update(interactions)
               .set({ isIndexed: true })
-              .where(inArray(whatsappMessages.id, ids))
+              .where(inArray(interactions.id, ids))
               .execute(),
-          catch: (e) => new Error(`Failed to update message index status: ${e}`),
+          catch: (e) => new Error(`Failed to update interaction index status: ${e}`),
         });
       });
 
-    const analyze = (chatId: string) =>
+    const analyze = (conversationId: string) =>
       Effect.gen(function* (_) {
         // 1. Retrieve recent messages (last 50)
         const recentMessages = yield* Effect.tryPromise({
           try: async () => {
             const msgs = await db
-              .select()
-              .from(whatsappMessages)
-              .where(eq(whatsappMessages.chatId, chatId))
-              .orderBy(desc(whatsappMessages.timestamp))
+              .select({
+                content: messages.content,
+                timestamp: interactions.occurredAt,
+                direction: interactions.direction,
+              })
+              .from(messages)
+              .innerJoin(interactions, eq(messages.interactionId, interactions.id))
+              .where(eq(interactions.conversationId, conversationId))
+              .orderBy(desc(interactions.occurredAt))
               .limit(50)
               .execute();
             return msgs.reverse(); // Chronological order
@@ -108,7 +120,7 @@ export const AnalysisLive = Layer.effect(
 
         // 3. Generate Analysis Report
         const recentText = recentMessages
-          .map((m) => `[${m.timestamp.toISOString()}] ${m.fromMe ? 'Me' : 'Partner'}: ${m.content}`)
+          .map((m) => `[${m.timestamp?.toISOString()}] ${m.direction === 'outbound' ? 'Me' : 'Partner'}: ${m.content}`)
           .join('\n');
 
         const contextText = ragResults
@@ -140,16 +152,20 @@ Provide a "Relationship State" report including:
         return analysis;
       });
 
-    const draftResponse = (chatId: string, intent: string) =>
+    const draftResponse = (conversationId: string, intent: string) =>
       Effect.gen(function* (_) {
         // 1. Fetch recent conversation context
         const recentMessages = yield* Effect.tryPromise({
           try: async () => {
              const msgs = await db
-              .select()
-              .from(whatsappMessages)
-              .where(eq(whatsappMessages.chatId, chatId))
-              .orderBy(desc(whatsappMessages.timestamp))
+              .select({
+                content: messages.content,
+                direction: interactions.direction,
+              })
+              .from(messages)
+              .innerJoin(interactions, eq(messages.interactionId, interactions.id))
+              .where(eq(interactions.conversationId, conversationId))
+              .orderBy(desc(interactions.occurredAt))
               .limit(10)
               .execute();
             return msgs.reverse();
@@ -165,7 +181,7 @@ Provide a "Relationship State" report including:
           .join('\n');
         
         const recentText = recentMessages
-          .map((m) => `${m.fromMe ? 'Me' : 'Partner'}: ${m.content}`)
+          .map((m) => `${m.direction === 'outbound' ? 'Me' : 'Partner'}: ${m.content}`)
           .join('\n');
 
         const prompt = `
