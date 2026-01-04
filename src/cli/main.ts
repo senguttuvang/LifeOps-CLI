@@ -84,14 +84,20 @@ const program = Effect.gen(function* () {
     default: {
       console.log("LifeOps - Personal Relationship Management\n");
       console.log("Usage: bun run cli <command> [options]\n");
-      console.log("Commands:");
-      console.log("  sync [--days=30]                Sync WhatsApp via QR code (iPhone + Android)");
-      console.log("  import-android --db=<path>      Import from Android backup (msgstore.db)");
-      console.log("                 [--limit=1000]   Limit messages for testing");
+      console.log("Primary Commands:");
+      console.log("  sync [--days=30]                Sync WhatsApp (iPhone + Android via QR code)");
+      console.log("                                   • First time: Gets ALL message history");
+      console.log("                                   • After: Real-time updates only");
       console.log("  health                          Check system health");
-      console.log("\nPlatform Notes:");
-      console.log("  • 'sync' works with BOTH iPhone and Android (scan QR code from WhatsApp app)");
-      console.log("  • 'import-android' is Android-only (msgstore.db is Android backup format)");
+      console.log("\nDeveloper/Testing Commands:");
+      console.log("  import-android --db=<path>      Import from Android msgstore.db backup");
+      console.log("                 [--limit=1000]    (Not for end users - testing only)");
+      console.log("\nHow It Works:");
+      console.log("  1. Run 'bun run cli sync'");
+      console.log("  2. Scan QR code with your phone (WhatsApp → Linked Devices)");
+      console.log("  3. First sync downloads ALL your message history automatically");
+      console.log("  4. Future syncs get only new messages");
+      console.log("  5. All data stored locally in lifeops3.db");
       break;
     }
   }
