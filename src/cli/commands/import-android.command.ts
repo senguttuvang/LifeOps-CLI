@@ -49,6 +49,7 @@ export const importAndroidCommand = (options: ImportAndroidCommandOptions) =>
     console.log(`\n✅ Sync complete:`);
     console.log(`   • Contacts: ${result.contactsAdded}`);
     console.log(`   • Conversations: ${result.conversationsAdded}`);
+    console.log(`   • Participants: ${result.participantsAdded}`);
     console.log(`   • Messages: ${result.messagesAdded}`);
     console.log(`   • Calls: ${result.callsAdded}`);
     console.log(`   • Synced at: ${result.syncedAt.toISOString()}`);
