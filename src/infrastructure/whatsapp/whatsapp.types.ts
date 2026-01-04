@@ -12,7 +12,7 @@ export interface WhatsAppMessageData {
   chatJid: string;
   senderJid: string;
   timestamp: number; // Unix timestamp
-  messageType: 'text' | 'image' | 'video' | 'audio' | 'document' | 'sticker' | 'location' | 'contact';
+  messageType: "text" | "image" | "video" | "audio" | "document" | "sticker" | "location" | "contact";
   text?: string;
   mediaUrl?: string;
   mediaMimeType?: string;

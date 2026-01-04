@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+
 /**
  * LifeOps CLI Entry Point
  *
@@ -6,22 +7,19 @@
  * Commands: sync, health
  */
 
-import { Effect, Layer } from "effect";
 import { NodeRuntime } from "@effect/platform-node";
-
+import { Effect, Layer } from "effect";
+// Domain layers
+import { SyncServiceLive } from "../domain/whatsapp/sync.service";
+import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
+import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
 // Infrastructure layers
 import { DatabaseLive } from "../infrastructure/db/client";
 import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
-import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
-import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
-
-// Domain layers
-import { SyncServiceLive } from "../domain/whatsapp/sync.service";
-
-// Commands
-import { syncCommand } from "./commands/sync.command";
 import { healthCommand } from "./commands/health.command";
 import { importAndroidCommand } from "./commands/import-android.command";
+// Commands
+import { syncCommand } from "./commands/sync.command";
 
 /**
  * Assemble all service layers
@@ -35,8 +33,8 @@ const MainLive = Layer.mergeAll(
   SyncServiceLive.pipe(
     Layer.provide(DatabaseLive),
     Layer.provide(WhatsAppServiceLive),
-    Layer.provide(WhatsAppAdapterLive)
-  )
+    Layer.provide(WhatsAppAdapterLive),
+  ),
 );
 
 /**
@@ -49,7 +47,7 @@ const program = Effect.gen(function* () {
   switch (command) {
     case "sync": {
       const daysArg = args.find((arg) => arg.startsWith("--days="));
-      const days = daysArg ? parseInt(daysArg.split("=")[1] || "30") : 30;
+      const days = daysArg ? parseInt(daysArg.split("=")[1] || "30", 10) : 30;
       yield* syncCommand({ days });
       break;
     }
@@ -65,12 +63,12 @@ const program = Effect.gen(function* () {
 
       if (!dbArg) {
         console.error("Error: --db argument is required");
-        console.log("\nUsage: bun run cli import-android --db=\"/path/to/msgstore.db\" [--limit=1000]");
+        console.log('\nUsage: bun run cli import-android --db="/path/to/msgstore.db" [--limit=1000]');
         process.exit(1);
       }
 
-      const db = dbArg.split("=")[1]?.replace(/"/g, '');
-      const limit = limitArg ? parseInt(limitArg.split("=")[1] || "0") : undefined;
+      const db = dbArg.split("=")[1]?.replace(/"/g, "");
+      const limit = limitArg ? parseInt(limitArg.split("=")[1] || "0", 10) : undefined;
 
       if (!db) {
         console.error("Error: Invalid --db path");

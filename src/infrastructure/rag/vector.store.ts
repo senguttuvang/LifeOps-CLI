@@ -1,12 +1,12 @@
-import * as lancedb from '@lancedb/lancedb';
-import { Context, Effect, Layer } from 'effect';
-import { OpenAI } from 'openai'; // Using OpenAI for embeddings (or we can use a local model)
+import * as lancedb from "@lancedb/lancedb";
+import { Context, Effect, Layer } from "effect";
+import { OpenAI } from "openai"; // Using OpenAI for embeddings (or we can use a local model)
 
 // Interfaces
 export interface Document {
   id: string;
   text: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, string | number | boolean | null | undefined>;
   vector?: number[];
 }
 
@@ -16,10 +16,7 @@ export interface VectorStore {
 }
 
 // Service Tag
-export class VectorStoreService extends Context.Tag('VectorStoreService')<
-  VectorStoreService,
-  VectorStore
->() {}
+export class VectorStoreService extends Context.Tag("VectorStoreService")<VectorStoreService, VectorStore>() {}
 
 // Implementation
 export const VectorStoreLive = Layer.effect(
@@ -27,7 +24,7 @@ export const VectorStoreLive = Layer.effect(
   Effect.gen(function* (_) {
     // Initialize LanceDB
     const db = yield* Effect.tryPromise({
-      try: () => lancedb.connect('data/lancedb'),
+      try: () => lancedb.connect("data/lancedb"),
       catch: (e) => new Error(`Failed to connect to LanceDB: ${e}`),
     });
 
@@ -39,19 +36,19 @@ export const VectorStoreLive = Layer.effect(
       Effect.tryPromise({
         try: async () => {
           const response = await openai.embeddings.create({
-            model: 'text-embedding-3-small',
+            model: "text-embedding-3-small",
             input: text,
           });
           const embedding = response.data[0]?.embedding;
           if (!embedding) {
-            throw new Error('No embedding returned from OpenAI');
+            throw new Error("No embedding returned from OpenAI");
           }
           return embedding;
         },
         catch: (e) => new Error(`Embedding failed: ${e}`),
       });
 
-    const TABLE_NAME = 'vectors';
+    const TABLE_NAME = "vectors";
 
     // Ensure table exists
     // Note: LanceDB creates tables implicitly on first add usually, or we explicitly create
@@ -68,9 +65,9 @@ export const VectorStoreLive = Layer.effect(
                 text: doc.text,
                 vector,
                 ...doc.metadata,
-              }))
+              })),
             ),
-            { concurrency: 5 }
+            { concurrency: 5 },
           );
 
           // 2. Add to table
@@ -109,5 +106,5 @@ export const VectorStoreLive = Layer.effect(
           });
         }),
     };
-  })
+  }),
 );

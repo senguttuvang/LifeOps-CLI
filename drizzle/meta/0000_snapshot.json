@@ -50,12 +50,8 @@
           "name": "calls_interaction_id_interactions_id_fk",
           "tableFrom": "calls",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -125,12 +121,8 @@
           "name": "communication_streaks_relationship_id_relationships_id_fk",
           "tableFrom": "communication_streaks",
           "tableTo": "relationships",
-          "columnsFrom": [
-            "relationship_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["relationship_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -197,17 +189,12 @@
       "indexes": {
         "idx_contact_identifiers_source_identifier": {
           "name": "idx_contact_identifiers_source_identifier",
-          "columns": [
-            "source",
-            "identifier"
-          ],
+          "columns": ["source", "identifier"],
           "isUnique": false
         },
         "idx_contact_identifiers_contact": {
           "name": "idx_contact_identifiers_contact",
-          "columns": [
-            "contact_id"
-          ],
+          "columns": ["contact_id"],
           "isUnique": false
         }
       },
@@ -216,12 +203,8 @@
           "name": "contact_identifiers_contact_id_contacts_id_fk",
           "tableFrom": "contact_identifiers",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -334,16 +317,12 @@
       "indexes": {
         "idx_participants_conversation": {
           "name": "idx_participants_conversation",
-          "columns": [
-            "conversation_id"
-          ],
+          "columns": ["conversation_id"],
           "isUnique": false
         },
         "idx_participants_contact": {
           "name": "idx_participants_contact",
-          "columns": [
-            "contact_id"
-          ],
+          "columns": ["contact_id"],
           "isUnique": false
         }
       },
@@ -352,12 +331,8 @@
           "name": "conversation_participants_conversation_id_conversations_id_fk",
           "tableFrom": "conversation_participants",
           "tableTo": "conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -365,22 +340,15 @@
           "name": "conversation_participants_contact_id_contacts_id_fk",
           "tableFrom": "conversation_participants",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "conversation_participants_conversation_id_contact_id_pk": {
-          "columns": [
-            "conversation_id",
-            "contact_id"
-          ],
+          "columns": ["conversation_id", "contact_id"],
           "name": "conversation_participants_conversation_id_contact_id_pk"
         }
       },
@@ -469,17 +437,12 @@
       "indexes": {
         "idx_conversations_source_conversation": {
           "name": "idx_conversations_source_conversation",
-          "columns": [
-            "source",
-            "source_conversation_id"
-          ],
+          "columns": ["source", "source_conversation_id"],
           "isUnique": false
         },
         "idx_conversations_last_activity": {
           "name": "idx_conversations_last_activity",
-          "columns": [
-            "last_activity_at"
-          ],
+          "columns": ["last_activity_at"],
           "isUnique": false
         }
       },
@@ -531,16 +494,12 @@
       "indexes": {
         "idx_topics_interaction": {
           "name": "idx_topics_interaction",
-          "columns": [
-            "interaction_id"
-          ],
+          "columns": ["interaction_id"],
           "isUnique": false
         },
         "idx_topics_topic": {
           "name": "idx_topics_topic",
-          "columns": [
-            "topic"
-          ],
+          "columns": ["topic"],
           "isUnique": false
         }
       },
@@ -549,12 +508,8 @@
           "name": "interaction_topics_interaction_id_interactions_id_fk",
           "tableFrom": "interaction_topics",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -642,38 +597,27 @@
       "indexes": {
         "idx_interactions_conversation": {
           "name": "idx_interactions_conversation",
-          "columns": [
-            "conversation_id"
-          ],
+          "columns": ["conversation_id"],
           "isUnique": false
         },
         "idx_interactions_occurred_at": {
           "name": "idx_interactions_occurred_at",
-          "columns": [
-            "occurred_at"
-          ],
+          "columns": ["occurred_at"],
           "isUnique": false
         },
         "idx_interactions_from_contact": {
           "name": "idx_interactions_from_contact",
-          "columns": [
-            "from_contact_id"
-          ],
+          "columns": ["from_contact_id"],
           "isUnique": false
         },
         "idx_interactions_indexed": {
           "name": "idx_interactions_indexed",
-          "columns": [
-            "is_indexed"
-          ],
+          "columns": ["is_indexed"],
           "isUnique": false
         },
         "idx_interactions_source_interaction": {
           "name": "idx_interactions_source_interaction",
-          "columns": [
-            "source",
-            "source_interaction_id"
-          ],
+          "columns": ["source", "source_interaction_id"],
           "isUnique": false
         }
       },
@@ -682,12 +626,8 @@
           "name": "interactions_conversation_id_conversations_id_fk",
           "tableFrom": "interactions",
           "tableTo": "conversations",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -695,12 +635,8 @@
           "name": "interactions_from_contact_id_contacts_id_fk",
           "tableFrom": "interactions",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "from_contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["from_contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -761,12 +697,8 @@
           "name": "location_shares_interaction_id_interactions_id_fk",
           "tableFrom": "location_shares",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -774,12 +706,8 @@
           "name": "location_shares_shared_by_contact_id_contacts_id_fk",
           "tableFrom": "location_shares",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "shared_by_contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["shared_by_contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -833,12 +761,8 @@
           "name": "meetings_interaction_id_interactions_id_fk",
           "tableFrom": "meetings",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -940,16 +864,12 @@
       "indexes": {
         "idx_messages_quoted": {
           "name": "idx_messages_quoted",
-          "columns": [
-            "quoted_interaction_id"
-          ],
+          "columns": ["quoted_interaction_id"],
           "isUnique": false
         },
         "idx_messages_starred": {
           "name": "idx_messages_starred",
-          "columns": [
-            "is_starred"
-          ],
+          "columns": ["is_starred"],
           "isUnique": false
         }
       },
@@ -958,12 +878,8 @@
           "name": "messages_interaction_id_interactions_id_fk",
           "tableFrom": "messages",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -971,12 +887,8 @@
           "name": "messages_quoted_interaction_id_interactions_id_fk",
           "tableFrom": "messages",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "quoted_interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["quoted_interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -984,12 +896,8 @@
           "name": "messages_forwarded_from_contact_id_contacts_id_fk",
           "tableFrom": "messages",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "forwarded_from_contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["forwarded_from_contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1058,12 +966,8 @@
           "name": "milestone_events_relationship_id_relationships_id_fk",
           "tableFrom": "milestone_events",
           "tableTo": "relationships",
-          "columnsFrom": [
-            "relationship_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["relationship_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1071,12 +975,8 @@
           "name": "milestone_events_linked_interaction_id_interactions_id_fk",
           "tableFrom": "milestone_events",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "linked_interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["linked_interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1124,12 +1024,8 @@
           "name": "poll_options_poll_id_polls_id_fk",
           "tableFrom": "poll_options",
           "tableTo": "polls",
-          "columnsFrom": [
-            "poll_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["poll_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1170,12 +1066,8 @@
           "name": "poll_votes_poll_option_id_poll_options_id_fk",
           "tableFrom": "poll_votes",
           "tableTo": "poll_options",
-          "columnsFrom": [
-            "poll_option_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["poll_option_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1183,22 +1075,15 @@
           "name": "poll_votes_voter_contact_id_contacts_id_fk",
           "tableFrom": "poll_votes",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "voter_contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["voter_contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "poll_votes_poll_option_id_voter_contact_id_pk": {
-          "columns": [
-            "poll_option_id",
-            "voter_contact_id"
-          ],
+          "columns": ["poll_option_id", "voter_contact_id"],
           "name": "poll_votes_poll_option_id_voter_contact_id_pk"
         }
       },
@@ -1243,12 +1128,8 @@
           "name": "polls_interaction_id_interactions_id_fk",
           "tableFrom": "polls",
           "tableTo": "interactions",
-          "columnsFrom": [
-            "interaction_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["interaction_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1256,12 +1137,8 @@
           "name": "polls_created_by_contact_id_contacts_id_fk",
           "tableFrom": "polls",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "created_by_contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1327,10 +1204,7 @@
       "indexes": {
         "idx_health_relationship_date": {
           "name": "idx_health_relationship_date",
-          "columns": [
-            "relationship_id",
-            "snapshot_date"
-          ],
+          "columns": ["relationship_id", "snapshot_date"],
           "isUnique": false
         }
       },
@@ -1339,12 +1213,8 @@
           "name": "relationship_health_snapshots_relationship_id_relationships_id_fk",
           "tableFrom": "relationship_health_snapshots",
           "tableTo": "relationships",
-          "columnsFrom": [
-            "relationship_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["relationship_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1403,16 +1273,12 @@
       "indexes": {
         "idx_insights_relationship": {
           "name": "idx_insights_relationship",
-          "columns": [
-            "relationship_id"
-          ],
+          "columns": ["relationship_id"],
           "isUnique": false
         },
         "idx_insights_type": {
           "name": "idx_insights_type",
-          "columns": [
-            "insight_type"
-          ],
+          "columns": ["insight_type"],
           "isUnique": false
         }
       },
@@ -1421,12 +1287,8 @@
           "name": "relationship_insights_relationship_id_relationships_id_fk",
           "tableFrom": "relationship_insights",
           "tableTo": "relationships",
-          "columnsFrom": [
-            "relationship_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["relationship_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1516,16 +1378,12 @@
       "indexes": {
         "idx_relationships_contact": {
           "name": "idx_relationships_contact",
-          "columns": [
-            "contact_id"
-          ],
+          "columns": ["contact_id"],
           "isUnique": false
         },
         "idx_relationships_last_interaction": {
           "name": "idx_relationships_last_interaction",
-          "columns": [
-            "last_interaction_at"
-          ],
+          "columns": ["last_interaction_at"],
           "isUnique": false
         }
       },
@@ -1534,12 +1392,8 @@
           "name": "relationships_contact_id_contacts_id_fk",
           "tableFrom": "relationships",
           "tableTo": "contacts",
-          "columnsFrom": [
-            "contact_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["contact_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1608,12 +1462,8 @@
           "name": "response_patterns_relationship_id_relationships_id_fk",
           "tableFrom": "response_patterns",
           "tableTo": "relationships",
-          "columnsFrom": [
-            "relationship_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["relationship_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

@@ -18,9 +18,9 @@
  * For iPhone/iOS users, use the 'sync' command which works via QR code (WhatsApp Web protocol).
  */
 
-import { Effect, Context, Layer } from 'effect';
-import { Database } from 'bun:sqlite';
-import type { WhatsAppSyncResult, WhatsAppMessageData, WhatsAppChatData } from '../whatsapp/whatsapp.types';
+import { Database } from "bun:sqlite";
+import { Context, Effect, Layer } from "effect";
+import type { WhatsAppChatData, WhatsAppMessageData, WhatsAppSyncResult } from "../whatsapp/whatsapp.types";
 
 /**
  * Android message row from msgstore.db
@@ -76,11 +76,11 @@ export interface AndroidImportService {
    */
   readonly importFromMsgstore: (
     dbPath: string,
-    options?: { limit?: number }
+    options?: { limit?: number },
   ) => Effect.Effect<WhatsAppSyncResult, Error>;
 }
 
-export class AndroidImportServiceTag extends Context.Tag('AndroidImportService')<
+export class AndroidImportServiceTag extends Context.Tag("AndroidImportService")<
   AndroidImportServiceTag,
   AndroidImportService
 >() {}
@@ -104,44 +104,42 @@ export const AndroidImportServiceLive = Layer.succeed(
      * - 15: Deleted message (6k)
      * - Others: Sticker, location, contact, etc.
      */
-    const mapMessageType = (androidType: number): WhatsAppMessageData['messageType'] => {
+    const mapMessageType = (androidType: number): WhatsAppMessageData["messageType"] => {
       switch (androidType) {
         case 0:
-          return 'text';
+          return "text";
         case 1:
-          return 'image';
+          return "image";
         case 2:
-          return 'video';
+          return "video";
         case 3:
         case 9: // Voice note
-          return 'audio';
+          return "audio";
         case 4:
         case 5: // PDF
-          return 'document';
+          return "document";
         case 20:
-          return 'sticker';
+          return "sticker";
         case 28:
-          return 'location';
+          return "location";
         case 30:
-          return 'contact';
+          return "contact";
         default:
           // For system messages (type 7), deleted (15), etc., treat as text
-          return 'text';
+          return "text";
       }
     };
 
     const importFromMsgstore = (
       dbPath: string,
-      options: { limit?: number } = {}
+      options: { limit?: number } = {},
     ): Effect.Effect<WhatsAppSyncResult, Error> =>
       Effect.gen(function* () {
         const db = new Database(dbPath, { readonly: true });
 
         try {
           // Step 1: Load JID lookup table (jid_row_id -> raw_string)
-          const jids = db
-            .prepare('SELECT _id, raw_string FROM jid')
-            .all() as AndroidJid[];
+          const jids = db.prepare("SELECT _id, raw_string FROM jid").all() as AndroidJid[];
 
           const jidMap = new Map<number, string>();
           for (const jid of jids) {
@@ -156,7 +154,7 @@ export const AndroidImportServiceLive = Layer.succeed(
             const participantRows = db
               .prepare(
                 `SELECT gjid, jid, admin
-                 FROM group_participants`
+                 FROM group_participants`,
               )
               .all() as AndroidGroupParticipant[];
 
@@ -170,7 +168,7 @@ export const AndroidImportServiceLive = Layer.succeed(
             }
 
             console.log(`   • Loaded ${participantRows.length} group participant memberships`);
-          } catch (e) {
+          } catch (_e) {
             // group_participants table might not exist in all msgstore.db versions
             console.log(`   • No group_participants table found (skipping)`);
           }
@@ -180,7 +178,7 @@ export const AndroidImportServiceLive = Layer.succeed(
             .prepare(
               `SELECT c._id, c.jid_row_id, c.subject, c.archived, c.sort_timestamp
                FROM chat c
-               WHERE c.jid_row_id IS NOT NULL`
+               WHERE c.jid_row_id IS NOT NULL`,
             )
             .all() as AndroidChat[];
 
@@ -195,7 +193,7 @@ export const AndroidImportServiceLive = Layer.succeed(
             return {
               jid,
               name: chat.subject || undefined,
-              isGroup: jid.includes('@g.us'),
+              isGroup: jid.includes("@g.us"),
               lastMessageTime: chat.sort_timestamp,
               unreadCount: 0,
               participants, // May be undefined for 1:1 chats or if no participants found
@@ -221,7 +219,7 @@ export const AndroidImportServiceLive = Layer.succeed(
                FROM message m
                WHERE m.key_id IS NOT NULL
                ORDER BY m.timestamp ASC
-               LIMIT ?`
+               LIMIT ?`,
             )
             .all(limit) as AndroidMessage[];
 
@@ -242,9 +240,7 @@ export const AndroidImportServiceLive = Layer.succeed(
 
           for (const msg of messageRows) {
             const chatJid = chatIdToJid.get(msg.chat_row_id);
-            const senderJid = msg.sender_jid_row_id
-              ? jidMap.get(msg.sender_jid_row_id)
-              : undefined;
+            const senderJid = msg.sender_jid_row_id ? jidMap.get(msg.sender_jid_row_id) : undefined;
 
             if (!chatJid) {
               skipped++;
@@ -262,7 +258,7 @@ export const AndroidImportServiceLive = Layer.succeed(
               messageType: mapMessageType(msg.message_type),
               text: msg.text_data || undefined,
               isFromMe: msg.from_me === 1,
-              isGroup: chatJid.includes('@g.us'),
+              isGroup: chatJid.includes("@g.us"),
             });
           }
 
@@ -281,5 +277,5 @@ export const AndroidImportServiceLive = Layer.succeed(
     return {
       importFromMsgstore,
     };
-  })()
+  })(),
 );
