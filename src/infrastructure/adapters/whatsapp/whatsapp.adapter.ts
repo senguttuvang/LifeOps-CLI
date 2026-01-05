@@ -199,8 +199,12 @@ export class WhatsAppAdapter {
       const contacts: DomainContact[] = [];
 
       for (const jid of jidSet) {
-        const contactUuid = randomUUID();
-        this.contactJidToUuid.set(jid, contactUuid);
+        // Only generate UUID if not already mapped
+        let contactUuid = this.contactJidToUuid.get(jid);
+        if (!contactUuid) {
+          contactUuid = randomUUID();
+          this.contactJidToUuid.set(jid, contactUuid);
+        }
 
         const normalizedJid = this.normalizeJid(jid);
         const name = jidToName.get(jid);
