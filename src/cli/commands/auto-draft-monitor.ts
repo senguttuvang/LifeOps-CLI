@@ -9,6 +9,8 @@ import { monitorAutoDraft } from "../../domain/whatsapp/auto-draft/auto-draft-mo
 // Domain layers
 import { SyncServiceLive } from "../../domain/whatsapp/sync.service";
 import { AnalysisLive } from "../../domain/relationship/analysis.service";
+import { SignalExtractionLive } from "../../domain/signals/signal-extraction.service";
+import { SignalEnhancedDraftLive } from "../../domain/whatsapp/auto-draft/signal-enhanced-draft.service";
 import { WhatsAppAdapterLive } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";
 import { AndroidImportServiceLive } from "../../infrastructure/android/android-import.service";
 // Infrastructure layers
@@ -29,7 +31,7 @@ const InfrastructureLive = Layer.mergeAll(
   AILive
 );
 
-const DomainLive = Layer.mergeAll(SyncServiceLive, AnalysisLive);
+const DomainLive = Layer.mergeAll(SyncServiceLive, AnalysisLive, SignalExtractionLive, SignalEnhancedDraftLive);
 
 const MainLive = DomainLive.pipe(
   Layer.provide(InfrastructureLive),
