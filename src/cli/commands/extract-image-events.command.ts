@@ -6,6 +6,7 @@
 
 import { Effect, Console } from "effect"
 import { ImageEventExtractionService, ImageEventExtractionServiceLive } from "../../domain/whatsapp/services/image-event-extraction.service"
+import { isVisionExtractionEnabled } from "../../config/feature-flags"
 
 /**
  * Format event as markdown with rich details
@@ -39,6 +40,13 @@ ${event.caption ? `- Caption: "${event.caption.slice(0, 150)}${event.caption.len
  * Main extraction program
  */
 const program = Effect.gen(function* () {
+  // Feature flag check
+  if (!isVisionExtractionEnabled()) {
+    yield* Console.log("⚠️  Vision extraction is disabled via ENABLE_VISION_EXTRACTION flag")
+    yield* Console.log("   Set ENABLE_VISION_EXTRACTION=true in .env to enable this feature\n")
+    return
+  }
+
   yield* Console.log("🖼️  Extracting events from WhatsApp image captions...\n")
   yield* Console.log("ℹ️  Note: Android backup doesn't include media files")
   yield* Console.log("   Extracting from image captions instead (often contain full event details)\n")
