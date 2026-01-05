@@ -5,27 +5,21 @@
  */
 
 import { Effect } from "effect";
+import { AnalysisServiceTag } from "../../../relationship/analysis.service";
 
 export const handleAnalyze = (
   chatId: string
-): Effect.Effect<string, Error, never> => {
-  // TODO: Implement actual analysis logic
-  // This is a stub implementation
-  const response = `
-📊 Relationship Analysis
+): Effect.Effect<string, Error> => {
+  return Effect.gen(function* () {
+    const analysisService = yield* AnalysisServiceTag;
 
-[STUB] This command will analyze relationship health metrics.
+    // Get relationship analysis
+    const analysis = yield* analysisService.analyze(chatId);
 
-Implementation pending:
-- Connection health (days since deep convo)
-- Communication quality (depth, topics, humor)
-- Emotional balance (support given/received)
-- Conflict metrics
-- Recent patterns and trends
-- Actionable suggestions
+    const response = `📊 Relationship Analysis
 
-Try: @lifeops help for other commands
-`.trim();
+${analysis}`;
 
-  return Effect.succeed(response);
+    return response;
+  });
 };

@@ -44,7 +44,7 @@ export const AILive = Layer.sync(AIServiceTag, () => {
     generateText: (messages, options = {}) =>
       Effect.tryPromise({
         try: async () => {
-          const provider = options.provider || "anthropic";
+          const provider = options.provider || "openrouter";
           const temperature = options.temperature ?? 0.7;
 
           if (provider === "anthropic") {
@@ -65,9 +65,9 @@ export const AILive = Layer.sync(AIServiceTag, () => {
             return firstContent && firstContent.type === "text" ? firstContent.text : "";
           }
 
-          // OpenRouter / OpenAI compatible
+          // OpenRouter / OpenAI compatible (Groq via OpenRouter)
           const res = await openRouter.chat.completions.create({
-            model: options.model || "meta-llama/llama-3.3-70b-instruct",
+            model: options.model || "deepseek/deepseek-r1",
             messages: messages.map((m) => ({ role: m.role, content: m.content })),
             temperature,
           });
@@ -79,7 +79,7 @@ export const AILive = Layer.sync(AIServiceTag, () => {
     streamText: (messages, options = {}) =>
       Stream.fromAsyncIterable(
         (async function* () {
-          const provider = options.provider || "anthropic";
+          const provider = options.provider || "openrouter";
           const temperature = options.temperature ?? 0.7;
 
           if (provider === "anthropic") {
@@ -104,7 +104,7 @@ export const AILive = Layer.sync(AIServiceTag, () => {
             }
           } else {
             const stream = await openRouter.chat.completions.create({
-              model: options.model || "meta-llama/llama-3.3-70b-instruct",
+              model: options.model || "deepseek/deepseek-r1",
               messages: messages.map((m) => ({ role: m.role, content: m.content })),
               temperature,
               stream: true,

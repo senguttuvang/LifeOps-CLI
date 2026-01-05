@@ -5,31 +5,47 @@
  */
 
 import { Effect } from "effect";
+import { VectorStoreService } from "../../../infrastructure/rag/vector.store";
 
 export const handleMemory = (
   query: string
-): Effect.Effect<string, Error, never> => {
+): Effect.Effect<string, Error> => {
   if (!query) {
     return Effect.succeed(
       "Please provide search query.\nExample: @lifeops memory beach sunset"
     );
   }
 
-  // TODO: Implement actual memory search logic
-  // This is a stub implementation
-  const response = `
-🔍 Memory Search: "${query}"
+  return Effect.gen(function* () {
+    const vectorStore = yield* VectorStoreService;
 
-[STUB] This command will search relationship memories using vector similarity.
+    // Search memories
+    const memories = yield* vectorStore.search(query, 5);
 
-Implementation pending:
-- Search vector store for similar memories
-- Rank by relevance
-- Include context (dates, photos, messages)
-- Format results with emoji and details
+    if (memories.length === 0) {
+      return `🔍 No memories found for: "${query}"
 
-Try: @lifeops help for other commands
-`.trim();
+Try a different search term or add more context.`;
+    }
 
-  return Effect.succeed(response);
+    // Format results
+    let response = `🔍 Found ${memories.length} memories for "${query}":
+
+`;
+
+    memories.forEach((memory, idx) => {
+      const timestamp = memory.metadata.timestamp
+        ? new Date(memory.metadata.timestamp as string).toLocaleDateString()
+        : "Unknown date";
+
+      response += `${idx + 1}. ${timestamp}
+   ${memory.text}
+
+`;
+    });
+
+    response += `Want more details? Try searching with different terms.`;
+
+    return response;
+  });
 };

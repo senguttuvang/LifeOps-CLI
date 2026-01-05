@@ -5,34 +5,31 @@
  */
 
 import { Effect } from "effect";
+import { AnalysisServiceTag } from "../../../relationship/analysis.service";
 
 export const handleDraft = (
   intent: string,
   chatId: string
-): Effect.Effect<string, Error, never> => {
+): Effect.Effect<string, Error> => {
   if (!intent) {
     return Effect.succeed(
       "Please describe what you want to say.\nExample: @lifeops draft apology for being late"
     );
   }
 
-  // TODO: Implement actual drafting logic
-  // This is a stub implementation
-  const response = `
-💬 Message Draft
+  return Effect.gen(function* () {
+    const analysisService = yield* AnalysisServiceTag;
 
-Intent: "${intent}"
+    // Generate draft using analysis service
+    const draft = yield* analysisService.draftResponse(chatId, intent);
 
-[STUB] This command will draft a message in your communication style.
+    const response = `💬 Message Draft (based on your style):
 
-Implementation pending:
-- Analyze user's message patterns
-- Generate draft based on intent
-- Match tone, emoji usage, message length
-- Provide draft for editing
+${draft}
 
-Try: @lifeops help for other commands
-`.trim();
+---
+Feel free to edit and send!`;
 
-  return Effect.succeed(response);
+    return response;
+  });
 };
