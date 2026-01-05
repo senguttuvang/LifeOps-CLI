@@ -14,7 +14,14 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { Context, Effect, Layer } from "effect";
-import type { WhatsAppAuthStatus, WhatsAppChatData, WhatsAppSyncOptions, WhatsAppSyncResult } from "./whatsapp.types";
+import type {
+  WhatsAppAuthStatus,
+  WhatsAppChatData,
+  WhatsAppSyncOptions,
+  WhatsAppSyncResult,
+  WhatsAppSendMessageOptions,
+  WhatsAppSendMessageResult,
+} from "./whatsapp.types";
 
 const execAsync = promisify(exec);
 
@@ -47,6 +54,11 @@ export interface WhatsAppService {
    * List all chats
    */
   readonly listChats: () => Effect.Effect<WhatsAppChatData[], Error>;
+
+  /**
+   * Send a message to a chat
+   */
+  readonly sendMessage: (options: WhatsAppSendMessageOptions) => Effect.Effect<WhatsAppSendMessageResult, Error>;
 
   /**
    * Health check - verify CLI is available and authenticated
@@ -128,6 +140,20 @@ export const WhatsAppServiceLive = Layer.sync(WhatsAppServiceTag, () => {
       catch: (e) => new Error(`Failed to list chats: ${e}`),
     });
 
+  const sendMessage = (options: WhatsAppSendMessageOptions) =>
+    Effect.tryPromise({
+      try: async () => {
+        const args: string[] = ["send"];
+
+        args.push("--to", options.to);
+        args.push("--message", options.content);
+
+        const { stdout } = await execAsync(`${cliBinPath} ${args.join(" ")}`);
+        return JSON.parse(stdout) as WhatsAppSendMessageResult;
+      },
+      catch: (e) => new Error(`Failed to send message: ${e}`),
+    });
+
   const healthCheck = () =>
     Effect.gen(function* () {
       const availableResult = yield* Effect.either(isAvailable());
@@ -162,6 +188,7 @@ export const WhatsAppServiceLive = Layer.sync(WhatsAppServiceTag, () => {
     authenticateQR,
     syncMessages,
     listChats,
+    sendMessage,
     healthCheck,
   };
 });

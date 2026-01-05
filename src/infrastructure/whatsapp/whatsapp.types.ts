@@ -80,3 +80,21 @@ export interface WhatsAppSyncOptions {
   chatJid?: string; // Sync specific chat only
   includeMedia?: boolean; // Download media files
 }
+
+/**
+ * Send message options
+ */
+export interface WhatsAppSendMessageOptions {
+  to: string; // Recipient JID (e.g., "1234567890@s.whatsapp.net")
+  content: string; // Message text
+}
+
+/**
+ * Send message result
+ */
+export interface WhatsAppSendMessageResult {
+  success: boolean;
+  messageId: string;
+  timestamp: number;
+  to: string;
+}
