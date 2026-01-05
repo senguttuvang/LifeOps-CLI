@@ -8,19 +8,24 @@
  */
 
 import { NodeRuntime } from "@effect/platform-node";
+import { Command } from "@effect/cli";
 import { Effect, Layer } from "effect";
 // Domain layers
 import { SyncServiceLive } from "../domain/whatsapp/sync.service";
+import { AnalysisLive } from "../domain/relationship/analysis.service";
 import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
 import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
 // Infrastructure layers
 import { DatabaseLive } from "../infrastructure/db/client";
 import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
+import { VectorStoreLive } from "../infrastructure/rag/vector.store";
+import { AILive } from "../infrastructure/llm/ai.service";
 import { extractEventsCommand } from "./commands/extract-events.command";
 import { extractImageEventsCommand } from "./commands/extract-image-events.command";
 import { extractVisionEventsCommand } from "./commands/extract-vision-events.command";
 import { healthCommand } from "./commands/health.command";
 import { importAndroidCommand } from "./commands/import-android.command";
+import { relationshipCommand } from "./commands/relationship.command";
 // Commands
 import { syncCommand } from "./commands/sync.command";
 
@@ -28,16 +33,23 @@ import { syncCommand } from "./commands/sync.command";
  * Assemble all service layers
  * Merge all layers so they're all available to commands
  */
-const MainLive = Layer.mergeAll(
+const InfrastructureLive = Layer.mergeAll(
   DatabaseLive,
   WhatsAppServiceLive,
   WhatsAppAdapterLive,
   AndroidImportServiceLive,
-  SyncServiceLive.pipe(
-    Layer.provide(DatabaseLive),
-    Layer.provide(WhatsAppServiceLive),
-    Layer.provide(WhatsAppAdapterLive),
-  ),
+  VectorStoreLive,
+  AILive
+);
+
+const DomainLive = Layer.mergeAll(
+  SyncServiceLive,
+  AnalysisLive
+);
+
+const MainLive = DomainLive.pipe(
+  Layer.provide(InfrastructureLive),
+  Layer.merge(InfrastructureLive)
 );
 
 /**
@@ -57,6 +69,14 @@ const program = Effect.gen(function* () {
 
     case "health": {
       yield* healthCommand();
+      break;
+    }
+
+    case "relationship": {
+      yield* Command.run(relationshipCommand, {
+        name: "LifeOps",
+        version: "1.0.0",
+      })(args);
       break;
     }
 
@@ -104,6 +124,8 @@ const program = Effect.gen(function* () {
       console.log("  sync [--days=30]                Sync WhatsApp (iPhone + Android via QR code)");
       console.log("                                   • First time: Gets ALL message history");
       console.log("                                   • After: Real-time updates only");
+      console.log("  relationship analyze <chatId>   Analyze relationship health with a contact");
+      console.log("  relationship draft <chatId> <intent> Draft a response based on history");
       console.log("  health                          Check system health");
       console.log("\nEvent Extraction:");
       console.log("  extract-events                  Extract events from text messages");

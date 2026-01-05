@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
 import { DatabaseService } from "../../infrastructure/db/client";
-import { interactions, messages } from "../../infrastructure/db/schema";
+import { interactions, messages, conversations } from "../../infrastructure/db/schema";
 import { AIServiceTag } from "../../infrastructure/llm/ai.service";
 import { VectorStoreService } from "../../infrastructure/rag/vector.store";
 
@@ -24,9 +24,10 @@ export const AnalysisLive = Layer.effect(
     const vectorStore = yield* _(VectorStoreService);
     const ai = yield* _(AIServiceTag);
 
-    const indexChat = (conversationId: string) =>
+    const indexChat = (chatId: string) =>
       Effect.gen(function* (_) {
         // 1. Fetch unindexed messages
+        // We join interactions -> messages -> conversations to filter by sourceConversationId (chatId)
         const unindexedMessages = yield* Effect.tryPromise({
           try: () =>
             db
@@ -36,10 +37,17 @@ export const AnalysisLive = Layer.effect(
                 interactionId: messages.interactionId,
                 timestamp: interactions.occurredAt,
                 direction: interactions.direction,
+                sourceConversationId: conversations.sourceConversationId,
               })
               .from(messages)
               .innerJoin(interactions, eq(messages.interactionId, interactions.id))
-              .where(and(eq(interactions.conversationId, conversationId), eq(interactions.isIndexed, false)))
+              .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
+              .where(
+                and(
+                  eq(conversations.sourceConversationId, chatId),
+                  eq(interactions.isIndexed, false)
+                )
+              )
               .execute(),
           catch: (e) => new Error(`Failed to fetch unindexed messages: ${e}`),
         });
@@ -55,7 +63,7 @@ export const AnalysisLive = Layer.effect(
           metadata: {
             timestamp: msg.timestamp?.toISOString() || new Date().toISOString(),
             sender: msg.direction === "outbound" ? "me" : "them",
-            conversationId,
+            chatId: msg.sourceConversationId,
           },
         }));
 
@@ -70,7 +78,7 @@ export const AnalysisLive = Layer.effect(
         });
       });
 
-    const analyze = (conversationId: string) =>
+    const analyze = (chatId: string) =>
       Effect.gen(function* (_) {
         // 1. Retrieve recent messages (last 50)
         const recentMessages = yield* Effect.tryPromise({
@@ -83,7 +91,8 @@ export const AnalysisLive = Layer.effect(
               })
               .from(messages)
               .innerJoin(interactions, eq(messages.interactionId, interactions.id))
-              .where(eq(interactions.conversationId, conversationId))
+              .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
+              .where(eq(conversations.sourceConversationId, chatId))
               .orderBy(desc(interactions.occurredAt))
               .limit(50)
               .execute();
@@ -137,7 +146,7 @@ Provide a "Relationship State" report including:
         return analysis;
       });
 
-    const draftResponse = (conversationId: string, intent: string) =>
+    const draftResponse = (chatId: string, intent: string) =>
       Effect.gen(function* (_) {
         // 1. Fetch recent conversation context
         const recentMessages = yield* Effect.tryPromise({
@@ -149,7 +158,8 @@ Provide a "Relationship State" report including:
               })
               .from(messages)
               .innerJoin(interactions, eq(messages.interactionId, interactions.id))
-              .where(eq(interactions.conversationId, conversationId))
+              .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
+              .where(eq(conversations.sourceConversationId, chatId))
               .orderBy(desc(interactions.occurredAt))
               .limit(10)
               .execute();
