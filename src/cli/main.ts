@@ -13,6 +13,7 @@ import { Effect, Layer } from "effect";
 // Domain layers
 import { SyncServiceLive } from "../domain/whatsapp/sync.service";
 import { AnalysisLive } from "../domain/relationship/analysis.service";
+import { SignalExtractionLive } from "../domain/signals/signal-extraction.service";
 import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
 import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
 // Infrastructure layers
@@ -23,6 +24,7 @@ import { AILive } from "../infrastructure/llm/ai.service";
 import { extractEventsCommand } from "./commands/extract-events.command";
 import { extractImageEventsCommand } from "./commands/extract-image-events.command";
 import { extractVisionEventsCommand } from "./commands/extract-vision-events.command";
+import { extractSignalsCommand } from "./commands/extract-signals.command";
 import { healthCommand } from "./commands/health.command";
 import { importAndroidCommand } from "./commands/import-android.command";
 import { relationshipCommand } from "./commands/relationship.command";
@@ -44,7 +46,8 @@ const InfrastructureLive = Layer.mergeAll(
 
 const DomainLive = Layer.mergeAll(
   SyncServiceLive,
-  AnalysisLive
+  AnalysisLive,
+  SignalExtractionLive
 );
 
 const MainLive = DomainLive.pipe(
@@ -117,6 +120,14 @@ const program = Effect.gen(function* () {
       break;
     }
 
+    case "extract-signals": {
+      yield* Command.run(extractSignalsCommand, {
+        name: "LifeOps",
+        version: "1.0.0",
+      })(args);
+      break;
+    }
+
     default: {
       console.log("LifeOps - Personal Relationship Management\n");
       console.log("Usage: bun run cli <command> [options]\n");
@@ -127,6 +138,9 @@ const program = Effect.gen(function* () {
       console.log("  relationship analyze <chatId>   Analyze relationship health with a contact");
       console.log("  relationship draft <chatId> <intent> Draft a response based on history");
       console.log("  health                          Check system health");
+      console.log("\nRAG+Signals (Personalization):");
+      console.log("  extract-signals <userId>        Extract behavioral signals from message history");
+      console.log("                 [--refresh]       Force recompute signals");
       console.log("\nEvent Extraction:");
       console.log("  extract-events                  Extract events from text messages");
       console.log("  extract-image-events            Extract events from image captions");
