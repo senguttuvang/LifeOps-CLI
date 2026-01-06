@@ -76,7 +76,8 @@ export class WhatsAppServiceTag extends Context.Tag("WhatsAppService")<WhatsAppS
  */
 export const WhatsAppServiceLive = Layer.sync(WhatsAppServiceTag, () => {
   // Binary is in bin/whatsmeow-cli (relative to project root)
-  const cliBinPath = `${process.cwd()}/bin/whatsmeow-cli`;
+  // Quote the path to handle spaces in directory names
+  const cliBinPath = `"${process.cwd()}/bin/whatsmeow-cli"`;
 
   const isAvailable = () =>
     Effect.tryPromise({

@@ -94,7 +94,7 @@ export const SignalExtractionLive = Layer.effect(
                 text: messages.content,
                 fromMe: interactions.direction,
                 timestamp: interactions.occurredAt,
-                mediaType: messages.mediaType,
+                contentType: messages.contentType,
               })
               .from(messages)
               .innerJoin(interactions, eq(messages.interactionId, interactions.id))
@@ -118,7 +118,7 @@ export const SignalExtractionLive = Layer.effect(
           text: msg.text,
           fromMe: msg.fromMe === "outbound",
           timestamp: msg.timestamp || new Date(),
-          mediaType: msg.mediaType || undefined,
+          mediaType: msg.contentType !== "text" ? msg.contentType : undefined,
           isEdited: false, // TODO: Add edit tracking to schema
         }));
       });

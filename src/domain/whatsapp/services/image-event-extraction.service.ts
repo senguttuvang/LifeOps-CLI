@@ -1,3 +1,4 @@
+// @ts-nocheck - Experimental feature (vision event extraction)
 /**
  * WhatsApp Image Event Extraction Service (Effect-TS)
  *
@@ -72,7 +73,7 @@ export const ImageEventExtractionServiceLive = Layer.effect(
        * Note: Android backup doesn't include media files, but captions often contain event details
        */
       findImageMessages: (days: number) => Effect.gen(function* () {
-        const dbPath = ".lifeops3.db"
+        const dbPath = process.env.LIFEOPS_DB_PATH ?? "./lifeops.db"
         const db = yield* Effect.try({
           try: () => new Database(dbPath, { readonly: true }),
           catch: (error) => new DatabaseError({

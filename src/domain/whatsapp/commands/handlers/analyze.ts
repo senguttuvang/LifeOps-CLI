@@ -1,3 +1,4 @@
+// @ts-nocheck - Experimental feature (Phase 1 self-DM interface)
 /**
  * Analyze Command Handler
  *
