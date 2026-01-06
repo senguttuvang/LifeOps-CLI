@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Relationship Advice (Not Really)
+    url: https://github.com/senguttuvang/LifeOps-CLI/discussions
+    about: For general questions, tips, and commiseration
+  - name: Documentation
+    url: https://github.com/senguttuvang/LifeOps-CLI/blob/main/README.md
+    about: Read the docs before asking "what does 'fine' mean?"
