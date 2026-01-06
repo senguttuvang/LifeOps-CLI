@@ -103,7 +103,6 @@ const getQuestionPreference = (signals: UserSignals): string => {
  */
 const getLengthGuidance = (signals: UserSignals): string => {
   const avg = signals.avgMessageLength.toFixed(0);
-  const std = signals.messageLengthStd.toFixed(0);
   const min = Math.max(0, signals.avgMessageLength - signals.messageLengthStd).toFixed(0);
   const max = (signals.avgMessageLength + signals.messageLengthStd).toFixed(0);
 

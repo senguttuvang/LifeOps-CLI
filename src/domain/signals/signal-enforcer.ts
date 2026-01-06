@@ -251,7 +251,7 @@ const enforcePunctuationStyle = (draft: string, signals: UserSignals): string =>
   let result = draft;
 
   // If user rarely uses periods but draft has many, remove some
-  if (signals.periodRate < 0.2 && draft.match(/\./g)?.length > 1) {
+  if (signals.periodRate < 0.2 && (draft.match(/\./g)?.length ?? 0) > 1) {
     // Remove periods except at end
     result = draft.replace(/\.(?!$)/g, "");
   }

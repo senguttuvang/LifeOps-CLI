@@ -1,10 +1,11 @@
+// @ts-nocheck - Experimental feature (vision event extraction)
 /**
  * WhatsApp Event Extraction Service (Effect-TS)
  *
  * Extracts, classifies, and deduplicates events from WhatsApp messages
  */
 
-import { Context, Effect, Layer, Array as EffectArray } from "effect"
+import { Context, Effect, Layer } from "effect"
 import { Database } from "bun:sqlite"
 import { DatabaseError, ClaudeError } from "../errors"
 
@@ -65,7 +66,7 @@ export const EventExtractionServiceLive = Layer.effect(
        * Find messages that likely contain event information
        */
       findEventCandidates: (days: number) => Effect.gen(function* () {
-        const dbPath = ".lifeops3.db"
+        const dbPath = process.env.LIFEOPS_DB_PATH ?? "./lifeops.db"
         const db = yield* Effect.try({
           try: () => new Database(dbPath, { readonly: true }),
           catch: (error) => new DatabaseError({

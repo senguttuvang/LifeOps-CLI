@@ -12,7 +12,8 @@
  * to determine what "fine" actually means.
  */
 
-import { Effect } from "effect";
+import { Command, Args } from "@effect/cli";
+import { Effect, Console } from "effect";
 import type { DecodedMeaning, FineResponse } from "../../domain/relationship/types";
 import { FINE_PROBABILITY_DISTRIBUTION } from "../../domain/relationship/types";
 import { displayFineAnalysis, displayTip, hint } from "../output/relationship-output";
@@ -122,8 +123,9 @@ const RESPONSE_WINDOWS: Record<DecodedMeaning, number> = {
 
 /**
  * Analyze a message and return the decoded meaning
+ * @public Exported for testing
  */
-function analyzeMessage(message: string): FineResponse {
+export function analyzeMessage(message: string): FineResponse {
   const normalized = message.toLowerCase().trim();
 
   // Find matching pattern
@@ -190,38 +192,52 @@ function analyzeMessage(message: string): FineResponse {
 }
 
 /**
- * The decode command
+ * Decode Command - @effect/cli based
+ *
+ * The Fine Decoder(tm) analyzes ambiguous relationship messages
+ * to determine what they really mean.
  */
-export const decodeCommand = (message: string) =>
-  Effect.gen(function* () {
-    if (!message || message.trim().length === 0) {
-      console.log("\nUsage: bun run cli decode <message>");
-      console.log('Example: bun run cli decode "I\'m fine"');
-      console.log("");
-      hint('The Fine Decoder(tm) analyzes ambiguous messages to help you understand what they really mean.');
-      return;
-    }
+export const decodeCommand = Command.make(
+  "decode",
+  {
+    message: Args.text({ name: "message" }).pipe(
+      Args.repeated,
+    ),
+  },
+  ({ message }) =>
+    Effect.gen(function* () {
+      // Join all words into a single message
+      const fullMessage = message.join(" ");
 
-    // Analyze the message
-    const result = analyzeMessage(message);
-
-    // Display the analysis
-    console.log("");
-    displayFineAnalysis(result);
-
-    // Show probability distribution for context
-    if (result.literal === "fine") {
-      console.log(`\n📊 "Fine" probability distribution:`);
-      for (const [meaning, prob] of Object.entries(FINE_PROBABILITY_DISTRIBUTION)) {
-        const bar = "█".repeat(Math.round(prob * 20));
-        const isMatch = meaning === result.decoded ? " ← YOU ARE HERE" : "";
-        console.log(`   ${meaning.padEnd(25)} ${bar} ${(prob * 100).toFixed(0)}%${isMatch}`);
+      if (!fullMessage || fullMessage.trim().length === 0) {
+        yield* Console.log("\nUsage: bun run cli decode <message>");
+        yield* Console.log('Example: bun run cli decode "I\'m fine"');
+        yield* Console.log("");
+        hint('The Fine Decoder(tm) analyzes ambiguous messages to help you understand what they really mean.');
+        return;
       }
-    }
 
-    // Show a helpful tip
-    displayTip();
+      // Analyze the message
+      const result = analyzeMessage(fullMessage);
 
-    // Suggest next command
-    hint(`Run 'bun run cli situation "${result.literal}"' to see historical context for similar messages.`);
-  });
+      // Display the analysis
+      yield* Console.log("");
+      displayFineAnalysis(result);
+
+      // Show probability distribution for context
+      if (result.literal === "fine") {
+        yield* Console.log(`\n📊 "Fine" probability distribution:`);
+        for (const [meaning, prob] of Object.entries(FINE_PROBABILITY_DISTRIBUTION)) {
+          const bar = "█".repeat(Math.round(prob * 20));
+          const isMatch = meaning === result.decoded ? " ← YOU ARE HERE" : "";
+          yield* Console.log(`   ${meaning.padEnd(25)} ${bar} ${(prob * 100).toFixed(0)}%${isMatch}`);
+        }
+      }
+
+      // Show a helpful tip
+      displayTip();
+
+      // Suggest next command
+      hint(`Run 'bun run cli situation "${result.literal}"' to see historical context for similar messages.`);
+    }),
+);
