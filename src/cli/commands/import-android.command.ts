@@ -13,44 +13,57 @@
  * iOS uses encrypted iTunes/iCloud backups which require a different import approach.
  */
 
-import { Effect } from "effect";
+import { Command, Options } from "@effect/cli";
+import { Effect, Console } from "effect";
 import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
 import { AndroidImportServiceTag } from "../../infrastructure/android/android-import.service";
 
-export interface ImportAndroidCommandOptions {
-  readonly db: string;
-  readonly limit?: number;
-}
+/**
+ * Import Android Command - @effect/cli based
+ *
+ * Imports WhatsApp data from Android msgstore.db backup.
+ */
+export const importAndroidCommand = Command.make(
+  "import-android",
+  {
+    db: Options.text("db").pipe(
+      Options.withDescription("Path to msgstore.db file"),
+    ),
+    limit: Options.integer("limit").pipe(
+      Options.withDescription("Limit number of messages to import (for testing)"),
+      Options.optional,
+    ),
+  },
+  ({ db, limit }) =>
+    Effect.gen(function* () {
+      const androidImport = yield* AndroidImportServiceTag;
+      const syncService = yield* SyncServiceTag;
 
-export const importAndroidCommand = (options: ImportAndroidCommandOptions) =>
-  Effect.gen(function* () {
-    const androidImport = yield* AndroidImportServiceTag;
-    const syncService = yield* SyncServiceTag;
+      yield* Console.log(`📱 Importing from Android msgstore.db...`);
+      yield* Console.log(`   Database: ${db}`);
+      if (limit._tag === "Some") {
+        yield* Console.log(`   Limit: ${limit.value} messages (test mode)`);
+      }
 
-    console.log(`📱 Importing from Android msgstore.db...`);
-    console.log(`   Database: ${options.db}`);
-    if (options.limit) {
-      console.log(`   Limit: ${options.limit} messages (test mode)`);
-    }
+      // Step 1: Read from msgstore.db and convert to WhatsApp format
+      const whatsappData = yield* androidImport.importFromMsgstore(db, {
+        limit: limit._tag === "Some" ? limit.value : undefined,
+      });
 
-    // Step 1: Read from msgstore.db and convert to WhatsApp format
-    const whatsappData = yield* androidImport.importFromMsgstore(options.db, {
-      limit: options.limit,
-    });
+      yield* Console.log(`\n✅ Import successful:`);
+      yield* Console.log(`   • Messages: ${whatsappData.messages.length}`);
+      yield* Console.log(`   • Chats: ${whatsappData.chats.length}`);
 
-    console.log(`\n✅ Import successful:`);
-    console.log(`   • Messages: ${whatsappData.messages.length}`);
-    console.log(`   • Chats: ${whatsappData.chats.length}`);
+      // Step 2: Persist to local database using existing sync pipeline
+      yield* Console.log(`\n🔄 Syncing to local database...`);
+      const result = yield* syncService.syncFromData(whatsappData);
 
-    // Step 2: Persist to local database using existing sync pipeline
-    console.log(`\n🔄 Syncing to local database...`);
-    const result = yield* syncService.syncFromData(whatsappData);
-
-    console.log(`\n✅ Sync complete:`);
-    console.log(`   • Contacts: ${result.contactsAdded}`);
-    console.log(`   • Conversations: ${result.conversationsAdded}`);
-    console.log(`   • Participants: ${result.participantsAdded}`);
-    console.log(`   • Messages: ${result.messagesAdded}`);
-    console.log(`   • Calls: ${result.callsAdded}`);
-    console.log(`   • Synced at: ${result.syncedAt.toISOString()}`);
-  });
+      yield* Console.log(`\n✅ Sync complete:`);
+      yield* Console.log(`   • Contacts: ${result.contactsAdded}`);
+      yield* Console.log(`   • Conversations: ${result.conversationsAdded}`);
+      yield* Console.log(`   • Participants: ${result.participantsAdded}`);
+      yield* Console.log(`   • Messages: ${result.messagesAdded}`);
+      yield* Console.log(`   • Calls: ${result.callsAdded}`);
+      yield* Console.log(`   • Synced at: ${result.syncedAt.toISOString()}`);
+    }),
+);

@@ -1,227 +1,112 @@
 #!/usr/bin/env bun
 
 /**
- * LifeOps CLI CLI Entry Point
+ * LifeOps CLI Entry Point
  *
- * Simple command dispatcher using Effect-TS.
- * Commands: sync, health, decode, remember, situation
+ * Unified CLI using @effect/cli for command parsing and help generation.
+ * All commands are composable Effect-based operations with explicit dependencies.
  *
- * Pure commands (decode, remember) run without service initialization.
- * Service-dependent commands (sync, health, etc.) require full layer setup.
+ * Architecture:
+ * - Root command: lifeops
+ * - Subcommands: sync, health, decode, remember, relationship, extract-*, import-android
+ * - Layers: Infrastructure → Domain → CLI
  */
 
-import { Effect } from "effect";
+import { Command } from "@effect/cli";
+import { NodeContext, NodeRuntime } from "@effect/platform-node";
+import { Effect, Layer } from "effect";
 
-// Check command early to avoid unnecessary service initialization
-const args = process.argv.slice(2);
-const command = args[0];
+// Commands
+import { syncCommand } from "./commands/sync.command";
+import { healthCommand } from "./commands/health.command";
+import { decodeCommand } from "./commands/decode.command";
+import { rememberCommand } from "./commands/remember.command";
+import { relationshipCommand } from "./commands/relationship.command";
+import { extractSignalsCommand } from "./commands/extract-signals.command";
+import { extractEventsCommand } from "./commands/extract-events.command";
+import { extractImageEventsCommand } from "./commands/extract-image-events.command";
+import { extractVisionEventsCommand } from "./commands/extract-vision-events.command";
+import { importAndroidCommand } from "./commands/import-android.command";
 
-// Pure commands - no service dependencies (including help)
-const PURE_COMMANDS = ["decode", "remember"];
+// Domain layers
+import { SyncServiceLive } from "../domain/whatsapp/sync.service";
+import { AnalysisLive } from "../domain/relationship/analysis.service";
+import { SignalExtractionLive } from "../domain/signals/signal-extraction.service";
 
-if (!command || command === "help" || command === "--help" || command === "-h") {
-  showHelp();
-} else if (PURE_COMMANDS.includes(command)) {
-  runPureCommand(command, args);
-} else {
-  runServiceCommand();
-}
+// Infrastructure layers
+import { DatabaseLive } from "../infrastructure/db/client";
+import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
+import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
+import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
+import { VectorStoreLive } from "../infrastructure/rag/vector.store";
+import { AILive } from "../infrastructure/llm/ai.service";
 
 /**
- * Show help banner - no service dependencies needed
+ * Assemble all service layers
+ *
+ * Layer composition follows the hexagonal architecture:
+ * Infrastructure (DB, WhatsApp, AI) → Domain (Sync, Analysis, Signals)
  */
-function showHelp() {
-  console.log("");
-  console.log("╔═══════════════════════════════════════════════════════════════════╗");
-  console.log("║  LifeOps CLI v1.0.0-uncomplicate                         ║");
-  console.log("║  \"Because 'fine' rarely means fine\"                               ║");
-  console.log("║                                                                   ║");
-  console.log("║  System Status: OPERATIONAL                                       ║");
-  console.log("║  Fine Decoder™: CALIBRATED (97% confidence, 3% \"you should know\")║");
-  console.log("║  Memory Module: READY (your brain has been deprecated)           ║");
-  console.log("║  Anxiety Monitor: NOMINAL (for now)                              ║");
-  console.log("╚═══════════════════════════════════════════════════════════════════╝");
-  console.log("");
-  console.log("Usage: bun run cli <command> [options]\n");
-  console.log("Primary Commands:");
-  console.log("  sync [--days=30]                Sync WhatsApp (iPhone + Android via QR code)");
-  console.log("                                   • First time: Gets ALL message history");
-  console.log("                                   • After: Real-time updates only");
-  console.log("  relationship analyze <chatId>   Analyze relationship health with a contact");
-  console.log("  relationship draft <chatId> <intent> Draft a response based on history");
-  console.log("  health                          Check system health (yours, not theirs)");
-  console.log("\nRelationship Intelligence (Fun + Function):");
-  console.log('  decode <message>                The Fine Decoder™ (97% accurate, 3% margin of "you should know")');
-  console.log("  remember <content>              Memory Capture™ (because your memory is a SPOF)");
-  console.log("  situation <topic>               Situation Room™ (context from message archaeology)");
-  console.log("\nRAG+Signals (Personalization):");
-  console.log("  extract-signals <userId>        Extract behavioral signals from message history");
-  console.log("                 [--refresh]       Force recompute signals");
-  console.log("\nEvent Extraction:");
-  console.log("  extract-events                  Extract events from text messages");
-  console.log("  extract-image-events            Extract events from image captions");
-  console.log("  extract-vision-events           Extract events from actual images (vision AI)");
-  console.log("\n⚠️  Danger Zone:");
-  console.log("  import-android --db=<path>      Import from Android msgstore.db backup");
-  console.log("                 [--limit=1000]    Use at your own risk. May reveal things.");
-  console.log("\nHow It Works:");
-  console.log("  1. Run 'bun run cli sync'");
-  console.log("  2. Scan QR code with your phone (WhatsApp → Linked Devices)");
-  console.log("  3. First sync downloads ALL your message history automatically");
-  console.log("  4. Future syncs get only new messages");
-  console.log("  5. All data stored locally in lifeops3.db");
-  console.log("\n💡 Pro tip: 'calm down' has never calmed anyone down. Ever.");
-}
+const InfrastructureLive = Layer.mergeAll(
+  DatabaseLive,
+  WhatsAppServiceLive,
+  WhatsAppAdapterLive,
+  AndroidImportServiceLive,
+  VectorStoreLive,
+  AILive,
+);
+
+const DomainLive = Layer.mergeAll(SyncServiceLive, AnalysisLive, SignalExtractionLive);
+
+const MainLive = DomainLive.pipe(Layer.provide(InfrastructureLive), Layer.merge(InfrastructureLive));
 
 /**
- * Run pure commands that don't need service layers
+ * Root CLI Command
+ *
+ * LifeOps - Relationship intelligence CLI.
+ * "Because 'fine' rarely means fine"
  */
-async function runPureCommand(cmd: string, cmdArgs: string[]) {
-  switch (cmd) {
-    case "decode": {
-      const { decodeCommand } = await import("./commands/decode.command");
-      const message = cmdArgs.slice(1).join(" ");
-      await Effect.runPromise(decodeCommand(message));
-      break;
-    }
-    case "remember": {
-      const { rememberCommand } = await import("./commands/remember.command");
-      const content = cmdArgs.slice(1).join(" ");
-      await Effect.runPromise(rememberCommand(content));
-      break;
-    }
-  }
-}
+const lifeopsCommand = Command.make("lifeops").pipe(
+  Command.withSubcommands([
+    // Core commands
+    syncCommand,
+    healthCommand,
+
+    // Relationship Intelligence (Fun + Function)
+    decodeCommand,
+    rememberCommand,
+    relationshipCommand,
+
+    // RAG+Signals
+    extractSignalsCommand,
+
+    // Event Extraction
+    extractEventsCommand,
+    extractImageEventsCommand,
+    extractVisionEventsCommand,
+
+    // Import
+    importAndroidCommand,
+  ]),
+);
 
 /**
- * Run service-dependent commands with full layer initialization
+ * Run the CLI
+ *
+ * The CLI application:
+ * 1. Parses command-line arguments
+ * 2. Routes to the appropriate subcommand
+ * 3. Provides all required service layers
+ * 4. Handles errors and exit codes
  */
-async function runServiceCommand() {
-  // Dynamic imports to avoid loading services for pure commands
-  const { NodeRuntime } = await import("@effect/platform-node");
-  const { Command } = await import("@effect/cli");
-  const { Layer } = await import("effect");
+const run = Command.run(lifeopsCommand, {
+  name: "LifeOps CLI",
+  version: "1.0.0",
+});
 
-  // Domain layers
-  const { SyncServiceLive } = await import("../domain/whatsapp/sync.service");
-  const { AnalysisLive } = await import("../domain/relationship/analysis.service");
-  const { SignalExtractionLive } = await import("../domain/signals/signal-extraction.service");
-  const { WhatsAppAdapterLive } = await import("../infrastructure/adapters/whatsapp/whatsapp.adapter");
-  const { AndroidImportServiceLive } = await import("../infrastructure/android/android-import.service");
-
-  // Infrastructure layers
-  const { DatabaseLive } = await import("../infrastructure/db/client");
-  const { WhatsAppServiceLive } = await import("../infrastructure/whatsapp/whatsapp.client");
-  const { VectorStoreLive } = await import("../infrastructure/rag/vector.store");
-  const { AILive } = await import("../infrastructure/llm/ai.service");
-
-  // Commands
-  const { extractEventsCommand } = await import("./commands/extract-events.command");
-  const { extractImageEventsCommand } = await import("./commands/extract-image-events.command");
-  const { extractVisionEventsCommand } = await import("./commands/extract-vision-events.command");
-  const { extractSignalsCommand } = await import("./commands/extract-signals.command");
-  const { healthCommand } = await import("./commands/health.command");
-  const { importAndroidCommand } = await import("./commands/import-android.command");
-  const { relationshipCommand } = await import("./commands/relationship.command");
-  const { syncCommand } = await import("./commands/sync.command");
-
-  /**
-   * Assemble all service layers
-   */
-  const InfrastructureLive = Layer.mergeAll(
-    DatabaseLive,
-    WhatsAppServiceLive,
-    WhatsAppAdapterLive,
-    AndroidImportServiceLive,
-    VectorStoreLive,
-    AILive
-  );
-
-  const DomainLive = Layer.mergeAll(SyncServiceLive, AnalysisLive, SignalExtractionLive);
-
-  const MainLive = DomainLive.pipe(Layer.provide(InfrastructureLive), Layer.merge(InfrastructureLive));
-
-  /**
-   * Parse CLI arguments and dispatch to command
-   */
-  const program = Effect.gen(function* () {
-    switch (command) {
-      case "sync": {
-        const daysArg = args.find((arg) => arg.startsWith("--days="));
-        const days = daysArg ? Number.parseInt(daysArg.split("=")[1] || "30", 10) : 30;
-        yield* syncCommand({ days });
-        break;
-      }
-
-      case "health": {
-        yield* healthCommand();
-        break;
-      }
-
-      case "relationship": {
-        yield* Command.run(relationshipCommand, {
-          name: "LifeOps CLI",
-          version: "1.0.0",
-        })(args);
-        break;
-      }
-
-      case "import-android": {
-        const dbArg = args.find((arg) => arg.startsWith("--db="));
-        const limitArg = args.find((arg) => arg.startsWith("--limit="));
-
-        if (!dbArg) {
-          console.error("Error: --db argument is required");
-          console.log('\nUsage: bun run cli import-android --db="/path/to/msgstore.db" [--limit=1000]');
-          process.exit(1);
-        }
-
-        const db = dbArg.split("=")[1]?.replace(/"/g, "");
-        const limit = limitArg ? Number.parseInt(limitArg.split("=")[1] || "0", 10) : undefined;
-
-        if (!db) {
-          console.error("Error: Invalid --db path");
-          process.exit(1);
-        }
-
-        yield* importAndroidCommand({ db, limit });
-        break;
-      }
-
-      case "extract-events": {
-        yield* extractEventsCommand();
-        break;
-      }
-
-      case "extract-image-events": {
-        yield* extractImageEventsCommand();
-        break;
-      }
-
-      case "extract-vision-events": {
-        yield* extractVisionEventsCommand();
-        break;
-      }
-
-      case "extract-signals": {
-        yield* Command.run(extractSignalsCommand, {
-          name: "LifeOps CLI",
-          version: "1.0.0",
-        })(args);
-        break;
-      }
-
-      default: {
-        console.log(`\n❌ Unknown command: '${command}'`);
-        console.log("Run 'bun run cli' or 'bun run cli --help' to see available commands.\n");
-        break;
-      }
-    }
-  });
-
-  /**
-   * Run with all service layers
-   */
-  const run = program.pipe(Effect.provide(MainLive));
-  NodeRuntime.runMain(run);
-}
+// Execute with NodeRuntime
+run(process.argv).pipe(
+  Effect.provide(MainLive),
+  Effect.provide(NodeContext.layer),
+  NodeRuntime.runMain,
+);

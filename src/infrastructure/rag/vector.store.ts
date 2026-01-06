@@ -31,14 +31,30 @@ export const VectorStoreLive = Layer.effect(
       catch: (e) => new Error(`Failed to connect to LanceDB: ${e}`),
     });
 
-    // Initialize Embedding Client (OpenAI for high quality, or switch to local later)
-    // For now, assuming OPENAI_API_KEY is present
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // Initialize Embedding Client lazily (only when actually used)
+    // This avoids startup failures when API key is not set
+    // Supports both OPENAI_API_KEY and OPENROUTER_API_KEY (OpenRouter is OpenAI-compatible)
+    let openaiClient: OpenAI | null = null;
+    const getOpenAI = () => {
+      if (!openaiClient) {
+        const apiKey = process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY;
+        if (!apiKey) {
+          throw new Error("OPENAI_API_KEY or OPENROUTER_API_KEY environment variable is not set. Vector store operations require embeddings.");
+        }
+        // Use OpenRouter if OPENROUTER_API_KEY is set, otherwise use OpenAI directly
+        const isOpenRouter = !process.env.OPENAI_API_KEY && process.env.OPENROUTER_API_KEY;
+        openaiClient = new OpenAI({
+          apiKey,
+          baseURL: isOpenRouter ? "https://openrouter.ai/api/v1" : undefined,
+        });
+      }
+      return openaiClient;
+    };
 
     const getEmbedding = (text: string) =>
       Effect.tryPromise({
         try: async () => {
-          const response = await openai.embeddings.create({
+          const response = await getOpenAI().embeddings.create({
             model: "text-embedding-3-small",
             input: text,
           });
