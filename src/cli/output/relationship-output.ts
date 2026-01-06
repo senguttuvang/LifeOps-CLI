@@ -329,6 +329,99 @@ export function hint(message: string): void {
 }
 
 /**
+ * Pattern-specific alerts
+ */
+export function alertFineDetected(probability = 3): void {
+  console.log(
+    `\n${colors.yellow}⚠️${colors.reset} 'Fine' detected. Probability of actually fine: ${probability}%. Proceed with caution.\n`
+  );
+}
+
+export function alertShortResponse(response: string): void {
+  if (response.toLowerCase() === "k") {
+    console.log(
+      `\n${colors.red}🚨${colors.reset} Single 'k' received. Threat level: ${colors.red}ELEVATED${colors.reset}. Recommended action: Call immediately.\n`
+    );
+  } else if (response.length <= 5) {
+    console.log(
+      `\n${colors.yellow}⚠️${colors.reset} Critically short response detected. The silence speaks volumes.\n`
+    );
+  }
+}
+
+export function alertRatioWarning(positive: number, negative: number): void {
+  const ratio = negative > 0 ? positive / negative : positive;
+  if (ratio < 5) {
+    console.log(
+      `\n${colors.yellow}⚠️${colors.reset} Your ratio is ${ratio.toFixed(1)}:1 (target: 5:1). Deposit positives ASAP.\n`
+    );
+  }
+}
+
+export function alertBidIgnored(bidType: string, hoursAgo: number): void {
+  console.log(
+    `\n${colors.cyan}📢${colors.reset} She ${bidType} ${hoursAgo} hours ago. Still thinking about it?\n`
+  );
+}
+
+export function alertReadReceipt(hoursAgo: number): void {
+  console.log(
+    `\n${colors.dim}She saw your message ${hoursAgo} hours ago. The silence speaks volumes.${colors.reset}\n`
+  );
+}
+
+export function alertLoveLanguageMismatch(given: string, needed: string): void {
+  console.log(
+    `\n${colors.magenta}🔧${colors.reset} You gave ${colors.bold}${given.toUpperCase()}${colors.reset}, she needed ${colors.bold}${needed.toUpperCase()}${colors.reset}. Translation failed.\n`
+  );
+}
+
+/**
+ * Loading messages for async operations
+ */
+const LOADING_MESSAGES = [
+  // Pattern analysis
+  "Analyzing if 'k' means 'okay' or 'I'm furious'...",
+  "Calculating probability that 'fine' means fine (spoiler: 3%)...",
+  "Scanning for horsemen of the relationship apocalypse...",
+  "Checking if you've turned toward her bids lately...",
+  "Detecting love language mismatches...",
+  "Reviewing evidence for 'You never listen'...",
+  "Searching memory banks for 'She mentioned this 3 weeks ago'...",
+  "Analyzing emoji-to-word ratio...",
+  "Running attachment style pattern matching...",
+  // Technical humor
+  "Decrypting emotional subtext...",
+  "Parsing passive-aggressive punctuation...",
+  "Calibrating thoughtfulness sensors...",
+  "Querying the 'What did I do wrong?' database...",
+  "Computing optimal apology parameters...",
+  "Analyzing read receipt anxiety levels...",
+  "Checking if flowers will fix this...",
+  "Calculating dog house residence time...",
+  "SELECT * FROM memories WHERE forgotten = true;",
+  "Running garbage collection on excuses...",
+  "Compiling list of things you should have remembered...",
+  "Executing relationship_health.check()...",
+  "Indexing all the times she mentioned this...",
+];
+
+/**
+ * Get a random loading message
+ */
+export function getLoadingMessage(): string {
+  return LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)];
+}
+
+/**
+ * Display a loading message (for CLI spinners)
+ */
+export function displayLoading(customMessage?: string): void {
+  const message = customMessage || getLoadingMessage();
+  console.log(`${colors.dim}${message}${colors.reset}`);
+}
+
+/**
  * Display a tip of the day
  */
 export function displayTip(): void {

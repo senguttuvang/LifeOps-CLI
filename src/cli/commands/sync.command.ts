@@ -5,26 +5,37 @@
  * Usage: bun run cli sync [--days 30]
  */
 
-import { Effect } from "effect";
+import { Command, Options } from "@effect/cli";
+import { Effect, Console } from "effect";
 import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
 
-export interface SyncCommandOptions {
-  readonly days?: number;
-}
+/**
+ * Sync Command - @effect/cli based
+ *
+ * Syncs WhatsApp messages via QR code authentication.
+ * First sync gets ALL message history, subsequent syncs get only new messages.
+ */
+export const syncCommand = Command.make(
+  "sync",
+  {
+    days: Options.integer("days").pipe(
+      Options.withDescription("Number of days to sync (default: 30)"),
+      Options.withDefault(30),
+    ),
+  },
+  ({ days }) =>
+    Effect.gen(function* () {
+      const syncService = yield* SyncServiceTag;
 
-export const syncCommand = (options: SyncCommandOptions = {}) =>
-  Effect.gen(function* () {
-    const syncService = yield* SyncServiceTag;
+      yield* Console.log(`🔄 Syncing WhatsApp messages from last ${days} days...`);
 
-    const days = options.days || 30;
-    console.log(`🔄 Syncing WhatsApp messages from last ${days} days...`);
+      const result = yield* syncService.syncMessages({ days });
 
-    const result = yield* syncService.syncMessages({ days });
-
-    console.log(`\n✅ Sync complete:`);
-    console.log(`   • Contacts: ${result.contactsAdded}`);
-    console.log(`   • Conversations: ${result.conversationsAdded}`);
-    console.log(`   • Messages: ${result.messagesAdded}`);
-    console.log(`   • Calls: ${result.callsAdded}`);
-    console.log(`   • Synced at: ${result.syncedAt.toISOString()}`);
-  });
+      yield* Console.log(`\n✅ Sync complete:`);
+      yield* Console.log(`   • Contacts: ${result.contactsAdded}`);
+      yield* Console.log(`   • Conversations: ${result.conversationsAdded}`);
+      yield* Console.log(`   • Messages: ${result.messagesAdded}`);
+      yield* Console.log(`   • Calls: ${result.callsAdded}`);
+      yield* Console.log(`   • Synced at: ${result.syncedAt.toISOString()}`);
+    }),
+);
