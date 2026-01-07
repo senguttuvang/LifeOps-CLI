@@ -35,3 +35,6 @@ whatsapp-session/
 # Test outputs
 coverage/
 test-results/
+
+# AI context (session-specific, not committed)
+.ai/
