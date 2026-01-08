@@ -13,13 +13,19 @@
  */
 
 import { Command, Args } from "@effect/cli";
-import { Effect, Console } from "effect";
+import { Effect } from "effect";
+import { Box, Text } from "ink";
 import type { Memory, MemoryCategory } from "../../domain/relationship/types";
-import { displayMemoryStored, hint, warn } from "../output/relationship-output";
+import {
+  InkRenderer,
+  InkRendererLive,
+  MemoryStored,
+  Warning,
+  Hint,
+} from "../ui/index.js";
 
 /**
  * Category detection patterns.
- * Order matters - more specific patterns should come first.
  */
 const CATEGORY_PATTERNS: Array<{
   category: MemoryCategory;
@@ -49,7 +55,7 @@ const CATEGORY_PATTERNS: Array<{
       /\bdon't\s+ever\b/i,
       /\bnot\s+to\s+be\s+discussed/i,
     ],
-    weight: 1.2, // Boundaries are important - weight them higher
+    weight: 1.2,
   },
   {
     category: "gift",
@@ -79,29 +85,23 @@ const CATEGORY_PATTERNS: Array<{
   },
   {
     category: "context",
-    patterns: [
-      // Catch-all with low weight
-      /.+/,
-    ],
+    patterns: [/.+/],
     weight: 0.1,
   },
 ];
 
 /**
  * Extract tags from memory content.
- * Basic keyword extraction.
  * @public Exported for testing
  */
 export function extractTags(content: string): string[] {
   const tags: string[] = [];
 
-  // Extract quoted text as potential tags
   const quoted = content.match(/"([^"]+)"/g);
   if (quoted) {
     tags.push(...quoted.map((q) => q.replace(/"/g, "").toLowerCase()));
   }
 
-  // Extract proper nouns (capitalized words not at start of sentence)
   const words = content.split(/\s+/);
   for (let i = 1; i < words.length; i++) {
     const word = words[i] ?? "";
@@ -110,25 +110,10 @@ export function extractTags(content: string): string[] {
     }
   }
 
-  // Extract common keywords
   const keywords = [
-    "food",
-    "restaurant",
-    "movie",
-    "book",
-    "music",
-    "travel",
-    "family",
-    "work",
-    "friend",
-    "hobby",
-    "sport",
-    "coffee",
-    "tea",
-    "morning",
-    "evening",
-    "weekend",
-    "holiday",
+    "food", "restaurant", "movie", "book", "music", "travel",
+    "family", "work", "friend", "hobby", "sport", "coffee",
+    "tea", "morning", "evening", "weekend", "holiday",
   ];
 
   for (const keyword of keywords) {
@@ -137,7 +122,6 @@ export function extractTags(content: string): string[] {
     }
   }
 
-  // Deduplicate and limit
   return [...new Set(tags)].slice(0, 5);
 }
 
@@ -163,9 +147,7 @@ export function categorizeMemory(content: string): { category: MemoryCategory; c
     }
   }
 
-  // Normalize confidence to 0-1 range
   const confidence = Math.min(1, bestScore / 1.5);
-
   return { category: bestCategory, confidence };
 }
 
@@ -179,41 +161,88 @@ function generateId(): string {
 }
 
 /**
- * Remember Command - @effect/cli based
- *
- * The Memory Capture System™ captures and auto-categorizes memories.
+ * Usage display component
+ */
+function UsageDisplay() {
+  return (
+    <Box flexDirection="column" marginY={1}>
+      <Text>Usage: bun run cli remember {"<something to remember>"}</Text>
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>Examples:</Text>
+        <Text>  bun run cli remember "wants the blue vase from Indiranagar"</Text>
+        <Text>  bun run cli remember "don't mention the parking incident"</Text>
+        <Text>  bun run cli remember "anniversary is March 15"</Text>
+        <Text>  bun run cli remember "allergic to shellfish"</Text>
+      </Box>
+      <Box marginTop={1}>
+        <Hint>Memories are auto-categorized as: gift, preference, date, boundary, or context.</Hint>
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * Memory result display component
+ */
+function MemoryResult({
+  memory,
+  confidence,
+  tags,
+}: {
+  readonly memory: Memory;
+  readonly confidence: number;
+  readonly tags: string[];
+}) {
+  return (
+    <Box flexDirection="column" gap={1}>
+      <MemoryStored memory={memory} />
+
+      {confidence < 0.5 && (
+        <Warning>Category confidence is {(confidence * 100).toFixed(0)}%. Review categorization.</Warning>
+      )}
+
+      {tags.length > 0 && (
+        <Text>  🏷️  Tags: {tags.join(", ")}</Text>
+      )}
+
+      <Hint>Memory captured! (Note: Persistence to database coming in next update)</Hint>
+
+      {memory.category === "date" && (
+        <Hint>Tip: Run 'bun run cli relationship dates' to see all remembered dates.</Hint>
+      )}
+      {memory.category === "gift" && (
+        <Hint>Tip: Gift ideas will appear in 'bun run cli relationship gifts' (coming soon).</Hint>
+      )}
+      {memory.category === "boundary" && (
+        <Box>
+          <Text color="yellow">⚠️  Boundary noted. This will trigger warnings if mentioned in draft responses.</Text>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Remember Command - @effect/cli based with Ink UI
  */
 export const rememberCommand = Command.make(
   "remember",
   {
-    content: Args.text({ name: "content" }).pipe(
-      Args.repeated,
-    ),
+    content: Args.text({ name: "content" }).pipe(Args.repeated),
   },
   ({ content }) =>
     Effect.gen(function* () {
-      // Join all words into a single content string
+      const renderer = yield* InkRenderer;
       const fullContent = content.join(" ");
 
       if (!fullContent || fullContent.trim().length === 0) {
-        yield* Console.log("\nUsage: bun run cli remember <something to remember>");
-        yield* Console.log("\nExamples:");
-        yield* Console.log('  bun run cli remember "wants the blue vase from Indiranagar"');
-        yield* Console.log('  bun run cli remember "don\'t mention the parking incident"');
-        yield* Console.log('  bun run cli remember "anniversary is March 15"');
-        yield* Console.log('  bun run cli remember "allergic to shellfish"');
-        yield* Console.log("");
-        hint("Memories are auto-categorized as: gift, preference, date, boundary, or context.");
+        yield* renderer.render(<UsageDisplay />);
         return;
       }
 
-      // Categorize the memory
       const { category, confidence } = categorizeMemory(fullContent);
-
-      // Extract tags
       const tags = extractTags(fullContent);
 
-      // Create the memory object
       const memory: Memory = {
         id: generateId(),
         content: fullContent.trim(),
@@ -223,30 +252,8 @@ export const rememberCommand = Command.make(
         tags,
       };
 
-      // Display the result
-      displayMemoryStored(memory);
-
-      // Show confidence if not high
-      if (confidence < 0.5) {
-        warn(`Category confidence is ${(confidence * 100).toFixed(0)}%. Review categorization.`);
-      }
-
-      // Show extracted tags
-      if (tags.length > 0) {
-        yield* Console.log(`  🏷️  Tags: ${tags.join(", ")}`);
-      }
-
-      // Note about persistence
-      yield* Console.log("");
-      hint("Memory captured! (Note: Persistence to database coming in next update)");
-
-      // Suggest related commands based on category
-      if (category === "date") {
-        hint("Tip: Run 'bun run cli relationship dates' to see all remembered dates.");
-      } else if (category === "gift") {
-        hint("Tip: Gift ideas will appear in 'bun run cli relationship gifts' (coming soon).");
-      } else if (category === "boundary") {
-        hint("⚠️  Boundary noted. This will trigger warnings if mentioned in draft responses.");
-      }
-    }),
+      yield* renderer.render(
+        <MemoryResult memory={memory} confidence={confidence} tags={tags} />
+      );
+    }).pipe(Effect.provide(InkRendererLive)),
 );
