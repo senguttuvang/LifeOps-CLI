@@ -4,7 +4,7 @@
  * The Memory Capture System™ - Stores important things to remember.
  *
  * Usage:
- *   bun run cli remember "she wants the blue vase from that shop in Indiranagar"
+ *   bun run cli remember "wants the blue vase from that shop in Indiranagar"
  *   bun run cli remember "don't bring up the parking incident"
  *   bun run cli remember "anniversary is March 15"
  *
@@ -186,7 +186,7 @@ export const rememberCommand = (content: string) =>
     if (!content || content.trim().length === 0) {
       console.log("\nUsage: bun run cli remember <something to remember>");
       console.log("\nExamples:");
-      console.log('  bun run cli remember "she wants the blue vase from Indiranagar"');
+      console.log('  bun run cli remember "wants the blue vase from Indiranagar"');
       console.log('  bun run cli remember "don\'t mention the parking incident"');
       console.log('  bun run cli remember "anniversary is March 15"');
       console.log('  bun run cli remember "allergic to shellfish"');
