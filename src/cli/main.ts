@@ -19,14 +19,15 @@ import { Effect, Layer } from "effect";
 // Commands
 import { syncCommand } from "./commands/sync.command";
 import { healthCommand } from "./commands/health.command";
-import { decodeCommand } from "./commands/decode.command";
-import { rememberCommand } from "./commands/remember.command";
+import { decodeCommand } from "./commands/decode.command.js";
+import { rememberCommand } from "./commands/remember.command.js";
 import { relationshipCommand } from "./commands/relationship.command";
 import { extractSignalsCommand } from "./commands/extract-signals.command";
 import { extractEventsCommand } from "./commands/extract-events.command";
 import { extractImageEventsCommand } from "./commands/extract-image-events.command";
 import { extractVisionEventsCommand } from "./commands/extract-vision-events.command";
 import { importAndroidCommand } from "./commands/import-android.command";
+import { demoUiCommand } from "./commands/demo-ui.command.js";
 
 // Domain layers
 import { SyncServiceLive } from "../domain/whatsapp/sync.service";
@@ -87,6 +88,9 @@ const lifeopsCommand = Command.make("lifeops").pipe(
 
     // Import
     importAndroidCommand,
+
+    // UI Demo (Ink)
+    demoUiCommand,
   ]),
 );
 
