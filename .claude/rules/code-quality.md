@@ -1,0 +1,120 @@
+# Code Quality Rules (MANDATORY)
+
+## Run Quality Checks After Significant Changes
+
+**When to run `bun run quality:full`:**
+- After adding new modules or services
+- After refactoring domain or infrastructure layers
+- Before creating PRs with architectural changes
+- Weekly maintenance (find accumulated dead code)
+
+```bash
+# Quick check (always before commit)
+bun run check   # typecheck + lint + test
+
+# Full analysis (after significant changes)
+bun run quality:full
+```
+
+## Architecture Enforcement (DDD)
+
+**CRITICAL**: Domain layer must be pure. Run architecture check after modifying domain code:
+
+```bash
+bun run quality:arch
+```
+
+### Forbidden Patterns
+
+```typescript
+// ❌ FORBIDDEN - Domain importing infrastructure
+// src/domain/whatsapp/sync.service.ts
+import { db } from "../../infrastructure/db/client";
+
+// ✅ CORRECT - Domain defines interface, uses Effect dependency
+// src/domain/whatsapp/sync.service.ts
+import { Effect, Context } from "effect";
+
+interface DatabaseService {
+  query: <T>(sql: string) => Effect.Effect<T, DatabaseError>;
+}
+const DatabaseService = Context.Tag<DatabaseService>();
+
+// Infrastructure provides the implementation as a Layer
+```
+
+### Layer Rules
+
+| From | Can Import | Cannot Import |
+|------|------------|---------------|
+| `src/domain/` | Effect, own types | `src/infrastructure/`, `src/cli/`, `src/db/` |
+| `src/infrastructure/` | Domain types | `src/cli/` |
+| `src/cli/` | All | - |
+
+## Dead Code Hygiene
+
+Run monthly or after major refactors:
+
+```bash
+bun run quality:knip
+```
+
+### Action Required When knip Reports:
+
+| Finding | Action |
+|---------|--------|
+| Unused files | Delete or add to entry points |
+| Unused dependencies | `bun remove <dep>` |
+| Unused exports | Remove export or mark as public API |
+
+## ESLint Auto-Fix
+
+After writing new code, run auto-fix:
+
+```bash
+bun run lint:eslint:fix   # Fixes ~215 issues automatically
+bun run lint:fix          # Biome auto-fix
+```
+
+## Quality Scripts Reference
+
+```bash
+# Core checks
+bun run check              # typecheck + lint + test (CI minimum)
+bun run quality            # typecheck + all linters
+bun run quality:full       # quality + arch + knip (comprehensive)
+
+# Individual tools
+bun run quality:arch       # DDD layer validation
+bun run quality:knip       # Dead code detection
+bun run lint:eslint        # ESLint with Effect-TS rules
+
+# Auto-fix
+bun run lint:fix           # Biome auto-fix
+bun run lint:eslint:fix    # ESLint auto-fix
+
+# Reports
+bun run quality:arch:report  # HTML dependency report
+bun run quality:arch:viz     # SVG dependency graph
+```
+
+## When Claude Should Run Quality Checks
+
+1. **After implementing new features**: Run `bun run check`
+2. **After modifying domain layer**: Run `bun run quality:arch`
+3. **After large refactors**: Run `bun run quality:full`
+4. **When cleaning up code**: Run `bun run quality:knip`
+
+## Complexity Limits (Enforced by ESLint)
+
+| Metric | Limit | Fix |
+|--------|-------|-----|
+| Cognitive complexity | 15 | Extract helper functions |
+| Cyclomatic complexity | 10 | Reduce branching |
+| Function lines | 50 | Split into smaller functions |
+| Parameters | 4 | Use options object |
+| Nesting depth | 4 | Early returns, extract functions |
+
+## Documentation
+
+Full documentation: `docs/standards/code-quality.md`
