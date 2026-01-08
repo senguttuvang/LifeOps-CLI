@@ -13,10 +13,17 @@
  */
 
 import { Command, Args } from "@effect/cli";
-import { Effect, Console } from "effect";
+import { Effect } from "effect";
+import { Box, Text } from "ink";
 import type { DecodedMeaning, FineResponse } from "../../domain/relationship/types";
 import { FINE_PROBABILITY_DISTRIBUTION } from "../../domain/relationship/types";
-import { displayFineAnalysis, displayTip, hint } from "../output/relationship-output";
+import {
+  InkRenderer,
+  InkRendererLive,
+  FineAnalysis,
+  TipOfTheDay,
+  Hint,
+} from "../ui/index.js";
 
 /**
  * Known ambiguous phrases and their base probabilities.
@@ -47,24 +54,18 @@ const AMBIGUOUS_PATTERNS: Record<string, { base: DecodedMeaning; confidence: num
 
 /**
  * Danger signals that increase severity.
- * These subtle modifiers can shift the meaning dramatically.
- *
- * Think of punctuation as emotional seasoning -
- * a period at the end of "fine" is like adding ghost pepper.
  */
 const DANGER_SIGNALS = {
-  /** Punctuation that changes everything. The period is particularly deadly. */
   punctuationThatChangesEverything: {
-    ".": 0.15, // Period after short response = DEFCON 2
-    "...": 0.1, // Ellipsis = thinking/disappointed/building up to something
-    "!": -0.05, // Exclamation might actually be genuine enthusiasm
+    ".": 0.15,
+    "...": 0.1,
+    "!": -0.05,
   },
-  /** Words that make it worse. Adding "just" to "fine" is not just fine. */
   wordsThatMakeItWorse: {
-    just: 0.1, // "I'm just fine" - definitely not fine
-    really: -0.1, // "I'm really fine" - might be genuine (rare)
-    actually: -0.15, // "I'm actually fine" - probably genuine (very rare)
-    totally: 0.05, // "I'm totally fine" - suspiciously emphatic
+    just: 0.1,
+    really: -0.1,
+    actually: -0.15,
+    totally: 0.05,
   },
 };
 
@@ -114,11 +115,11 @@ const PROHIBITED_ACTIONS: Record<DecodedMeaning, readonly string[]> = {
  * Response windows in milliseconds
  */
 const RESPONSE_WINDOWS: Record<DecodedMeaning, number> = {
-  ACTUALLY_FINE: 30 * 60 * 1000, // 30 min (relaxed)
-  NOT_FINE_INVESTIGATE: 5 * 60 * 1000, // 5 min
-  FINAL_WARNING: 2 * 60 * 1000, // 2 min
-  SHOULD_ALREADY_KNOW: 60 * 1000, // 1 min (urgent)
-  TEST_IN_PROGRESS: 30 * 1000, // 30 sec (critical)
+  ACTUALLY_FINE: 30 * 60 * 1000,
+  NOT_FINE_INVESTIGATE: 5 * 60 * 1000,
+  FINAL_WARNING: 2 * 60 * 1000,
+  SHOULD_ALREADY_KNOW: 60 * 1000,
+  TEST_IN_PROGRESS: 30 * 1000,
 };
 
 /**
@@ -128,13 +129,11 @@ const RESPONSE_WINDOWS: Record<DecodedMeaning, number> = {
 export function analyzeMessage(message: string): FineResponse {
   const normalized = message.toLowerCase().trim();
 
-  // Find matching pattern
   let matchedPattern: { base: DecodedMeaning; confidence: number } | null = null;
   let matchedPhrase = "";
 
   for (const [phrase, analysis] of Object.entries(AMBIGUOUS_PATTERNS)) {
     if (normalized.includes(phrase)) {
-      // Prefer longer matches
       if (!matchedPattern || phrase.length > matchedPhrase.length) {
         matchedPattern = analysis;
         matchedPhrase = phrase;
@@ -142,9 +141,7 @@ export function analyzeMessage(message: string): FineResponse {
     }
   }
 
-  // Default if no pattern matched
   if (!matchedPattern) {
-    // Check if it's a short response (potential concern)
     if (normalized.length < 10) {
       matchedPattern = { base: "NOT_FINE_INVESTIGATE", confidence: 0.4 };
     } else {
@@ -154,25 +151,21 @@ export function analyzeMessage(message: string): FineResponse {
 
   let { base: decoded, confidence } = matchedPattern;
 
-  // Adjust for punctuation (the silent killers)
   for (const [punct, adjustment] of Object.entries(DANGER_SIGNALS.punctuationThatChangesEverything)) {
     if (normalized.endsWith(punct)) {
       confidence = Math.min(0.97, confidence + adjustment);
-      // Period after "fine" escalates severity
       if (punct === "." && decoded === "NOT_FINE_INVESTIGATE") {
         decoded = "FINAL_WARNING";
       }
     }
   }
 
-  // Adjust for modifiers (words that change everything)
   for (const [modifier, adjustment] of Object.entries(DANGER_SIGNALS.wordsThatMakeItWorse)) {
     if (normalized.includes(modifier)) {
       confidence = Math.max(0.1, Math.min(0.97, confidence + adjustment));
     }
   }
 
-  // Determine literal category
   type LiteralType = "fine" | "okay" | "nothing" | "whatever" | "k" | "sure";
   let literal: LiteralType = "fine";
   if (normalized.includes("okay") || normalized.includes("ok")) literal = "okay";
@@ -192,52 +185,76 @@ export function analyzeMessage(message: string): FineResponse {
 }
 
 /**
- * Decode Command - @effect/cli based
- *
- * The Fine Decoder(tm) analyzes ambiguous relationship messages
- * to determine what they really mean.
+ * Probability distribution display component
+ */
+function ProbabilityDistribution({ decoded }: { readonly decoded: DecodedMeaning }) {
+  return (
+    <Box flexDirection="column" marginTop={1}>
+      <Text>📊 "Fine" probability distribution:</Text>
+      {Object.entries(FINE_PROBABILITY_DISTRIBUTION).map(([meaning, prob]) => {
+        const bar = "█".repeat(Math.round(prob * 20));
+        const isMatch = meaning === decoded;
+        return (
+          <Box key={meaning}>
+            <Text>   {meaning.padEnd(25)} </Text>
+            <Text color={isMatch ? "yellow" : "gray"}>{bar}</Text>
+            <Text> {(prob * 100).toFixed(0)}%</Text>
+            {isMatch && <Text color="yellow"> ← YOU ARE HERE</Text>}
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+/**
+ * Usage display component
+ */
+function UsageDisplay() {
+  return (
+    <Box flexDirection="column" marginY={1}>
+      <Text>Usage: bun run cli decode {"<message>"}</Text>
+      <Text>Example: bun run cli decode "I'm fine"</Text>
+      <Box marginTop={1}>
+        <Hint>The Fine Decoder(tm) analyzes ambiguous messages to help you understand what they really mean.</Hint>
+      </Box>
+    </Box>
+  );
+}
+
+/**
+ * Full decode result display
+ */
+function DecodeResult({ result }: { readonly result: FineResponse }) {
+  return (
+    <Box flexDirection="column" gap={1}>
+      <FineAnalysis result={result} />
+      {result.literal === "fine" && <ProbabilityDistribution decoded={result.decoded} />}
+      <TipOfTheDay />
+      <Hint>Run 'bun run cli situation "{result.literal}"' to see historical context for similar messages.</Hint>
+    </Box>
+  );
+}
+
+/**
+ * Decode Command - @effect/cli based with Ink UI
  */
 export const decodeCommand = Command.make(
   "decode",
   {
-    message: Args.text({ name: "message" }).pipe(
-      Args.repeated,
-    ),
+    message: Args.text({ name: "message" }).pipe(Args.repeated),
   },
   ({ message }) =>
     Effect.gen(function* () {
-      // Join all words into a single message
+      const renderer = yield* InkRenderer;
       const fullMessage = message.join(" ");
 
       if (!fullMessage || fullMessage.trim().length === 0) {
-        yield* Console.log("\nUsage: bun run cli decode <message>");
-        yield* Console.log('Example: bun run cli decode "I\'m fine"');
-        yield* Console.log("");
-        hint('The Fine Decoder(tm) analyzes ambiguous messages to help you understand what they really mean.');
+        yield* renderer.render(<UsageDisplay />);
         return;
       }
 
-      // Analyze the message
       const result = analyzeMessage(fullMessage);
-
-      // Display the analysis
-      yield* Console.log("");
-      displayFineAnalysis(result);
-
-      // Show probability distribution for context
-      if (result.literal === "fine") {
-        yield* Console.log(`\n📊 "Fine" probability distribution:`);
-        for (const [meaning, prob] of Object.entries(FINE_PROBABILITY_DISTRIBUTION)) {
-          const bar = "█".repeat(Math.round(prob * 20));
-          const isMatch = meaning === result.decoded ? " ← YOU ARE HERE" : "";
-          yield* Console.log(`   ${meaning.padEnd(25)} ${bar} ${(prob * 100).toFixed(0)}%${isMatch}`);
-        }
-      }
-
-      // Show a helpful tip
-      displayTip();
-
-      // Suggest next command
-      hint(`Run 'bun run cli situation "${result.literal}"' to see historical context for similar messages.`);
-    }),
+      yield* renderer.render(<DecodeResult result={result} />);
+    }).pipe(Effect.provide(InkRendererLive)),
 );
