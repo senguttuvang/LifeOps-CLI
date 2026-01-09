@@ -45,19 +45,25 @@ const AMBIGUOUS_PATTERNS: Record<string, { base: DecodedMeaning; confidence: num
 };
 
 /**
- * Danger signals that increase severity
+ * Danger signals that increase severity.
+ * These subtle modifiers can shift the meaning dramatically.
+ *
+ * Think of punctuation as emotional seasoning -
+ * a period at the end of "fine" is like adding ghost pepper.
  */
 const DANGER_SIGNALS = {
-  punctuation: {
-    ".": 0.15, // Period after short response = bad
-    "...": 0.1, // Ellipsis = thinking/disappointed
-    "!": -0.05, // Exclamation might be genuine
+  /** Punctuation that changes everything. The period is particularly deadly. */
+  punctuationThatChangesEverything: {
+    ".": 0.15, // Period after short response = DEFCON 2
+    "...": 0.1, // Ellipsis = thinking/disappointed/building up to something
+    "!": -0.05, // Exclamation might actually be genuine enthusiasm
   },
-  modifiers: {
-    just: 0.1, // "I'm just fine" - worse
-    really: -0.1, // "I'm really fine" - might be genuine
-    actually: -0.15, // "I'm actually fine" - probably genuine
-    totally: 0.05, // "I'm totally fine" - suspicious
+  /** Words that make it worse. Adding "just" to "fine" is not just fine. */
+  wordsThatMakeItWorse: {
+    just: 0.1, // "I'm just fine" - definitely not fine
+    really: -0.1, // "I'm really fine" - might be genuine (rare)
+    actually: -0.15, // "I'm actually fine" - probably genuine (very rare)
+    totally: 0.05, // "I'm totally fine" - suspiciously emphatic
   },
 };
 
@@ -146,8 +152,8 @@ function analyzeMessage(message: string): FineResponse {
 
   let { base: decoded, confidence } = matchedPattern;
 
-  // Adjust for punctuation
-  for (const [punct, adjustment] of Object.entries(DANGER_SIGNALS.punctuation)) {
+  // Adjust for punctuation (the silent killers)
+  for (const [punct, adjustment] of Object.entries(DANGER_SIGNALS.punctuationThatChangesEverything)) {
     if (normalized.endsWith(punct)) {
       confidence = Math.min(0.97, confidence + adjustment);
       // Period after "fine" escalates severity
@@ -157,8 +163,8 @@ function analyzeMessage(message: string): FineResponse {
     }
   }
 
-  // Adjust for modifiers
-  for (const [modifier, adjustment] of Object.entries(DANGER_SIGNALS.modifiers)) {
+  // Adjust for modifiers (words that change everything)
+  for (const [modifier, adjustment] of Object.entries(DANGER_SIGNALS.wordsThatMakeItWorse)) {
     if (normalized.includes(modifier)) {
       confidence = Math.max(0.1, Math.min(0.97, confidence + adjustment));
     }

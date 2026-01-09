@@ -16,13 +16,61 @@ import { Effect } from "effect";
 const args = process.argv.slice(2);
 const command = args[0];
 
-// Pure commands - no service dependencies
+// Pure commands - no service dependencies (including help)
 const PURE_COMMANDS = ["decode", "remember"];
 
-if (PURE_COMMANDS.includes(command ?? "")) {
-  runPureCommand(command!, args);
+if (!command || command === "help" || command === "--help" || command === "-h") {
+  showHelp();
+} else if (PURE_COMMANDS.includes(command)) {
+  runPureCommand(command, args);
 } else {
   runServiceCommand();
+}
+
+/**
+ * Show help banner - no service dependencies needed
+ */
+function showHelp() {
+  console.log("");
+  console.log("╔═══════════════════════════════════════════════════════════════════╗");
+  console.log("║  LifeOps-Relationship v1.0.0-uncomplicate                         ║");
+  console.log("║  \"Because 'fine' rarely means fine\"                               ║");
+  console.log("║                                                                   ║");
+  console.log("║  System Status: OPERATIONAL                                       ║");
+  console.log("║  Fine Decoder™: CALIBRATED (97% confidence, 3% \"you should know\")║");
+  console.log("║  Memory Module: READY (your brain has been deprecated)           ║");
+  console.log("║  Anxiety Monitor: NOMINAL (for now)                              ║");
+  console.log("╚═══════════════════════════════════════════════════════════════════╝");
+  console.log("");
+  console.log("Usage: bun run cli <command> [options]\n");
+  console.log("Primary Commands:");
+  console.log("  sync [--days=30]                Sync WhatsApp (iPhone + Android via QR code)");
+  console.log("                                   • First time: Gets ALL message history");
+  console.log("                                   • After: Real-time updates only");
+  console.log("  relationship analyze <chatId>   Analyze relationship health with a contact");
+  console.log("  relationship draft <chatId> <intent> Draft a response based on history");
+  console.log("  health                          Check system health (yours, not theirs)");
+  console.log("\nRelationship Intelligence (Fun + Function):");
+  console.log('  decode <message>                The Fine Decoder™ (97% accurate, 3% margin of "you should know")');
+  console.log("  remember <content>              Memory Capture™ (because your memory is a SPOF)");
+  console.log("  situation <topic>               Situation Room™ (context from message archaeology)");
+  console.log("\nRAG+Signals (Personalization):");
+  console.log("  extract-signals <userId>        Extract behavioral signals from message history");
+  console.log("                 [--refresh]       Force recompute signals");
+  console.log("\nEvent Extraction:");
+  console.log("  extract-events                  Extract events from text messages");
+  console.log("  extract-image-events            Extract events from image captions");
+  console.log("  extract-vision-events           Extract events from actual images (vision AI)");
+  console.log("\n⚠️  Danger Zone:");
+  console.log("  import-android --db=<path>      Import from Android msgstore.db backup");
+  console.log("                 [--limit=1000]    Use at your own risk. May reveal things.");
+  console.log("\nHow It Works:");
+  console.log("  1. Run 'bun run cli sync'");
+  console.log("  2. Scan QR code with your phone (WhatsApp → Linked Devices)");
+  console.log("  3. First sync downloads ALL your message history automatically");
+  console.log("  4. Future syncs get only new messages");
+  console.log("  5. All data stored locally in lifeops3.db");
+  console.log("\n💡 Pro tip: 'calm down' has never calmed anyone down. Ever.");
 }
 
 /**
@@ -164,35 +212,8 @@ async function runServiceCommand() {
       }
 
       default: {
-        console.log("LifeOps-Relationship - Because relationships need observability too\n");
-        console.log("Usage: bun run cli <command> [options]\n");
-        console.log("Primary Commands:");
-        console.log("  sync [--days=30]                Sync WhatsApp (iPhone + Android via QR code)");
-        console.log("                                   • First time: Gets ALL message history");
-        console.log("                                   • After: Real-time updates only");
-        console.log("  relationship analyze <chatId>   Analyze relationship health with a contact");
-        console.log("  relationship draft <chatId> <intent> Draft a response based on history");
-        console.log("  health                          Check system health");
-        console.log("\nRelationship Intelligence (Fun + Function):");
-        console.log('  decode <message>                Decode ambiguous messages ("I\'m fine" etc)');
-        console.log("  remember <content>              Capture something to remember about partner");
-        console.log("  situation <topic>               Get context on recurring conversation topics");
-        console.log("\nRAG+Signals (Personalization):");
-        console.log("  extract-signals <userId>        Extract behavioral signals from message history");
-        console.log("                 [--refresh]       Force recompute signals");
-        console.log("\nEvent Extraction:");
-        console.log("  extract-events                  Extract events from text messages");
-        console.log("  extract-image-events            Extract events from image captions");
-        console.log("  extract-vision-events           Extract events from actual images (vision AI)");
-        console.log("\nDeveloper/Testing Commands:");
-        console.log("  import-android --db=<path>      Import from Android msgstore.db backup");
-        console.log("                 [--limit=1000]    (Not for end users - testing only)");
-        console.log("\nHow It Works:");
-        console.log("  1. Run 'bun run cli sync'");
-        console.log("  2. Scan QR code with your phone (WhatsApp → Linked Devices)");
-        console.log("  3. First sync downloads ALL your message history automatically");
-        console.log("  4. Future syncs get only new messages");
-        console.log("  5. All data stored locally in lifeops3.db");
+        console.log(`\n❌ Unknown command: '${command}'`);
+        console.log("Run 'bun run cli' or 'bun run cli --help' to see available commands.\n");
         break;
       }
     }
