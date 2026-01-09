@@ -39,3 +39,4 @@ test-results/
 # AI context (session-specific, not committed)
 .ai/
 CLAUDE.local.md
+.claude/settings.local.json
