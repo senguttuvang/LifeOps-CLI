@@ -36,6 +36,10 @@ whatsapp-session/
 coverage/
 test-results/
 
+# Quality reports (generated)
+reports/*
+!reports/.gitkeep
+
 # AI context (session-specific, not committed)
 .ai/
 CLAUDE.local.md

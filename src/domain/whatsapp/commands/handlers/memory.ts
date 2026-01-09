@@ -6,15 +6,13 @@
  */
 
 import { Effect } from "effect";
-import { VectorStoreService } from "../../../infrastructure/rag/vector.store";
 
-export const handleMemory = (
-  query: string
-): Effect.Effect<string, Error> => {
+// Import from domain ports (not directly from infrastructure)
+import { VectorStoreService } from "../../../ports";
+
+export const handleMemory = (query: string): Effect.Effect<string, Error> => {
   if (!query) {
-    return Effect.succeed(
-      "Please provide search query.\nExample: @lifeops memory beach sunset"
-    );
+    return Effect.succeed("Please provide search query.\nExample: @lifeops memory beach sunset");
   }
 
   return Effect.gen(function* () {
@@ -34,7 +32,7 @@ Try a different search term or add more context.`;
 
 `;
 
-    memories.forEach((memory, idx) => {
+    for (const [idx, memory] of memories.entries()) {
       const timestamp = memory.metadata.timestamp
         ? new Date(memory.metadata.timestamp as string).toLocaleDateString()
         : "Unknown date";
@@ -43,7 +41,7 @@ Try a different search term or add more context.`;
    ${memory.text}
 
 `;
-    });
+    }
 
     response += `Want more details? Try searching with different terms.`;
 

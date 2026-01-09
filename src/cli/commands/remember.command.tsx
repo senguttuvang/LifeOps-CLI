@@ -12,17 +12,11 @@
  * Because remembering things manually is so 2019.
  */
 
-import { Command, Args } from "@effect/cli";
+import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 import { Box, Text } from "ink";
 import type { Memory, MemoryCategory } from "../../domain/relationship/types";
-import {
-  InkRenderer,
-  InkRendererLive,
-  MemoryStored,
-  Warning,
-  Hint,
-} from "../ui/index.js";
+import { Hint, InkRenderer, InkRendererLive, MemoryStored, Warning } from "../ui/index.js";
 
 /**
  * Category detection patterns.
@@ -111,9 +105,23 @@ export function extractTags(content: string): string[] {
   }
 
   const keywords = [
-    "food", "restaurant", "movie", "book", "music", "travel",
-    "family", "work", "friend", "hobby", "sport", "coffee",
-    "tea", "morning", "evening", "weekend", "holiday",
+    "food",
+    "restaurant",
+    "movie",
+    "book",
+    "music",
+    "travel",
+    "family",
+    "work",
+    "friend",
+    "hobby",
+    "sport",
+    "coffee",
+    "tea",
+    "morning",
+    "evening",
+    "weekend",
+    "holiday",
   ];
 
   for (const keyword of keywords) {
@@ -169,10 +177,10 @@ function UsageDisplay() {
       <Text>Usage: bun run cli remember {"<something to remember>"}</Text>
       <Box marginTop={1} flexDirection="column">
         <Text bold>Examples:</Text>
-        <Text>  bun run cli remember "wants the blue vase from Indiranagar"</Text>
-        <Text>  bun run cli remember "don't mention the parking incident"</Text>
-        <Text>  bun run cli remember "anniversary is March 15"</Text>
-        <Text>  bun run cli remember "allergic to shellfish"</Text>
+        <Text> bun run cli remember "wants the blue vase from Indiranagar"</Text>
+        <Text> bun run cli remember "don't mention the parking incident"</Text>
+        <Text> bun run cli remember "anniversary is March 15"</Text>
+        <Text> bun run cli remember "allergic to shellfish"</Text>
       </Box>
       <Box marginTop={1}>
         <Hint>Memories are auto-categorized as: gift, preference, date, boundary, or context.</Hint>
@@ -201,9 +209,7 @@ function MemoryResult({
         <Warning>Category confidence is {(confidence * 100).toFixed(0)}%. Review categorization.</Warning>
       )}
 
-      {tags.length > 0 && (
-        <Text>  🏷️  Tags: {tags.join(", ")}</Text>
-      )}
+      {tags.length > 0 && <Text> 🏷️ Tags: {tags.join(", ")}</Text>}
 
       <Hint>Memory captured! (Note: Persistence to database coming in next update)</Hint>
 
@@ -215,7 +221,7 @@ function MemoryResult({
       )}
       {memory.category === "boundary" && (
         <Box>
-          <Text color="yellow">⚠️  Boundary noted. This will trigger warnings if mentioned in draft responses.</Text>
+          <Text color="yellow">⚠️ Boundary noted. This will trigger warnings if mentioned in draft responses.</Text>
         </Box>
       )}
     </Box>
@@ -252,8 +258,6 @@ export const rememberCommand = Command.make(
         tags,
       };
 
-      yield* renderer.render(
-        <MemoryResult memory={memory} confidence={confidence} tags={tags} />
-      );
+      yield* renderer.render(<MemoryResult memory={memory} confidence={confidence} tags={tags} />);
     }).pipe(Effect.provide(InkRendererLive)),
 );

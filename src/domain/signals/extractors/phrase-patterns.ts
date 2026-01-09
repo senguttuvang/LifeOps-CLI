@@ -97,7 +97,7 @@ export const extractPhrasePatterns = (messages: MessageForSignals[]): PhraseSign
 const extractGreetings = (messages: MessageForSignals[]): string[] => {
   const greetingFreq = new Map<string, number>();
 
-  messages.forEach((m) => {
+  for (const m of messages) {
     const text = (m.text || "").toLowerCase().trim();
     const words = text.split(/\s+/);
 
@@ -110,11 +110,11 @@ const extractGreetings = (messages: MessageForSignals[]): string[] => {
         greetingFreq.set(greeting, (greetingFreq.get(greeting) || 0) + 1);
       }
     }
-  });
+  }
 
   // Return greetings used in >10% of messages
   const threshold = messages.length * 0.1;
-  return Array.from(greetingFreq.entries())
+  return [...greetingFreq.entries()]
     .filter(([_, count]) => count >= threshold)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
@@ -127,11 +127,11 @@ const extractGreetings = (messages: MessageForSignals[]): string[] => {
 const extractEndings = (messages: MessageForSignals[]): string[] => {
   const endingFreq = new Map<string, number>();
 
-  messages.forEach((m) => {
+  for (const m of messages) {
     const text = (m.text || "").toLowerCase().trim();
 
     // Remove emojis for ending analysis
-    const textWithoutEmojis = text.replace(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/gu, "").trim();
+    const textWithoutEmojis = text.replaceAll(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu, "").trim();
 
     const words = textWithoutEmojis.split(/\s+/);
 
@@ -145,16 +145,16 @@ const extractEndings = (messages: MessageForSignals[]): string[] => {
     }
 
     // Also capture emoji-only endings
-    const emojiMatch = (m.text || "").match(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+$/gu);
+    const emojiMatch = (m.text || "").match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]+$/gu);
     if (emojiMatch) {
       const emojiEnding = emojiMatch[0];
       endingFreq.set(emojiEnding, (endingFreq.get(emojiEnding) || 0) + 1);
     }
-  });
+  }
 
   // Return endings used in >10% of messages
   const threshold = messages.length * 0.1;
-  return Array.from(endingFreq.entries())
+  return [...endingFreq.entries()]
     .filter(([_, count]) => count >= threshold)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
@@ -167,7 +167,7 @@ const extractEndings = (messages: MessageForSignals[]): string[] => {
 const extractCommonNGrams = (messages: MessageForSignals[]): Array<{ phrase: string; frequency: number }> => {
   const phraseFreq = new Map<string, number>();
 
-  messages.forEach((m) => {
+  for (const m of messages) {
     const text = (m.text || "").toLowerCase();
     const words = text.split(/\s+/).filter((w) => w.length > 0);
 
@@ -182,12 +182,12 @@ const extractCommonNGrams = (messages: MessageForSignals[]): Array<{ phrase: str
         }
       }
     }
-  });
+  }
 
   // Return phrases appearing in >5% of messages
   const threshold = messages.length * 0.05;
 
-  return Array.from(phraseFreq.entries())
+  return [...phraseFreq.entries()]
     .filter(([_, count]) => count >= threshold)
     .map(([phrase, count]) => ({
       phrase,
@@ -203,23 +203,23 @@ const extractCommonNGrams = (messages: MessageForSignals[]): Array<{ phrase: str
 const extractFillerWords = (messages: MessageForSignals[]): string[] => {
   const fillerFreq = new Map<string, number>();
 
-  messages.forEach((m) => {
+  for (const m of messages) {
     const text = (m.text || "").toLowerCase();
     const words = text.split(/\s+/);
 
-    words.forEach((word) => {
+    for (const word of words) {
       // Remove punctuation
-      const cleanWord = word.replace(/[^\p{L}]/gu, "");
+      const cleanWord = word.replaceAll(/[^\p{L}]/gu, "");
 
       if (COMMON_FILLERS.includes(cleanWord)) {
         fillerFreq.set(cleanWord, (fillerFreq.get(cleanWord) || 0) + 1);
       }
-    });
-  });
+    }
+  }
 
   // Return fillers used in >5% of messages
   const threshold = messages.length * 0.05;
-  return Array.from(fillerFreq.entries())
+  return [...fillerFreq.entries()]
     .filter(([_, count]) => count >= threshold)
     .sort((a, b) => b[1] - a[1])
     .map(([filler, _]) => filler);

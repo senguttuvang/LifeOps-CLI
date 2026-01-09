@@ -5,7 +5,7 @@
  * Tracks frequency, top emojis, position preferences, and variance.
  */
 
-import type { MessageForSignals, EmojiSignals } from "../types";
+import type { EmojiSignals, MessageForSignals } from "../types";
 
 /**
  * Extract emoji pattern signals from message history
@@ -34,7 +34,7 @@ export const extractEmojiPatterns = (messages: MessageForSignals[]): EmojiSignal
   // Count emojis per message
   const emojiCounts = userMessages.map((m) => {
     const text = m.text || "";
-    const emojis = text.match(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/gu) || [];
+    const emojis = text.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu) || [];
     return emojis.length;
   });
 
@@ -44,15 +44,15 @@ export const extractEmojiPatterns = (messages: MessageForSignals[]): EmojiSignal
 
   // Find top emojis
   const emojiFreq = new Map<string, number>();
-  userMessages.forEach((m) => {
+  for (const m of userMessages) {
     const text = m.text || "";
-    const emojis = text.match(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/gu) || [];
-    emojis.forEach((emoji) => {
+    const emojis = text.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu) || [];
+    for (const emoji of emojis) {
       emojiFreq.set(emoji, (emojiFreq.get(emoji) || 0) + 1);
-    });
-  });
+    }
+  }
 
-  const topEmojis = Array.from(emojiFreq.entries())
+  const topEmojis = [...emojiFreq.entries()]
     .map(([emoji, count]) => ({
       emoji,
       frequency: count / userMessages.length,
@@ -62,22 +62,22 @@ export const extractEmojiPatterns = (messages: MessageForSignals[]): EmojiSignal
 
   // Analyze emoji position (start, middle, end)
   const positions = { start: 0, middle: 0, end: 0 };
-  userMessages.forEach((m) => {
+  for (const m of userMessages) {
     const text = m.text || "";
-    const emojis = text.match(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/gu);
-    if (!emojis || emojis.length === 0) return;
+    const emojis = text.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu);
+    if (!emojis || emojis.length === 0) {continue;}
 
     const firstEmojiPos = text.indexOf(emojis[0]);
     const textLength = text.length;
 
-    if (textLength === 0) return;
+    if (textLength === 0) {continue;}
 
     // Categorize position
     const relativePos = firstEmojiPos / textLength;
-    if (relativePos < 0.2) positions.start++;
-    else if (relativePos > 0.8) positions.end++;
-    else positions.middle++;
-  });
+    if (relativePos < 0.2) {positions.start++;}
+    else if (relativePos > 0.8) {positions.end++;}
+    else {positions.middle++;}
+  }
 
   const totalWithEmojis = positions.start + positions.middle + positions.end;
   const emojiPosition =
@@ -101,8 +101,8 @@ export const extractEmojiPatterns = (messages: MessageForSignals[]): EmojiSignal
  * Calculate variance for a dataset
  */
 const calculateVariance = (values: number[], mean: number): number => {
-  if (values.length === 0) return 0;
+  if (values.length === 0) {return 0;}
 
-  const squaredDiffs = values.map((v) => Math.pow(v - mean, 2));
+  const squaredDiffs = values.map((v) => (v - mean) ** 2);
   return squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
 };

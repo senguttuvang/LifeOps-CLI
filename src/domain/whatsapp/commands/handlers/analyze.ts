@@ -6,11 +6,10 @@
  */
 
 import { Effect } from "effect";
+
 import { AnalysisServiceTag } from "../../../relationship/analysis.service";
 
-export const handleAnalyze = (
-  chatId: string
-): Effect.Effect<string, Error> => {
+export const handleAnalyze = (chatId: string): Effect.Effect<string, Error> => {
   return Effect.gen(function* () {
     const analysisService = yield* AnalysisServiceTag;
 

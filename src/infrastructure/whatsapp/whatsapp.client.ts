@@ -13,14 +13,16 @@
 
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
+
 import { Context, Effect, Layer } from "effect";
+
 import type {
   WhatsAppAuthStatus,
   WhatsAppChatData,
-  WhatsAppSyncOptions,
-  WhatsAppSyncResult,
   WhatsAppSendMessageOptions,
   WhatsAppSendMessageResult,
+  WhatsAppSyncOptions,
+  WhatsAppSyncResult,
 } from "./whatsapp.types";
 
 const execAsync = promisify(exec);

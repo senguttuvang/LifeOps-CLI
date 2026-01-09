@@ -7,19 +7,19 @@
 
 import { Command } from "@effect/cli";
 import { Effect } from "effect";
+import { Box, Text } from "ink";
 import {
+  FineAnalysis,
+  type FineResponse,
+  HealthDashboard,
   InkRenderer,
   InkRendererLive,
-  FineAnalysis,
-  HealthDashboard,
+  type Memory,
   MemoryList,
+  type RelationshipHealthMetrics,
   Success,
   TipOfTheDay,
-  type FineResponse,
-  type RelationshipHealthMetrics,
-  type Memory,
 } from "../ui/index.js";
-import { Box, Text } from "ink";
 
 /**
  * Demo data
@@ -29,16 +29,8 @@ const mockFineResponse: FineResponse = {
   decoded: "NOT_FINE_INVESTIGATE",
   confidence: 0.87,
   responseWindowMs: 300000, // 5 minutes
-  doNotDo: [
-    "Ask 'what's wrong' repeatedly",
-    "Say 'you're overreacting'",
-    "Try to fix it immediately",
-  ],
-  suggestedActions: [
-    "Acknowledge something seems off",
-    "Offer to listen without judgment",
-    "Give space if needed",
-  ],
+  doNotDo: ["Ask 'what's wrong' repeatedly", "Say 'you're overreacting'", "Try to fix it immediately"],
+  suggestedActions: ["Acknowledge something seems off", "Offer to listen without judgment", "Give space if needed"],
 };
 
 const mockHealthMetrics: RelationshipHealthMetrics = {
@@ -95,6 +87,4 @@ const handler = Effect.gen(function* () {
 /**
  * Demo UI command definition
  */
-export const demoUiCommand = Command.make("demo-ui", {}, () =>
-  handler.pipe(Effect.provide(InkRendererLive))
-);
+export const demoUiCommand = Command.make("demo-ui", {}, () => handler.pipe(Effect.provide(InkRendererLive)));

@@ -62,7 +62,7 @@ export const AILive = Layer.sync(AIServiceTag, () => {
             });
 
             const firstContent = res.content[0];
-            return firstContent && firstContent.type === "text" ? firstContent.text : "";
+            return firstContent?.type === "text" ? firstContent.text : "";
           }
 
           // OpenRouter / OpenAI compatible (Groq via OpenRouter)
@@ -112,7 +112,7 @@ export const AILive = Layer.sync(AIServiceTag, () => {
 
             for await (const chunk of stream) {
               const content = chunk.choices[0]?.delta?.content;
-              if (content) yield content;
+              if (content) {yield content;}
             }
           }
         })(),

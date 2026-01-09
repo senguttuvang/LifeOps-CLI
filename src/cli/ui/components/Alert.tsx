@@ -74,10 +74,7 @@ export interface FineAlertProps {
 export function FineDetectedAlert({ probability = 3 }: FineAlertProps) {
   return (
     <Box marginY={1}>
-      <Text color="yellow">
-        ⚠️ 'Fine' detected. Probability of actually fine: {probability}%.
-        Proceed with caution.
-      </Text>
+      <Text color="yellow">⚠️ 'Fine' detected. Probability of actually fine: {probability}%. Proceed with caution.</Text>
     </Box>
   );
 }
@@ -99,9 +96,7 @@ export function ShortResponseAlert({ response }: ShortResponseAlertProps) {
           . Recommended action: Call immediately.
         </Text>
       ) : (
-        <Text color="yellow">
-          ⚠️ Critically short response detected. The silence speaks volumes.
-        </Text>
+        <Text color="yellow">⚠️ Critically short response detected. The silence speaks volumes.</Text>
       )}
     </Box>
   );
@@ -118,10 +113,7 @@ export function RatioWarning({ positive, negative }: RatioWarningProps) {
 
   return (
     <Box marginY={1}>
-      <Text color="yellow">
-        ⚠️ Your ratio is {ratio.toFixed(1)}:1 (target: 5:1). Deposit positives
-        ASAP.
-      </Text>
+      <Text color="yellow">⚠️ Your ratio is {ratio.toFixed(1)}:1 (target: 5:1). Deposit positives ASAP.</Text>
     </Box>
   );
 }

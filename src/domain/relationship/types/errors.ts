@@ -53,7 +53,7 @@ export class ForgotAnniversaryError extends Data.TaggedError("Relationship/Forgo
       wedding: 5,
     };
     const multiplier = typeMultipliers[type] ?? 1;
-    return Math.round(base * Math.pow(1.5, Math.min(daysLate, 7)) * multiplier);
+    return Math.round(base * 1.5 ** Math.min(daysLate, 7) * multiplier);
   }
 }
 

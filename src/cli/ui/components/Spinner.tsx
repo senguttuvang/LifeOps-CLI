@@ -48,11 +48,7 @@ export interface SpinnerProps {
 /**
  * A loading spinner with optional message
  */
-export function Spinner({
-  message,
-  useRandomMessage = false,
-  color = "cyan",
-}: SpinnerProps) {
+export function Spinner({ message, useRandomMessage = false, color = "cyan" }: SpinnerProps) {
   const displayMessage = message ?? (useRandomMessage ? getRandomMessage() : "Loading...");
 
   return (

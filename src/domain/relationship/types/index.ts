@@ -7,5 +7,5 @@
  *   import { FineResponse, ForgotAnniversaryError } from "../types";
  */
 
-export * from "./responses";
 export * from "./errors";
+export * from "./responses";

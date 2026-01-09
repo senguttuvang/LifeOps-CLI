@@ -51,10 +51,10 @@ export const enforceSignals = (generatedDraft: string, signals: UserSignals): st
  * Enforce emoji count to match user's pattern
  */
 const enforceEmojiCount = (draft: string, signals: UserSignals): string => {
-  const currentEmojis = (draft.match(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/gu) || []).length;
+  const currentEmojis = (draft.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu) || []).length;
   const targetEmojis = Math.round(signals.emojiPerMessage);
 
-  if (currentEmojis === targetEmojis) return draft;
+  if (currentEmojis === targetEmojis) {return draft;}
 
   // Too many emojis: remove excess
   if (currentEmojis > targetEmojis) {
@@ -70,7 +70,7 @@ const enforceEmojiCount = (draft: string, signals: UserSignals): string => {
  */
 const removeExcessEmojis = (draft: string, count: number, signals: UserSignals): string => {
   const topEmojiSet = new Set(signals.topEmojis.slice(0, 3).map((e) => e.emoji));
-  const allEmojis = draft.match(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/gu) || [];
+  const allEmojis = draft.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu) || [];
 
   // Find emojis to remove (least common first)
   const toRemove: string[] = [];
@@ -95,7 +95,7 @@ const removeExcessEmojis = (draft: string, count: number, signals: UserSignals):
     result = result.replace(emoji, "");
   }
 
-  return result.replace(/\s{2,}/g, " ").trim(); // Clean up extra spaces
+  return result.replaceAll(/\s{2,}/g, " ").trim(); // Clean up extra spaces
 };
 
 /**
@@ -111,22 +111,22 @@ const addMissingEmojis = (draft: string, count: number, signals: UserSignals): s
   if (position.end > 0.6) {
     // Add at end
     return `${draft} ${emojisToAdd}`;
-  } else if (position.start > 0.6) {
+  } if (position.start > 0.6) {
     // Add at start
     return `${emojisToAdd} ${draft}`;
-  } else {
+  } 
     // Add in middle (after first sentence or at midpoint)
-    const firstSentenceEnd = draft.search(/[.!?]\s/);
+    const firstSentenceEnd = draft.search(/[!.?]\s/);
     if (firstSentenceEnd > 0) {
       return `${draft.slice(0, firstSentenceEnd + 2)}${emojisToAdd} ${draft.slice(firstSentenceEnd + 2)}`;
-    } else {
+    } 
       const mid = Math.floor(draft.length / 2);
       const spaceAfterMid = draft.indexOf(" ", mid);
       if (spaceAfterMid > 0) {
         return `${draft.slice(0, spaceAfterMid)} ${emojisToAdd}${draft.slice(spaceAfterMid)}`;
       }
-    }
-  }
+    
+  
 
   // Fallback: add at end
   return `${draft} ${emojisToAdd}`;
@@ -160,10 +160,10 @@ const enforceMessageLength = (draft: string, signals: UserSignals): string => {
 const truncateToLength = (draft: string, targetLength: number, tolerance: number): string => {
   const maxLength = Math.floor(targetLength + tolerance);
 
-  if (draft.length <= maxLength) return draft;
+  if (draft.length <= maxLength) {return draft;}
 
   // Try to keep complete sentences
-  const sentences = draft.split(/([.!?]\s+)/);
+  const sentences = draft.split(/([!.?]\s+)/);
   let result = "";
 
   for (let i = 0; i < sentences.length; i++) {
@@ -188,7 +188,7 @@ const truncateToLength = (draft: string, targetLength: number, tolerance: number
  */
 const injectCommonPhrases = (draft: string, signals: UserSignals): string => {
   const topPhrase = signals.commonPhrases[0]?.phrase;
-  if (!topPhrase) return draft;
+  if (!topPhrase) {return draft;}
 
   // Check if draft already contains this phrase
   if (draft.toLowerCase().includes(topPhrase.toLowerCase())) {
@@ -199,7 +199,7 @@ const injectCommonPhrases = (draft: string, signals: UserSignals): string => {
   if (draft.match(/\b(here|support|help|sorry)\b/i)) {
     // Add phrase as a question at the end
     const capitalizedPhrase = topPhrase.charAt(0).toUpperCase() + topPhrase.slice(1);
-    return draft.replace(/(\.|!|\?)?\s*$/, `? ${capitalizedPhrase}?`);
+    return draft.replace(/([!\.\?])?\s*$/, `? ${capitalizedPhrase}?`);
   }
 
   return draft;
@@ -253,7 +253,7 @@ const enforcePunctuationStyle = (draft: string, signals: UserSignals): string =>
   // If user rarely uses periods but draft has many, remove some
   if (signals.periodRate < 0.2 && (draft.match(/\./g)?.length ?? 0) > 1) {
     // Remove periods except at end
-    result = draft.replace(/\.(?!$)/g, "");
+    result = draft.replaceAll(/\.(?!$)/g, "");
   }
 
   // If user uses lots of exclamation marks, ensure draft has some
@@ -283,7 +283,7 @@ export const validateDraftAgainstSignals = (
   const issues: string[] = [];
 
   // Check emoji count
-  const emojiCount = (draft.match(/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/gu) || []).length;
+  const emojiCount = (draft.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu) || []).length;
   const targetEmojis = Math.round(signals.emojiPerMessage);
   if (Math.abs(emojiCount - targetEmojis) > 1) {
     issues.push(`Emoji count mismatch: has ${emojiCount}, expected ${targetEmojis}`);
@@ -293,7 +293,9 @@ export const validateDraftAgainstSignals = (
   const lengthDiff = Math.abs(draft.length - signals.avgMessageLength);
   const tolerance = signals.messageLengthStd || signals.avgMessageLength * 0.2;
   if (lengthDiff > tolerance) {
-    issues.push(`Length mismatch: ${draft.length} chars, expected ${signals.avgMessageLength.toFixed(0)} ±${tolerance.toFixed(0)}`);
+    issues.push(
+      `Length mismatch: ${draft.length} chars, expected ${signals.avgMessageLength.toFixed(0)} ±${tolerance.toFixed(0)}`,
+    );
   }
 
   // Check question if required

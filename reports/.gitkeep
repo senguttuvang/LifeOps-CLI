@@ -1,0 +1,30 @@
+# Quality Reports Directory
+
+This directory contains generated code quality reports. All contents are gitignored.
+
+## Generate Reports
+
+```bash
+bun run report:all          # Generate all reports
+bun run report:coverage     # Test coverage only
+bun run quality:arch:report # Architecture HTML report
+bun run quality:arch:viz    # Dependency graph SVG
+bun run quality:eslint:report # ESLint JSON report
+```
+
+## Report Structure
+
+```
+reports/
+├── coverage/               # Vitest coverage (HTML)
+│   └── index.html
+├── dependency-report.html  # Architecture violations
+├── dependency-graph.svg    # Module dependency visualization
+└── eslint-report.json      # ESLint issues (JSON)
+```
+
+## Viewing Reports
+
+- **Coverage**: `open reports/coverage/index.html`
+- **Architecture**: `open reports/dependency-report.html`
+- **Dependency Graph**: `open reports/dependency-graph.svg`

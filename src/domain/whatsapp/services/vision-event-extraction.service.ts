@@ -5,42 +5,43 @@
  * Extracts events from actual image files using Claude Vision API
  */
 
-import { Context, Effect, Layer } from "effect"
-import { Database } from "bun:sqlite"
-import { DatabaseError, ClaudeError } from "../errors"
+import { Database } from "bun:sqlite";
+import { Context, Effect, Layer } from "effect";
+
+import { ClaudeError, DatabaseError } from "../errors";
 
 /**
  * Image message with actual file path
  */
 export interface ImageMessageWithPath {
-  readonly id: string
-  readonly messageRowId: number
-  readonly timestamp: number
-  readonly filePath: string  // Relative path from msgstore.db
-  readonly fullPath: string  // Absolute path to actual file
-  readonly width: number | undefined
-  readonly height: number | undefined
-  readonly caption: string | undefined
+  readonly id: string;
+  readonly messageRowId: number;
+  readonly timestamp: number;
+  readonly filePath: string; // Relative path from msgstore.db
+  readonly fullPath: string; // Absolute path to actual file
+  readonly width: number | undefined;
+  readonly height: number | undefined;
+  readonly caption: string | undefined;
 }
 
 /**
  * Event extracted from image using vision model
  */
 export interface VisionExtractedEvent {
-  readonly eventName: string
-  readonly date: string | undefined
-  readonly time: string | undefined
-  readonly location: string | undefined
-  readonly organizer: string | undefined
-  readonly description: string | undefined
-  readonly category: "workshop" | "class" | "performance" | "gathering" | "ceremony" | "sports" | "notice" | "other"
-  readonly registrationInfo: string | undefined
-  readonly contactInfo: string | undefined
-  readonly sourceMessageId: number
-  readonly sourceImagePath: string
-  readonly caption: string | undefined
-  readonly confidence: number
-  readonly isEventPoster: boolean  // Filter out ads, college posters, personal photos
+  readonly eventName: string;
+  readonly date: string | undefined;
+  readonly time: string | undefined;
+  readonly location: string | undefined;
+  readonly organizer: string | undefined;
+  readonly description: string | undefined;
+  readonly category: "workshop" | "class" | "performance" | "gathering" | "ceremony" | "sports" | "notice" | "other";
+  readonly registrationInfo: string | undefined;
+  readonly contactInfo: string | undefined;
+  readonly sourceMessageId: number;
+  readonly sourceImagePath: string;
+  readonly caption: string | undefined;
+  readonly confidence: number;
+  readonly isEventPoster: boolean; // Filter out ads, college posters, personal photos
 }
 
 /**
@@ -49,9 +50,13 @@ export interface VisionExtractedEvent {
 export class VisionEventExtractionService extends Context.Tag("VisionEventExtractionService")<
   VisionEventExtractionService,
   {
-    readonly findImagesWithPaths: (limit: number) => Effect.Effect<ReadonlyArray<ImageMessageWithPath>, DatabaseError>
-    readonly extractEventFromImage: (image: ImageMessageWithPath) => Effect.Effect<VisionExtractedEvent | null, ClaudeError>
-    readonly extractEventsFromImages: (images: ReadonlyArray<ImageMessageWithPath>) => Effect.Effect<ReadonlyArray<VisionExtractedEvent>, ClaudeError>
+    readonly findImagesWithPaths: (limit: number) => Effect.Effect<ReadonlyArray<ImageMessageWithPath>, DatabaseError>;
+    readonly extractEventFromImage: (
+      image: ImageMessageWithPath,
+    ) => Effect.Effect<VisionExtractedEvent | null, ClaudeError>;
+    readonly extractEventsFromImages: (
+      images: ReadonlyArray<ImageMessageWithPath>,
+    ) => Effect.Effect<ReadonlyArray<VisionExtractedEvent>, ClaudeError>;
   }
 >() {}
 
@@ -63,34 +68,36 @@ export const VisionEventExtractionServiceLive = Layer.effect(
   Effect.gen(function* () {
     // Get OpenRouter API key
     const openRouterKey = yield* Effect.sync(() => {
-      const key = process.env.OPENROUTER_API_KEY
+      const key = process.env.OPENROUTER_API_KEY;
       if (!key) {
-        throw new Error("OPENROUTER_API_KEY not set")
+        throw new Error("OPENROUTER_API_KEY not set");
       }
-      return key
-    })
+      return key;
+    });
 
     // WhatsApp Export base path
-    const whatsappExportPath = process.env.WHATSAPP_EXPORT_PATH ?? "./data/whatsapp-export"
+    const whatsappExportPath = process.env.WHATSAPP_EXPORT_PATH ?? "./data/whatsapp-export";
 
     return {
       /**
        * Find messages with image file paths that exist
        */
-      findImagesWithPaths: (limit: number) => Effect.gen(function* () {
-        const dbPath = process.env.WHATSAPP_DB_PATH ?? "./data/msgstore.db"
-        const db = yield* Effect.try({
-          try: () => new Database(dbPath, { readonly: true }),
-          catch: (error) => new DatabaseError({
-            message: `Failed to open database: ${error}`,
-            query: undefined,
-          }),
-        })
+      findImagesWithPaths: (limit: number) =>
+        Effect.gen(function* () {
+          const dbPath = process.env.WHATSAPP_DB_PATH ?? "./data/msgstore.db";
+          const db = yield* Effect.try({
+            try: () => new Database(dbPath, { readonly: true }),
+            catch: (error) =>
+              new DatabaseError({
+                message: `Failed to open database: ${error}`,
+                query: undefined,
+              }),
+          });
 
-        const results = yield* Effect.try({
-          try: () => {
-            // Query for images with file paths, prioritizing larger images (likely posters)
-            const query = `
+          const results = yield* Effect.try({
+            try: () => {
+              // Query for images with file paths, prioritizing larger images (likely posters)
+              const query = `
               SELECT
                 m._id,
                 m.key_id,
@@ -109,86 +116,90 @@ export const VisionEventExtractionServiceLive = Layer.effect(
               AND m.timestamp < 1715904000000
               ORDER BY m.timestamp DESC
               LIMIT ?
-            `
+            `;
 
-            return db.prepare(query).all(limit) as Array<{
-              _id: number
-              key_id: string
-              timestamp: number
-              file_path: string
-              width: number | null
-              height: number | null
-              media_caption: string | null
-            }>
-          },
-          catch: (error) => new DatabaseError({
-            message: `Query failed: ${error}`,
-            query: "findImagesWithPaths",
-          }),
-        })
+              return db.prepare(query).all(limit) as Array<{
+                _id: number;
+                key_id: string;
+                timestamp: number;
+                file_path: string;
+                width: number | null;
+                height: number | null;
+                media_caption: string | null;
+              }>;
+            },
+            catch: (error) =>
+              new DatabaseError({
+                message: `Query failed: ${error}`,
+                query: "findImagesWithPaths",
+              }),
+          });
 
-        db.close()
+          db.close();
 
-        // Filter for images that actually exist on disk
-        const imagesWithPaths = results.map(r => ({
-          id: r.key_id,
-          messageRowId: r._id,
-          timestamp: r.timestamp,
-          filePath: r.file_path,
-          fullPath: `${whatsappExportPath}/${r.file_path}`,
-          width: r.width ?? undefined,
-          height: r.height ?? undefined,
-          caption: r.media_caption ?? undefined,
-        }))
+          // Filter for images that actually exist on disk
+          const imagesWithPaths = results.map((r) => ({
+            id: r.key_id,
+            messageRowId: r._id,
+            timestamp: r.timestamp,
+            filePath: r.file_path,
+            fullPath: `${whatsappExportPath}/${r.file_path}`,
+            width: r.width ?? undefined,
+            height: r.height ?? undefined,
+            caption: r.media_caption ?? undefined,
+          }));
 
-        // Verify files exist (using Effect)
-        const existingImages: ImageMessageWithPath[] = []
-        for (const img of imagesWithPaths) {
-          const exists = yield* Effect.tryPromise({
-            try: async () => await Bun.file(img.fullPath).exists(),
-            catch: () => false,
-          })
-          if (exists) {
-            existingImages.push(img)
+          // Verify files exist (using Effect)
+          const existingImages: ImageMessageWithPath[] = [];
+          for (const img of imagesWithPaths) {
+            const exists = yield* Effect.tryPromise({
+              try: async () => await Bun.file(img.fullPath).exists(),
+              catch: () => false,
+            });
+            if (exists) {
+              existingImages.push(img);
+            }
           }
-        }
 
-        return existingImages
-      }),
+          return existingImages;
+        }),
 
       /**
        * Extract event from image using Claude Vision
        */
-      extractEventFromImage: (image: ImageMessageWithPath) => Effect.gen(function* () {
-        // Read image file
-        const imageFile = yield* Effect.tryPromise({
-          try: async () => {
-            const file = Bun.file(image.fullPath)
-            const exists = await file.exists()
-            if (!exists) {
-              throw new Error(`Image file not found: ${image.fullPath}`)
-            }
-            return file
-          },
-          catch: (error) => new ClaudeError({
-            message: `Failed to read image: ${error}`,
-            prompt: undefined,
-          }),
-        })
+      extractEventFromImage: (image: ImageMessageWithPath) =>
+        Effect.gen(function* () {
+          // Read image file
+          const imageFile = yield* Effect.tryPromise({
+            try: async () => {
+              const file = Bun.file(image.fullPath);
+              const exists = await file.exists();
+              if (!exists) {
+                throw new Error(`Image file not found: ${image.fullPath}`);
+              }
+              return file;
+            },
+            catch: (error) =>
+              new ClaudeError({
+                message: `Failed to read image: ${error}`,
+                prompt: undefined,
+              }),
+          });
 
-        // Convert to base64
-        const imageBytes = yield* Effect.tryPromise({
-          try: async () => await imageFile.arrayBuffer(),
-          catch: (error) => new ClaudeError({
-            message: `Failed to read image bytes: ${error}`,
-            prompt: undefined,
-          }),
-        })
+          // Convert to base64
+          const imageBytes = yield* Effect.tryPromise({
+            try: async () => await imageFile.arrayBuffer(),
+            catch: (error) =>
+              new ClaudeError({
+                message: `Failed to read image bytes: ${error}`,
+                prompt: undefined,
+              }),
+          });
 
-        const base64Image = Buffer.from(imageBytes).toString('base64')
+          const base64Image = Buffer.from(imageBytes).toString("base64");
 
-        // Prepare vision prompt
-        const prompt = `Analyze this image and determine if it's an EVENT POSTER for Auroville community events.
+          // Prepare vision prompt
+          const prompt = `Analyze this image and determine if it's an EVENT POSTER for Auroville community events.
 
 EVENT POSTERS include:
 - Workshops, classes, sessions
@@ -216,7 +227,7 @@ If this IS an event poster, extract:
 - Contact information
 - Category (workshop, class, performance, gathering, ceremony, sports, notice, other)
 
-${image.caption ? `\nImage caption from WhatsApp: "${image.caption}"` : ''}
+${image.caption ? `\nImage caption from WhatsApp: "${image.caption}"` : ""}
 
 Return ONLY valid JSON:
 {
@@ -233,128 +244,131 @@ Return ONLY valid JSON:
   "confidence": 0.0-1.0
 }
 
-If not an event poster, return: {"isEventPoster": false, "confidence": 0.0}`
+If not an event poster, return: {"isEventPoster": false, "confidence": 0.0}`;
 
-        // Call OpenRouter Vision API (Google Gemini Flash for cost-effectiveness)
-        const response = yield* Effect.tryPromise({
-          try: async () => {
-            const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${openRouterKey}`,
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://lifeops.local",
-                "X-Title": "LifeOps WhatsApp Vision Event Extraction",
-              },
-              body: JSON.stringify({
-                model: "qwen/qwen-2-vl-72b-instruct",  // Cost-effective vision model ($0.19/M tokens)
-                messages: [
-                  {
-                    role: "user",
-                    content: [
-                      {
-                        type: "text",
-                        text: prompt,
-                      },
-                      {
-                        type: "image_url",
-                        image_url: {
-                          url: `data:image/jpeg;base64,${base64Image}`,
+          // Call OpenRouter Vision API (Google Gemini Flash for cost-effectiveness)
+          const response = yield* Effect.tryPromise({
+            try: async () => {
+              const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${openRouterKey}`,
+                  "Content-Type": "application/json",
+                  "HTTP-Referer": "https://lifeops.local",
+                  "X-Title": "LifeOps WhatsApp Vision Event Extraction",
+                },
+                body: JSON.stringify({
+                  model: "qwen/qwen-2-vl-72b-instruct", // Cost-effective vision model ($0.19/M tokens)
+                  messages: [
+                    {
+                      role: "user",
+                      content: [
+                        {
+                          type: "text",
+                          text: prompt,
                         },
-                      },
-                    ],
-                  },
-                ],
-                max_tokens: 1024,
-                temperature: 0.2,
+                        {
+                          type: "image_url",
+                          image_url: {
+                            url: `data:image/jpeg;base64,${base64Image}`,
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                  max_tokens: 1024,
+                  temperature: 0.2,
+                }),
+              });
+
+              if (!res.ok) {
+                const error = await res.text();
+                throw new Error(`OpenRouter API error: ${error}`);
+              }
+
+              const data = (await res.json()) as any;
+              return data.choices[0].message.content;
+            },
+            catch: (error) =>
+              new ClaudeError({
+                message: `Vision API failed: ${error}`,
+                prompt: prompt.slice(0, 200),
               }),
-            })
+          });
 
-            if (!res.ok) {
-              const error = await res.text()
-              throw new Error(`OpenRouter API error: ${error}`)
-            }
+          // Parse JSON response
+          const parsed = yield* Effect.try({
+            try: () => {
+              // Extract JSON from response
+              const jsonMatch =
+                response.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) || response.match(/(\{[\s\S]*\})/);
 
-            const data = await res.json() as any
-            return data.choices[0].message.content
-          },
-          catch: (error) => new ClaudeError({
-            message: `Vision API failed: ${error}`,
-            prompt: prompt.slice(0, 200),
-          }),
-        })
+              if (!jsonMatch) {
+                return null;
+              }
 
-        // Parse JSON response
-        const parsed = yield* Effect.try({
-          try: () => {
-            // Extract JSON from response
-            const jsonMatch = response.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/) ||
-                             response.match(/(\{[\s\S]*\})/)
+              const json = JSON.parse(jsonMatch[1]);
 
-            if (!jsonMatch) {
-              return null
-            }
+              // Return null if not an event poster
+              if (!json.isEventPoster) {
+                return null;
+              }
 
-            const json = JSON.parse(jsonMatch[1])
+              return json;
+            },
+            catch: () => null,
+          });
 
-            // Return null if not an event poster
-            if (!json.isEventPoster) {
-              return null
-            }
+          if (!parsed) {
+            return null;
+          }
 
-            return json
-          },
-          catch: () => null,
-        })
-
-        if (!parsed) {
-          return null
-        }
-
-        return {
-          eventName: parsed.eventName ?? "Unknown Event",
-          date: parsed.date ?? undefined,
-          time: parsed.time ?? undefined,
-          location: parsed.location ?? undefined,
-          organizer: parsed.organizer ?? undefined,
-          description: parsed.description ?? undefined,
-          category: parsed.category ?? "other",
-          registrationInfo: parsed.registrationInfo ?? undefined,
-          contactInfo: parsed.contactInfo ?? undefined,
-          sourceMessageId: image.messageRowId,
-          sourceImagePath: image.fullPath,
-          caption: image.caption,
-          confidence: parsed.confidence ?? 0.5,
-          isEventPoster: true,
-        }
-      }),
+          return {
+            eventName: parsed.eventName ?? "Unknown Event",
+            date: parsed.date ?? undefined,
+            time: parsed.time ?? undefined,
+            location: parsed.location ?? undefined,
+            organizer: parsed.organizer ?? undefined,
+            description: parsed.description ?? undefined,
+            category: parsed.category ?? "other",
+            registrationInfo: parsed.registrationInfo ?? undefined,
+            contactInfo: parsed.contactInfo ?? undefined,
+            sourceMessageId: image.messageRowId,
+            sourceImagePath: image.fullPath,
+            caption: image.caption,
+            confidence: parsed.confidence ?? 0.5,
+            isEventPoster: true,
+          };
+        }),
 
       /**
        * Extract events from multiple images (batch processing with rate limiting)
        */
-      extractEventsFromImages: (images: ReadonlyArray<ImageMessageWithPath>) => Effect.gen(function* () {
-        const events: VisionExtractedEvent[] = []
-        const service = yield* VisionEventExtractionService
+      extractEventsFromImages: (images: ReadonlyArray<ImageMessageWithPath>) =>
+        Effect.gen(function* () {
+          const events: VisionExtractedEvent[] = [];
+          const service = yield* VisionEventExtractionService;
 
-        // Process images one by one with rate limiting (for sampling/testing)
-        for (const image of images.slice(0, 10)) {  // Limit to 10 images for sampling
-          try {
-            const event = yield* service.extractEventFromImage(image)
+          // Process images one by one with rate limiting (for sampling/testing)
+          for (const image of images.slice(0, 10)) {
+            // Limit to 10 images for sampling
+            try {
+              const event = yield* service.extractEventFromImage(image);
 
-            if (event && event.isEventPoster) {
-              events.push(event)
+              if (event && event.isEventPoster) {
+                events.push(event);
+              }
+
+              // Rate limiting: Claude Vision has limits, add delay
+              yield* Effect.sleep("2 seconds");
+            } catch (error) {
+              console.error(`Failed to extract from image ${image.id}:`, error);
+              // Continue with next image
             }
-
-            // Rate limiting: Claude Vision has limits, add delay
-            yield* Effect.sleep("2 seconds")
-          } catch (error) {
-            console.error(`Failed to extract from image ${image.id}:`, error)
-            // Continue with next image
           }
-        }
 
-        return events
-      }),
-    }
-  })
-)
+          return events;
+        }),
+    };
+  }),
+);

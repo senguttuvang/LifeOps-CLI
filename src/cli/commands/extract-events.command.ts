@@ -5,9 +5,13 @@
  * Usage: bun run cli extract-events
  */
 
-import { Command } from "@effect/cli"
-import { Effect, Console } from "effect"
-import { EventExtractionService, EventExtractionServiceLive } from "../../domain/whatsapp/services/event-extraction.service"
+import { Command } from "@effect/cli";
+import { Console, Effect } from "effect";
+
+import {
+  EventExtractionService,
+  EventExtractionServiceLive,
+} from "../../domain/whatsapp/services/event-extraction.service";
 
 /**
  * Format event as markdown
@@ -28,22 +32,25 @@ ${event.description || "No description provided"}
 **Source Messages:** ${event.sourceMessages.length} message(s)
 
 ---
-`
+`;
 }
 
 /**
  * Get statistics by category
  */
 function getCategoryStats(events: ReadonlyArray<{ category: string }>): string {
-  const counts = events.reduce((acc: Record<string, number>, event) => {
-    acc[event.category] = (acc[event.category] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const counts = events.reduce(
+    (acc: Record<string, number>, event) => {
+      acc[event.category] = (acc[event.category] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   return Object.entries(counts)
     .sort(([, a], [, b]) => b - a)
     .map(([category, count]) => `- **${category}**: ${count}`)
-    .join('\n')
+    .join("\n");
 }
 
 /**
@@ -51,43 +58,40 @@ function getCategoryStats(events: ReadonlyArray<{ category: string }>): string {
  *
  * Extracts events from WhatsApp messages using AI analysis.
  */
-export const extractEventsCommand = Command.make(
-  "extract-events",
-  {},
-  () =>
-    Effect.gen(function* () {
-      yield* Console.log("🔍 Extracting events from WhatsApp messages...\n")
+export const extractEventsCommand = Command.make("extract-events", {}, () =>
+  Effect.gen(function* () {
+    yield* Console.log("🔍 Extracting events from WhatsApp messages...\n");
 
-      const service = yield* EventExtractionService
+    const service = yield* EventExtractionService;
 
-      // Find candidate messages (last 365 days)
-      yield* Console.log("📊 Finding event candidates...")
-      const candidates = yield* service.findEventCandidates(365)
-      yield* Console.log(`   Found ${candidates.length} candidate messages\n`)
+    // Find candidate messages (last 365 days)
+    yield* Console.log("📊 Finding event candidates...");
+    const candidates = yield* service.findEventCandidates(365);
+    yield* Console.log(`   Found ${candidates.length} candidate messages\n`);
 
-      if (candidates.length === 0) {
-        yield* Console.log("❌ No event candidates found")
-        return
-      }
+    if (candidates.length === 0) {
+      yield* Console.log("❌ No event candidates found");
+      return;
+    }
 
-      // Extract events
-      yield* Console.log("🤖 Extracting events with Claude...")
-      const events = yield* service.extractEvents(candidates)
-      yield* Console.log(`   Extracted ${events.length} events\n`)
+    // Extract events
+    yield* Console.log("🤖 Extracting events with Claude...");
+    const events = yield* service.extractEvents(candidates);
+    yield* Console.log(`   Extracted ${events.length} events\n`);
 
-      if (events.length === 0) {
-        yield* Console.log("❌ No events extracted")
-        return
-      }
+    if (events.length === 0) {
+      yield* Console.log("❌ No events extracted");
+      return;
+    }
 
-      // Deduplicate
-      yield* Console.log("🔄 Deduplicating events...")
-      const uniqueEvents = yield* service.deduplicateEvents(events)
-      yield* Console.log(`   ${uniqueEvents.length} unique events\n`)
+    // Deduplicate
+    yield* Console.log("🔄 Deduplicating events...");
+    const uniqueEvents = yield* service.deduplicateEvents(events);
+    yield* Console.log(`   ${uniqueEvents.length} unique events\n`);
 
-      // Generate report (first 10)
-      const top10 = uniqueEvents.slice(0, 10)
-      const report = `# Auroville WhatsApp Events Report
+    // Generate report (first 10)
+    const top10 = uniqueEvents.slice(0, 10);
+    const report = `# Auroville WhatsApp Events Report
 
 **Generated:** ${new Date().toISOString()}
 **Source:** WhatsApp group messages (last 365 days)
@@ -98,7 +102,7 @@ export const extractEventsCommand = Command.make(
 
 ---
 
-${top10.map((event, idx) => formatEvent(event, idx + 1)).join('\n')}
+${top10.map((event, idx) => formatEvent(event, idx + 1)).join("\n")}
 
 ## Statistics by Category
 
@@ -117,18 +121,18 @@ ${getCategoryStats(uniqueEvents)}
 - Calendar integration (iCal export)
 - Automatic event reminders
 - Location geocoding for mapping
-`
+`;
 
-      // Save to vault (configurable via environment variable)
-      const vaultPath = process.env.LIFEOPS_REPORT_PATH ?? "./reports/WhatsApp-Events-Report.md"
-      yield* Effect.tryPromise({
-        try: () => Bun.write(vaultPath, report),
-        catch: (error) => new Error(`Failed to write report: ${error}`),
-      })
+    // Save to vault (configurable via environment variable)
+    const vaultPath = process.env.LIFEOPS_REPORT_PATH ?? "./reports/WhatsApp-Events-Report.md";
+    yield* Effect.tryPromise({
+      try: () => Bun.write(vaultPath, report),
+      catch: (error) => new Error(`Failed to write report: ${error}`),
+    });
 
-      yield* Console.log(`✅ Report saved to: ${vaultPath}`)
-      yield* Console.log(`\n📈 Summary:`)
-      yield* Console.log(`   Total events: ${uniqueEvents.length}`)
-      yield* Console.log(`   Report includes: First ${top10.length} events`)
-    }).pipe(Effect.provide(EventExtractionServiceLive)),
-)
+    yield* Console.log(`✅ Report saved to: ${vaultPath}`);
+    yield* Console.log(`\n📈 Summary:`);
+    yield* Console.log(`   Total events: ${uniqueEvents.length}`);
+    yield* Console.log(`   Report includes: First ${top10.length} events`);
+  }).pipe(Effect.provide(EventExtractionServiceLive)),
+);

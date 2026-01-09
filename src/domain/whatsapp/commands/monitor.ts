@@ -5,9 +5,11 @@
  */
 
 import { Effect, Schedule } from "effect";
-import { WhatsAppServiceTag } from "../../../infrastructure/whatsapp/whatsapp.client";
-import { parseCommand } from "./parser";
+
 import { dispatchCommand } from "./dispatcher";
+import { parseCommand } from "./parser";
+// Import from domain ports (not directly from infrastructure)
+import { WhatsAppServiceTag } from "../../ports";
 
 export interface MonitorConfig {
   /**
@@ -47,9 +49,7 @@ export interface MonitorConfig {
  *   program.pipe(Effect.provide(WhatsAppServiceLive))
  * );
  */
-export const monitorSelfDM = (
-  config: MonitorConfig
-) => {
+export const monitorSelfDM = (config: MonitorConfig) => {
   const pollInterval = config.pollIntervalSeconds ?? 5;
   let lastProcessedTimestamp = Date.now();
 
@@ -97,9 +97,7 @@ export const monitorSelfDM = (
       }
 
       if (config.verbose) {
-        console.log(
-          `[Monitor] Processing command: ${command.name} with args: "${command.args}"`
-        );
+        console.log(`[Monitor] Processing command: ${command.name} with args: "${command.args}"`);
       }
 
       // Dispatch command
@@ -132,8 +130,8 @@ export const monitorSelfDM = (
         console.error(`[Monitor] Error during polling:`, error);
         // Return success to continue polling despite errors
         return Effect.void;
-      })
+      }),
     ),
-    Schedule.spaced(`${pollInterval} seconds`)
+    Schedule.spaced(`${pollInterval} seconds`),
   ).pipe(Effect.asVoid);
 };

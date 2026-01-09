@@ -6,16 +6,12 @@
  */
 
 import { Effect } from "effect";
+
 import { AnalysisServiceTag } from "../../../relationship/analysis.service";
 
-export const handleDraft = (
-  intent: string,
-  chatId: string
-): Effect.Effect<string, Error> => {
+export const handleDraft = (intent: string, chatId: string): Effect.Effect<string, Error> => {
   if (!intent) {
-    return Effect.succeed(
-      "Please describe what you want to say.\nExample: @lifeops draft apology for being late"
-    );
+    return Effect.succeed("Please describe what you want to say.\nExample: @lifeops draft apology for being late");
   }
 
   return Effect.gen(function* () {

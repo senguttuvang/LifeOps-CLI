@@ -6,10 +6,7 @@
 
 import { Effect } from "effect";
 
-export const handleSuggest = (
-  args: string,
-  chatId: string
-): Effect.Effect<string, Error, never> => {
+export const handleSuggest = (args: string, chatId: string): Effect.Effect<string, Error, never> => {
   const category = args || "any";
 
   // TODO: Implement actual suggestion logic

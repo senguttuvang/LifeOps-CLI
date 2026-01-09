@@ -17,17 +17,17 @@
  */
 
 import { Context, Effect, Layer } from "effect";
-import { DatabaseService } from "../../../infrastructure/db/client";
-import { AIServiceTag } from "../../../infrastructure/llm/ai.service";
-import { VectorStoreService } from "../../../infrastructure/rag/vector.store";
+
+// Import from domain ports (not directly from infrastructure)
+import { AIServiceTag, DatabaseService, VectorStoreService } from "../../ports";
 import {
-  SignalExtractionServiceTag,
-  buildSignalEnhancedPrompt,
   buildBasicPrompt,
+  buildSignalEnhancedPrompt,
+  type DraftQualityScore,
   enforceSignals,
+  SignalExtractionServiceTag,
   scoreDraftQuality,
   type UserSignals,
-  type DraftQualityScore,
 } from "../../signals";
 
 /**
@@ -72,7 +72,7 @@ export interface SignalEnhancedDraftService {
       forceSignalExtraction?: boolean;
       /** Enable verbose logging (default: false) */
       verbose?: boolean;
-    }
+    },
   ) => Effect.Effect<DraftResult, Error>;
 }
 
@@ -99,49 +99,48 @@ export const SignalEnhancedDraftLive = Layer.effect(
       userId: string,
       chatId: string,
       incomingMessage: string,
-      options = {}
+      options = {},
     ): Effect.Effect<DraftResult, Error> =>
       Effect.gen(function* () {
         const { forceSignalExtraction = false, verbose = false } = options;
 
         if (verbose) {
-          console.log(`[SignalDraft] Generating draft for message: "${incomingMessage.substring(0, 50)}..."`);
+          console.log(`[SignalDraft] Generating draft for message: "${incomingMessage.slice(0, 50)}..."`);
         }
 
         // Step 1: Try to load user signals
         let signals: UserSignals | undefined;
         try {
           if (forceSignalExtraction) {
-            if (verbose) console.log(`[SignalDraft] Forcing signal extraction...`);
+            if (verbose) {console.log(`[SignalDraft] Forcing signal extraction...`);}
             signals = yield* signalService.extractSignals(userId);
           } else {
-            if (verbose) console.log(`[SignalDraft] Loading cached signals...`);
+            if (verbose) {console.log(`[SignalDraft] Loading cached signals...`);}
             signals = yield* signalService.getSignals(userId);
 
             // If no signals exist, try to extract them
             if (!signals) {
-              if (verbose) console.log(`[SignalDraft] No signals found, extracting...`);
+              if (verbose) {console.log(`[SignalDraft] No signals found, extracting...`);}
               try {
                 signals = yield* signalService.extractSignals(userId);
-              } catch (e) {
+              } catch {
                 // Extraction failed (probably insufficient data), continue without signals
-                if (verbose)
-                  console.log(`[SignalDraft] Signal extraction failed (insufficient data), using basic RAG`);
+                if (verbose) {console.log(`[SignalDraft] Signal extraction failed (insufficient data), using basic RAG`);}
               }
             }
           }
-        } catch (e) {
-          if (verbose) console.log(`[SignalDraft] Could not load signals, using basic RAG`);
+        } catch {
+          if (verbose) {console.log(`[SignalDraft] Could not load signals, using basic RAG`);}
           signals = undefined;
         }
 
         // Step 2: RAG search for similar messages
-        if (verbose) console.log(`[SignalDraft] Searching RAG for similar messages...`);
+        if (verbose) {console.log(`[SignalDraft] Searching RAG for similar messages...`);}
 
         const ragResults = yield* vectorStore.search(`respond to: ${incomingMessage}`, 5);
         const ragExamples = ragResults.map((r) => r.text);
 
-        if (verbose) console.log(`[SignalDraft] Found ${ragExamples.length} similar examples`);
+        if (verbose) {console.log(`[SignalDraft] Found ${ragExamples.length} similar examples`);}
 
         // Step 3: Build prompt (signal-enhanced or basic)
         const prompt = signals
@@ -153,7 +152,7 @@ export const SignalEnhancedDraftLive = Layer.effect(
         }
 
         // Step 4: Generate draft with LLM
-        if (verbose) console.log(`[SignalDraft] Generating draft with LLM...`);
+        if (verbose) {console.log(`[SignalDraft] Generating draft with LLM...`);}
 
         const rawDraft = yield* ai.generateText([
           {
@@ -168,7 +167,7 @@ export const SignalEnhancedDraftLive = Layer.effect(
         // Step 5: Enforce signals (if available)
         let finalDraft = rawDraft;
         if (signals) {
-          if (verbose) console.log(`[SignalDraft] Enforcing signals on draft...`);
+          if (verbose) {console.log(`[SignalDraft] Enforcing signals on draft...`);}
           finalDraft = enforceSignals(rawDraft, signals);
         }
 
@@ -201,5 +200,5 @@ export const SignalEnhancedDraftLive = Layer.effect(
     return {
       generateDraft,
     };
-  })
+  }),
 );

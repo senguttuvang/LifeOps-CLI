@@ -14,20 +14,24 @@
 
 import { and, desc, eq } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-import { DatabaseService } from "../../infrastructure/db/client";
-import { interactions, messages, conversations } from "../../infrastructure/db/schema";
-import { userSignals } from "../../infrastructure/db/signal-schema";
-import type { MessageForSignals, UserSignals } from "./types";
+
 import {
-  extractResponseTimes,
+  extractBehavioralPatterns,
   extractEmojiPatterns,
   extractMessageStructure,
   extractPhrasePatterns,
   extractPunctuationPatterns,
-  extractBehavioralPatterns,
+  extractResponseTimes,
   extractTemporalPatterns,
 } from "./extractors";
 import { signalCache } from "./signal-cache";
+// Import from domain ports (not directly from infrastructure)
+import { DatabaseService } from "../ports";
+// Schema types are still needed for query construction
+import { conversations, interactions, messages } from "../../infrastructure/db/schema";
+import { userSignals } from "../../infrastructure/db/signal-schema";
+
+import type { MessageForSignals, UserSignals } from "./types";
 
 /**
  * Minimum messages required for reliable signal extraction
@@ -127,10 +131,10 @@ export const SignalExtractionLive = Layer.effect(
      * Calculate confidence score based on sample size and quality
      */
     const calculateConfidence = (messageCount: number): number => {
-      if (messageCount < MIN_MESSAGE_COUNT) return 0;
-      if (messageCount < 100) return 0.5;
-      if (messageCount < 200) return 0.7;
-      if (messageCount < 500) return 0.85;
+      if (messageCount < MIN_MESSAGE_COUNT) {return 0;}
+      if (messageCount < 100) {return 0.5;}
+      if (messageCount < 200) {return 0.7;}
+      if (messageCount < 500) {return 0.85;}
       return 0.95;
     };
 
@@ -200,11 +204,7 @@ export const SignalExtractionLive = Layer.effect(
               .where(eq(userSignals.userId, signals.userId))
               .execute();
 
-            if (existing.length > 0) {
-              await db.update(userSignals).set(record).where(eq(userSignals.userId, signals.userId)).execute();
-            } else {
-              await db.insert(userSignals).values(record).execute();
-            }
+            await (existing.length > 0 ? db.update(userSignals).set(record).where(eq(userSignals.userId, signals.userId)).execute() : db.insert(userSignals).values(record).execute());
           },
           catch: (e) => new Error(`Failed to store signals: ${e}`),
         });
@@ -317,7 +317,7 @@ export const SignalExtractionLive = Layer.effect(
       Effect.gen(function* () {
         // Check cache first
         const cached = signalCache.get(userId);
-        if (cached) return cached;
+        if (cached) {return cached;}
 
         // Fetch from database
         const result = yield* Effect.tryPromise({
@@ -325,7 +325,7 @@ export const SignalExtractionLive = Layer.effect(
           catch: (e) => new Error(`Failed to retrieve signals: ${e}`),
         });
 
-        if (result.length === 0) return undefined;
+        if (result.length === 0) {return;}
 
         const record = result[0];
 

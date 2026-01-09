@@ -6,7 +6,8 @@
  */
 
 import { Command, Options } from "@effect/cli";
-import { Effect, Console } from "effect";
+import { Console, Effect } from "effect";
+
 import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
 
 /**

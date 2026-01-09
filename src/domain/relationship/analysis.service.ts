@@ -1,9 +1,10 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-import { DatabaseService } from "../../infrastructure/db/client";
-import { interactions, messages, conversations } from "../../infrastructure/db/schema";
-import { AIServiceTag } from "../../infrastructure/llm/ai.service";
-import { VectorStoreService } from "../../infrastructure/rag/vector.store";
+
+// Import from domain ports (not directly from infrastructure)
+import { AIServiceTag, DatabaseService, VectorStoreService } from "../ports";
+// Schema types are still needed for query construction
+import { conversations, interactions, messages } from "../../infrastructure/db/schema";
 
 // --- Interface ---
 
@@ -42,12 +43,7 @@ export const AnalysisLive = Layer.effect(
               .from(messages)
               .innerJoin(interactions, eq(messages.interactionId, interactions.id))
               .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
-              .where(
-                and(
-                  eq(conversations.sourceConversationId, chatId),
-                  eq(interactions.isIndexed, false)
-                )
-              )
+              .where(and(eq(conversations.sourceConversationId, chatId), eq(interactions.isIndexed, false)))
               .execute(),
           catch: (e) => new Error(`Failed to fetch unindexed messages: ${e}`),
         });

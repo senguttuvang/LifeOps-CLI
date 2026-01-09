@@ -8,17 +8,18 @@
  */
 
 import { Effect, Layer } from "effect";
+
+import { AnalysisLive } from "../../domain/relationship/analysis.service";
 import { monitorSelfDM } from "../../domain/whatsapp/commands/monitor";
 // Domain layers
 import { SyncServiceLive } from "../../domain/whatsapp/sync.service";
-import { AnalysisLive } from "../../domain/relationship/analysis.service";
 import { WhatsAppAdapterLive } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";
 import { AndroidImportServiceLive } from "../../infrastructure/android/android-import.service";
 // Infrastructure layers
 import { DatabaseLive } from "../../infrastructure/db/client";
-import { WhatsAppServiceLive } from "../../infrastructure/whatsapp/whatsapp.client";
-import { VectorStoreLive } from "../../infrastructure/rag/vector.store";
 import { AILive } from "../../infrastructure/llm/ai.service";
+import { VectorStoreLive } from "../../infrastructure/rag/vector.store";
+import { WhatsAppServiceLive } from "../../infrastructure/whatsapp/whatsapp.client";
 
 /**
  * Assemble all service layers (same as main CLI)
@@ -29,18 +30,12 @@ const InfrastructureLive = Layer.mergeAll(
   WhatsAppAdapterLive,
   AndroidImportServiceLive,
   VectorStoreLive,
-  AILive
+  AILive,
 );
 
-const DomainLive = Layer.mergeAll(
-  SyncServiceLive,
-  AnalysisLive
-);
+const DomainLive = Layer.mergeAll(SyncServiceLive, AnalysisLive);
 
-const MainLive = DomainLive.pipe(
-  Layer.provide(InfrastructureLive),
-  Layer.merge(InfrastructureLive)
-);
+const MainLive = DomainLive.pipe(Layer.provide(InfrastructureLive), Layer.merge(InfrastructureLive));
 
 /**
  * Start self-DM monitor
@@ -56,15 +51,11 @@ const main = () => {
 
   if (!selfChatId) {
     console.error("Error: SELF_CHAT_ID environment variable is required");
-    console.error(
-      'Example: SELF_CHAT_ID="1234567890@s.whatsapp.net" bun run src/cli/commands/self-dm-monitor.ts'
-    );
+    console.error('Example: SELF_CHAT_ID="1234567890@s.whatsapp.net" bun run src/cli/commands/self-dm-monitor.ts');
     process.exit(1);
   }
 
-  const pollInterval = process.env.POLL_INTERVAL
-    ? Number.parseInt(process.env.POLL_INTERVAL, 10)
-    : 5;
+  const pollInterval = process.env.POLL_INTERVAL ? Number.parseInt(process.env.POLL_INTERVAL, 10) : 5;
 
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("🤖 LifeOps Self-DM Monitor");

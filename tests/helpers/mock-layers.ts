@@ -61,6 +61,15 @@ export interface SignalExtractionService {
   readonly getSignals: (userId: string) => Effect.Effect<UserSignals | undefined, Error>;
 }
 
+/**
+ * AnalysisService interface - matches src/domain/relationship/analysis.service.ts
+ */
+export interface AnalysisService {
+  readonly indexChat: (chatId: string) => Effect.Effect<void, Error>;
+  readonly analyze: (chatId: string) => Effect.Effect<string, Error>;
+  readonly draftResponse: (chatId: string, intent: string) => Effect.Effect<string, Error>;
+}
+
 // =============================================================================
 // SERVICE TAGS (re-defined to avoid importing from source)
 // =============================================================================
@@ -82,6 +91,11 @@ export class SignalExtractionServiceTag extends Context.Tag("SignalExtractionSer
   SignalExtractionServiceTag,
   SignalExtractionService
 >() {}
+
+/**
+ * AnalysisServiceTag - must match the tag string in source
+ */
+export class AnalysisServiceTag extends Context.Tag("AnalysisService")<AnalysisServiceTag, AnalysisService>() {}
 
 // =============================================================================
 // MOCK WHATSAPP SERVICE
@@ -254,6 +268,67 @@ export const createMockSignalExtractionLayer = (
   };
 
   return Layer.succeed(SignalExtractionServiceTag, mockService);
+};
+
+// =============================================================================
+// MOCK ANALYSIS SERVICE
+// =============================================================================
+
+export interface MockAnalysisOptions {
+  analysisResult?: string;
+  draftResult?: string;
+  shouldFail?: boolean;
+  failureMessage?: string;
+  noMessages?: boolean;
+}
+
+export const createMockAnalysisLayer = (options: MockAnalysisOptions = {}): Layer.Layer<AnalysisServiceTag> => {
+  const mockService: AnalysisService = {
+    indexChat: (_chatId) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Index failed"));
+      }
+      return Effect.succeed(undefined);
+    },
+
+    analyze: (_chatId) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Analysis failed"));
+      }
+      if (options.noMessages) {
+        return Effect.succeed("No messages found for this chat.");
+      }
+      return Effect.succeed(
+        options.analysisResult ||
+          `## Relationship State Report
+
+### Current Emotional Tone
+The conversation shows a warm and engaged tone. Both parties seem comfortable sharing.
+
+### Key Topics
+- Weekend plans
+- Work stress
+- Shared memories
+
+### Sentiments
+Positive overall, with minor tension around scheduling.
+
+### Suggestions
+Consider scheduling dedicated time together this weekend.`,
+      );
+    },
+
+    draftResponse: (_chatId, _intent) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Draft failed"));
+      }
+      return Effect.succeed(
+        options.draftResult || "Hey! I was thinking about what you said earlier. How about we talk more about it over dinner?",
+      );
+    },
+  };
+
+  return Layer.succeed(AnalysisServiceTag, mockService);
 };
 
 // =============================================================================
