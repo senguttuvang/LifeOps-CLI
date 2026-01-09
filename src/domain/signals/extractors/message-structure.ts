@@ -43,7 +43,7 @@ export const extractMessageStructure = (messages: MessageForSignals[]): MessageS
   const avgLength = lengths.reduce((a, b) => a + b, 0) / lengths.length;
 
   // Calculate standard deviation
-  const squaredDiffs = lengths.map((len) => Math.pow(len - avgLength, 2));
+  const squaredDiffs = lengths.map((len) => (len - avgLength) ** 2);
   const variance = squaredDiffs.reduce((a, b) => a + b, 0) / lengths.length;
   const stdDev = Math.sqrt(variance);
 

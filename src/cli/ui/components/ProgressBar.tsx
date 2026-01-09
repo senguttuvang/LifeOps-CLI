@@ -26,12 +26,7 @@ function getColor(value: number): string {
 /**
  * A visual progress bar with automatic coloring
  */
-export function ProgressBar({
-  value,
-  width = 20,
-  showPercentage = true,
-  label,
-}: ProgressBarProps) {
+export function ProgressBar({ value, width = 20, showPercentage = true, label }: ProgressBarProps) {
   const clampedValue = Math.max(0, Math.min(100, value));
   const filled = Math.round((clampedValue / 100) * width);
   const empty = width - filled;
@@ -46,9 +41,7 @@ export function ProgressBar({
       )}
       <Text color={color}>{"█".repeat(filled)}</Text>
       <Text dimColor>{"░".repeat(empty)}</Text>
-      {showPercentage && (
-        <Text color={color}> {clampedValue.toFixed(0)}%</Text>
-      )}
+      {showPercentage && <Text color={color}> {clampedValue.toFixed(0)}%</Text>}
     </Box>
   );
 }

@@ -47,9 +47,7 @@ function getRecoverySteps(error: RelationshipError): readonly string[] {
         "Do NOT double text (yet)",
         "Wait at least 2 hours",
         "If anxiety persists, distract yourself",
-        error.canDoubleText
-          ? "One follow-up allowed now"
-          : "Wait longer before follow-up",
+        error.canDoubleText ? "One follow-up allowed now" : "Wait longer before follow-up",
       ];
     case "Relationship/ComparedToExError":
       return [
@@ -73,11 +71,7 @@ function getRecoverySteps(error: RelationshipError): readonly string[] {
         "Empathy > accuracy",
       ];
     default:
-      return [
-        "Reflect on what went wrong",
-        "Apologize sincerely",
-        "Learn for next time",
-      ];
+      return ["Reflect on what went wrong", "Apologize sincerely", "Learn for next time"];
   }
 }
 

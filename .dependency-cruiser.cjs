@@ -36,11 +36,21 @@ module.exports = {
       name: "domain-must-be-pure",
       comment:
         "Domain layer cannot depend on infrastructure, CLI, or external adapters. " +
-        "Domain should contain only pure business logic with Effect-TS patterns.",
+        "Domain should contain only pure business logic with Effect-TS patterns. " +
+        "Exception: domain/ports is the designated anti-corruption layer that re-exports infrastructure Tags.",
       severity: "error",
-      from: { path: "^src/domain" },
+      from: {
+        path: "^src/domain",
+        pathNot: "^src/domain/ports", // Ports are allowed to import from infrastructure
+      },
       to: {
         path: "^src/(infrastructure|cli|db|ai)",
+        pathNot: [
+          "^src/infrastructure/db/schema\\.ts$", // Schema types needed for Drizzle queries
+          "^src/infrastructure/db/signal-schema\\.ts$", // Signal schema types
+          "^src/infrastructure/whatsapp/whatsapp\\.types\\.ts$", // WhatsApp types (data structures only)
+          "^src/infrastructure/adapters/whatsapp/whatsapp\\.adapter\\.ts$", // Adapter interface types
+        ],
       },
     },
 
@@ -64,12 +74,16 @@ module.exports = {
       name: "bounded-context-isolation",
       comment:
         "Domain modules should not directly import from other domain modules. " +
-        "Use application layer services or domain events for cross-context communication.",
+        "Use application layer services or domain events for cross-context communication. " +
+        "Exception: domain/ports is the shared interface layer.",
       severity: "warn",
       from: { path: "^src/domain/([^/]+)" },
       to: {
         path: "^src/domain/([^/]+)",
-        pathNot: "^src/domain/$1", // Allow same subdomain
+        pathNot: [
+          "^src/domain/$1", // Allow same subdomain
+          "^src/domain/ports", // Allow importing from shared ports
+        ],
       },
     },
 

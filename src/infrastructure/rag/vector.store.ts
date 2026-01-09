@@ -39,7 +39,9 @@ export const VectorStoreLive = Layer.effect(
       if (!openaiClient) {
         const apiKey = process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY;
         if (!apiKey) {
-          throw new Error("OPENAI_API_KEY or OPENROUTER_API_KEY environment variable is not set. Vector store operations require embeddings.");
+          throw new Error(
+            "OPENAI_API_KEY or OPENROUTER_API_KEY environment variable is not set. Vector store operations require embeddings.",
+          );
         }
         // Use OpenRouter if OPENROUTER_API_KEY is set, otherwise use OpenAI directly
         const isOpenRouter = !process.env.OPENAI_API_KEY && process.env.OPENROUTER_API_KEY;
@@ -93,11 +95,7 @@ export const VectorStoreLive = Layer.effect(
           yield* Effect.tryPromise({
             try: async () => {
               const table = await db.openTable(TABLE_NAME).catch(() => null);
-              if (table) {
-                await table.add(docsWithVectors);
-              } else {
-                await db.createTable(TABLE_NAME, docsWithVectors);
-              }
+              await (table ? table.add(docsWithVectors) : db.createTable(TABLE_NAME, docsWithVectors));
             },
             catch: (e) => new Error(`Failed to add documents: ${e}`),
           });

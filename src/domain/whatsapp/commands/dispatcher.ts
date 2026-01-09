@@ -5,17 +5,18 @@
  */
 
 import { Effect } from "effect";
-import type { ParsedCommand } from "./parser";
-import { handleHelp } from "./handlers/help";
-import { handleSuggest } from "./handlers/suggest";
+
 import { handleAnalyze } from "./handlers/analyze";
-import { handleMemory } from "./handlers/memory";
-import { handleDraft } from "./handlers/draft";
 import { handleDashboard } from "./handlers/dashboard";
-import { AnalysisServiceTag } from "../../relationship/analysis.service";
-import { VectorStoreService } from "../../../infrastructure/rag/vector.store";
-import { AIServiceTag } from "../../../infrastructure/llm/ai.service";
-import { DatabaseService } from "../../../infrastructure/db/client";
+import { handleDraft } from "./handlers/draft";
+import { handleHelp } from "./handlers/help";
+import { handleMemory } from "./handlers/memory";
+import { handleSuggest } from "./handlers/suggest";
+
+import type { ParsedCommand } from "./parser";
+// Import from domain ports (not directly from infrastructure)
+import type { AIServiceTag, DatabaseService, VectorStoreService } from "../../ports";
+import type { AnalysisServiceTag } from "../../relationship/analysis.service";
 
 /**
  * Dispatch command to appropriate handler
@@ -26,14 +27,11 @@ import { DatabaseService } from "../../../infrastructure/db/client";
  */
 export const dispatchCommand = (
   command: ParsedCommand,
-  chatId: string
+  chatId: string,
 ): Effect.Effect<
   string,
   Error,
-  | typeof AnalysisServiceTag
-  | typeof VectorStoreService
-  | typeof AIServiceTag
-  | typeof DatabaseService
+  typeof AnalysisServiceTag | typeof VectorStoreService | typeof AIServiceTag | typeof DatabaseService
 > => {
   switch (command.name) {
     case "help":
@@ -55,8 +53,6 @@ export const dispatchCommand = (
       return handleDashboard(chatId);
 
     default:
-      return Effect.succeed(
-        `Unknown command: ${command.name}\n\nTry: @lifeops help`
-      );
+      return Effect.succeed(`Unknown command: ${command.name}\n\nTry: @lifeops help`);
   }
 };

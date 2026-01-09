@@ -12,8 +12,10 @@
 
 import { and, eq } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-import { WhatsAppAdapterTag } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";
-import { DatabaseService } from "../../infrastructure/db/client";
+
+// Import from domain ports (not directly from infrastructure)
+import { DatabaseService, WhatsAppAdapterTag, WhatsAppServiceTag } from "../ports";
+// Schema types are still needed for query construction
 import {
   calls,
   contactIdentifiers,
@@ -24,7 +26,6 @@ import {
   messages,
   syncState,
 } from "../../infrastructure/db/schema";
-import { WhatsAppServiceTag } from "../../infrastructure/whatsapp/whatsapp.client";
 
 /**
  * Sync statistics returned after sync operation

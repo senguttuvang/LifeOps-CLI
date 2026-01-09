@@ -1,6 +1,7 @@
 import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Context, Effect, Layer } from "effect";
+
 import * as schema from "./schema";
 
 // Define the Service Tag

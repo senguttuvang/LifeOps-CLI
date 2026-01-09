@@ -16,31 +16,29 @@ import { Command } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Effect, Layer } from "effect";
 
-// Commands
-import { syncCommand } from "./commands/sync.command";
-import { healthCommand } from "./commands/health.command";
+// Domain layers
+// Infrastructure layers
 import { decodeCommand } from "./commands/decode.command.js";
-import { rememberCommand } from "./commands/remember.command.js";
-import { relationshipCommand } from "./commands/relationship.command";
-import { extractSignalsCommand } from "./commands/extract-signals.command";
+import { demoUiCommand } from "./commands/demo-ui.command.js";
 import { extractEventsCommand } from "./commands/extract-events.command";
 import { extractImageEventsCommand } from "./commands/extract-image-events.command";
+import { extractSignalsCommand } from "./commands/extract-signals.command";
 import { extractVisionEventsCommand } from "./commands/extract-vision-events.command";
+import { healthCommand } from "./commands/health.command";
 import { importAndroidCommand } from "./commands/import-android.command";
-import { demoUiCommand } from "./commands/demo-ui.command.js";
-
-// Domain layers
-import { SyncServiceLive } from "../domain/whatsapp/sync.service";
+import { relationshipCommand } from "./commands/relationship.command";
+import { rememberCommand } from "./commands/remember.command.js";
+// Commands
+import { syncCommand } from "./commands/sync.command";
 import { AnalysisLive } from "../domain/relationship/analysis.service";
 import { SignalExtractionLive } from "../domain/signals/signal-extraction.service";
-
-// Infrastructure layers
-import { DatabaseLive } from "../infrastructure/db/client";
-import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
+import { SyncServiceLive } from "../domain/whatsapp/sync.service";
 import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
 import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
-import { VectorStoreLive } from "../infrastructure/rag/vector.store";
+import { DatabaseLive } from "../infrastructure/db/client";
 import { AILive } from "../infrastructure/llm/ai.service";
+import { VectorStoreLive } from "../infrastructure/rag/vector.store";
+import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
 
 /**
  * Assemble all service layers
@@ -109,8 +107,4 @@ const run = Command.run(lifeopsCommand, {
 });
 
 // Execute with NodeRuntime
-run(process.argv).pipe(
-  Effect.provide(MainLive),
-  Effect.provide(NodeContext.layer),
-  NodeRuntime.runMain,
-);
+run(process.argv).pipe(Effect.provide(MainLive), Effect.provide(NodeContext.layer), NodeRuntime.runMain);

@@ -8,8 +8,9 @@
  *   bun run cli extract-signals --refresh <userId>
  */
 
-import { Command, Args, Options } from "@effect/cli";
-import { Effect, Console } from "effect";
+import { Args, Command, Options } from "@effect/cli";
+import { Console, Effect } from "effect";
+
 import { SignalExtractionServiceTag } from "../../domain/signals/signal-extraction.service";
 
 /**
@@ -66,7 +67,9 @@ export const extractSignalsCommand = Command.make(
       yield* Console.log("┌─────────────────────────────────────────────────────────┐");
       yield* Console.log("│ Metadata                                                │");
       yield* Console.log("├─────────────────────────────────────────────────────────┤");
-      yield* Console.log(`│ Messages analyzed: ${signals.messageCount.toString().padStart(7)}                                │`);
+      yield* Console.log(
+        `│ Messages analyzed: ${signals.messageCount.toString().padStart(7)}                                │`,
+      );
       yield* Console.log(
         `│ Confidence score:  ${(signals.confidence * 100).toFixed(1).padStart(7)}%                               │`,
       );
@@ -118,9 +121,7 @@ export const extractSignalsCommand = Command.make(
       yield* Console.log(
         `│ Top emoji:         ${signals.topEmojis[0]?.emoji || "N/A"}  (${((signals.topEmojis[0]?.frequency || 0) * 100).toFixed(1)}%)                            │`,
       );
-      yield* Console.log(
-        `│ Position:          ${getEmojiPositionLabel(signals.emojiPosition).padEnd(41)} │`,
-      );
+      yield* Console.log(`│ Position:          ${getEmojiPositionLabel(signals.emojiPosition).padEnd(41)} │`);
       yield* Console.log("└─────────────────────────────────────────────────────────┘\n");
 
       // Punctuation
@@ -133,7 +134,9 @@ export const extractSignalsCommand = Command.make(
       yield* Console.log(
         `│ Question (??):     ${(signals.questionRate * 100).toFixed(1).padStart(7)}%                              │`,
       );
-      yield* Console.log(`│ Period (.):        ${(signals.periodRate * 100).toFixed(1).padStart(7)}%                              │`);
+      yield* Console.log(
+        `│ Period (.):        ${(signals.periodRate * 100).toFixed(1).padStart(7)}%                              │`,
+      );
       yield* Console.log(
         `│ Ellipsis (...):    ${(signals.ellipsisRate * 100).toFixed(1).padStart(7)}%                              │`,
       );
@@ -147,7 +150,9 @@ export const extractSignalsCommand = Command.make(
         `│ Greetings:         ${signals.commonGreetings.length.toString().padStart(7)} patterns                            │`,
       );
       if (signals.commonGreetings.length > 0) {
-        yield* Console.log(`│   - "${signals.commonGreetings[0]}"${" ".repeat(Math.max(0, 41 - signals.commonGreetings[0].length))}│`);
+        yield* Console.log(
+          `│   - "${signals.commonGreetings[0]}"${" ".repeat(Math.max(0, 41 - signals.commonGreetings[0].length))}│`,
+        );
       }
       yield* Console.log(
         `│ Common phrases:    ${signals.commonPhrases.length.toString().padStart(7)} patterns                            │`,
@@ -191,8 +196,8 @@ export const extractSignalsCommand = Command.make(
  * Helper: Get emoji position label
  */
 const getEmojiPositionLabel = (position: { start: number; middle: number; end: number }): string => {
-  if (position.end > 0.6) return `End (${(position.end * 100).toFixed(1)}%)`;
-  if (position.start > 0.6) return `Start (${(position.start * 100).toFixed(1)}%)`;
-  if (position.middle > 0.4) return `Middle (${(position.middle * 100).toFixed(1)}%)`;
+  if (position.end > 0.6) {return `End (${(position.end * 100).toFixed(1)}%)`;}
+  if (position.start > 0.6) {return `Start (${(position.start * 100).toFixed(1)}%)`;}
+  if (position.middle > 0.4) {return `Middle (${(position.middle * 100).toFixed(1)}%)`;}
   return "Mixed";
 };

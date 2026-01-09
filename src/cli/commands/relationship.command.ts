@@ -1,5 +1,6 @@
-import { Command, Args } from "@effect/cli";
-import { Effect, Console } from "effect";
+import { Args, Command } from "@effect/cli";
+import { Console, Effect } from "effect";
+
 import { AnalysisServiceTag } from "../../domain/relationship/analysis.service";
 
 // Subcommand: Analyze
@@ -13,7 +14,7 @@ const AnalyzeCommand = Command.make(
       const analysis = yield* _(AnalysisServiceTag);
       yield* _(Console.log(`Indexing chat: ${chatId}...`));
       yield* _(analysis.indexChat(chatId));
-      
+
       yield* _(Console.log(`Analyzing chat: ${chatId}...`));
 
       const result = yield* _(analysis.analyze(chatId));
@@ -21,7 +22,7 @@ const AnalyzeCommand = Command.make(
       yield* _(Console.log("\n--- Analysis Report ---\n"));
       yield* _(Console.log(result));
       yield* _(Console.log("\n-----------------------\n"));
-    })
+    }),
 );
 
 // Subcommand: Draft
@@ -41,10 +42,10 @@ const DraftCommand = Command.make(
       yield* _(Console.log("\n--- Draft Response ---\n"));
       yield* _(Console.log(result));
       yield* _(Console.log("\n----------------------\n"));
-    })
+    }),
 );
 
 // Parent Command: Relationship
 export const relationshipCommand = Command.make("relationship").pipe(
-  Command.withSubcommands([AnalyzeCommand, DraftCommand])
+  Command.withSubcommands([AnalyzeCommand, DraftCommand]),
 );

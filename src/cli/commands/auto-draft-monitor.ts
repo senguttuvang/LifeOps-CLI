@@ -8,19 +8,20 @@
  */
 
 import { Effect, Layer } from "effect";
-import { monitorAutoDraft } from "../../domain/whatsapp/auto-draft/auto-draft-monitor";
-// Domain layers
-import { SyncServiceLive } from "../../domain/whatsapp/sync.service";
+
 import { AnalysisLive } from "../../domain/relationship/analysis.service";
 import { SignalExtractionLive } from "../../domain/signals/signal-extraction.service";
+import { monitorAutoDraft } from "../../domain/whatsapp/auto-draft/auto-draft-monitor";
 import { SignalEnhancedDraftLive } from "../../domain/whatsapp/auto-draft/signal-enhanced-draft.service";
+// Domain layers
+import { SyncServiceLive } from "../../domain/whatsapp/sync.service";
 import { WhatsAppAdapterLive } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";
 import { AndroidImportServiceLive } from "../../infrastructure/android/android-import.service";
 // Infrastructure layers
 import { DatabaseLive } from "../../infrastructure/db/client";
-import { WhatsAppServiceLive } from "../../infrastructure/whatsapp/whatsapp.client";
-import { VectorStoreLive } from "../../infrastructure/rag/vector.store";
 import { AILive } from "../../infrastructure/llm/ai.service";
+import { VectorStoreLive } from "../../infrastructure/rag/vector.store";
+import { WhatsAppServiceLive } from "../../infrastructure/whatsapp/whatsapp.client";
 
 /**
  * Assemble all service layers
@@ -31,15 +32,12 @@ const InfrastructureLive = Layer.mergeAll(
   WhatsAppAdapterLive,
   AndroidImportServiceLive,
   VectorStoreLive,
-  AILive
+  AILive,
 );
 
 const DomainLive = Layer.mergeAll(SyncServiceLive, AnalysisLive, SignalExtractionLive, SignalEnhancedDraftLive);
 
-const MainLive = DomainLive.pipe(
-  Layer.provide(InfrastructureLive),
-  Layer.merge(InfrastructureLive)
-);
+const MainLive = DomainLive.pipe(Layer.provide(InfrastructureLive), Layer.merge(InfrastructureLive));
 
 /**
  * Start auto-draft monitor
@@ -60,22 +58,18 @@ const main = () => {
   if (!girlfriendChatId) {
     console.error("Error: GIRLFRIEND_CHAT_ID environment variable is required");
     console.error(
-      'Example: GIRLFRIEND_CHAT_ID="919876543210@s.whatsapp.net" bun run src/cli/commands/auto-draft-monitor.ts'
+      'Example: GIRLFRIEND_CHAT_ID="919876543210@s.whatsapp.net" bun run src/cli/commands/auto-draft-monitor.ts',
     );
     process.exit(1);
   }
 
   if (!selfChatId) {
     console.error("Error: SELF_CHAT_ID environment variable is required");
-    console.error(
-      'Example: SELF_CHAT_ID="919123456789@s.whatsapp.net" bun run src/cli/commands/auto-draft-monitor.ts'
-    );
+    console.error('Example: SELF_CHAT_ID="919123456789@s.whatsapp.net" bun run src/cli/commands/auto-draft-monitor.ts');
     process.exit(1);
   }
 
-  const pollInterval = process.env.POLL_INTERVAL
-    ? Number.parseInt(process.env.POLL_INTERVAL, 10)
-    : 30;
+  const pollInterval = process.env.POLL_INTERVAL ? Number.parseInt(process.env.POLL_INTERVAL, 10) : 30;
 
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("💬 LifeOps Auto-Draft Monitor");

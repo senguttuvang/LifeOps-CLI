@@ -29,13 +29,7 @@ export function StyledBox({
   children,
 }: StyledBoxProps) {
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor={borderColor}
-      width={width}
-      paddingX={padding}
-    >
+    <Box flexDirection="column" borderStyle="round" borderColor={borderColor} width={width} paddingX={padding}>
       {title && (
         <Box marginBottom={1}>
           <Text bold color={titleColor}>
@@ -58,12 +52,7 @@ export interface LabeledValueProps {
 /**
  * A labeled value pair for displaying key-value data
  */
-export function LabeledValue({
-  label,
-  value,
-  labelColor = "white",
-  valueColor,
-}: LabeledValueProps) {
+export function LabeledValue({ label, value, labelColor = "white", valueColor }: LabeledValueProps) {
   return (
     <Box>
       <Text bold color={labelColor}>

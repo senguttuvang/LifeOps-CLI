@@ -30,10 +30,10 @@ export const extractTemporalPatterns = (messages: MessageForSignals[]): Temporal
 
   // Analyze hourly activity
   const hourlyActivity = new Array(24).fill(0);
-  userMessages.forEach((m) => {
+  for (const m of userMessages) {
     const hour = m.timestamp.getHours();
     hourlyActivity[hour]++;
-  });
+  }
 
   // Find peak hours (top 3 hours with most activity)
   const hourlyActivityWithIndex = hourlyActivity.map((count, hour) => ({ hour, count }));
@@ -46,7 +46,7 @@ export const extractTemporalPatterns = (messages: MessageForSignals[]): Temporal
   let weekdayCount = 0;
   let weekendCount = 0;
 
-  userMessages.forEach((m) => {
+  for (const m of userMessages) {
     const day = m.timestamp.getDay(); // 0 = Sunday, 6 = Saturday
 
     if (day === 0 || day === 6) {
@@ -54,7 +54,7 @@ export const extractTemporalPatterns = (messages: MessageForSignals[]): Temporal
     } else {
       weekdayCount++;
     }
-  });
+  }
 
   // Calculate weekend vs weekday ratio
   // >1 means more active on weekends, <1 means more active on weekdays
@@ -79,7 +79,7 @@ export const extractTemporalPatterns = (messages: MessageForSignals[]): Temporal
  * Count number of weekdays in the message date range
  */
 const countWeekdaysInRange = (messages: MessageForSignals[]): number => {
-  if (messages.length === 0) return 0;
+  if (messages.length === 0) {return 0;}
 
   const firstDate = messages[0].timestamp;
   const lastDate = messages[messages.length - 1].timestamp;
@@ -95,7 +95,7 @@ const countWeekdaysInRange = (messages: MessageForSignals[]): number => {
  * Count number of weekend days in the message date range
  */
 const countWeekendsInRange = (messages: MessageForSignals[]): number => {
-  if (messages.length === 0) return 0;
+  if (messages.length === 0) {return 0;}
 
   const firstDate = messages[0].timestamp;
   const lastDate = messages[messages.length - 1].timestamp;

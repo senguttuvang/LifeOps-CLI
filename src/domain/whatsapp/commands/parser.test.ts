@@ -2,7 +2,8 @@
  * Command Parser Tests
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
+
 import { parseCommand } from "./parser";
 
 describe("parseCommand", () => {
@@ -23,9 +24,7 @@ describe("parseCommand", () => {
     });
 
     it("should parse command with complex args", () => {
-      const result = parseCommand(
-        "@lifeops draft apology for being late to dinner"
-      );
+      const result = parseCommand("@lifeops draft apology for being late to dinner");
       expect(result).toEqual({
         name: "draft",
         args: "apology for being late to dinner",

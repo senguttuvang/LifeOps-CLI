@@ -6,8 +6,8 @@
  */
 
 import { Box, Text } from "ink";
-import { StyledBox } from "./StyledBox.js";
 import { MetricRow } from "./ProgressBar.js";
+import { StyledBox } from "./StyledBox.js";
 
 export interface RelationshipHealthMetrics {
   readonly communicationScore: number;
@@ -48,11 +48,7 @@ export function HealthDashboard({ metrics }: HealthDashboardProps) {
  */
 export function HealthSummary({ metrics }: HealthDashboardProps) {
   const avgScore = Math.round(
-    (metrics.communicationScore +
-      metrics.qualityTimeScore +
-      metrics.surpriseFactor +
-      metrics.memoryAccuracy) /
-      4
+    (metrics.communicationScore + metrics.qualityTimeScore + metrics.surpriseFactor + metrics.memoryAccuracy) / 4,
   );
 
   const color = avgScore >= 70 ? "green" : avgScore >= 40 ? "yellow" : "red";

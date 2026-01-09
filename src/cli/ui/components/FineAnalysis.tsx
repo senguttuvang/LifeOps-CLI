@@ -6,7 +6,7 @@
  */
 
 import { Box, Text } from "ink";
-import { StyledBox, LabeledValue, SectionHeader } from "./StyledBox.js";
+import { LabeledValue, SectionHeader, StyledBox } from "./StyledBox.js";
 
 export type DecodedMeaning =
   | "ACTUALLY_FINE"
@@ -69,19 +69,13 @@ export function FineAnalysis({ result }: FineAnalysisProps) {
         <Text bold>Decoded: </Text>
         <DecodedText decoded={result.decoded} />
       </Box>
-      <LabeledValue
-        label="Confidence"
-        value={`${(result.confidence * 100).toFixed(1)}%`}
-      />
-      <LabeledValue
-        label="Response Window"
-        value={formatTime(result.responseWindowMs)}
-      />
+      <LabeledValue label="Confidence" value={`${(result.confidence * 100).toFixed(1)}%`} />
+      <LabeledValue label="Response Window" value={formatTime(result.responseWindowMs)} />
 
       <SectionHeader text="DO NOT:" color="red" />
       {result.doNotDo.map((item, i) => (
         <Box key={i}>
-          <Text color="red">  ✗ </Text>
+          <Text color="red"> ✗ </Text>
           <Text>{item}</Text>
         </Box>
       ))}
@@ -89,7 +83,7 @@ export function FineAnalysis({ result }: FineAnalysisProps) {
       <SectionHeader text="SUGGESTED:" color="green" />
       {result.suggestedActions.map((item, i) => (
         <Box key={i}>
-          <Text color="green">  ✓ </Text>
+          <Text color="green"> ✓ </Text>
           <Text>{item}</Text>
         </Box>
       ))}

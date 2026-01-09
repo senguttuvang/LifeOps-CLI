@@ -12,13 +12,15 @@
  * modify, or ignore.
  */
 
+import { eq, sql } from "drizzle-orm";
 import { Effect, Schedule } from "effect";
-import { WhatsAppServiceTag } from "../../../infrastructure/whatsapp/whatsapp.client";
-import { AnalysisServiceTag } from "../../relationship/analysis.service";
+
 import { SignalEnhancedDraftServiceTag } from "./signal-enhanced-draft.service";
-import { DatabaseService } from "../../../infrastructure/db/client";
-import { sql, eq } from "drizzle-orm";
-import { conversations, conversationParticipants } from "../../../infrastructure/db/schema";
+// Import from domain ports (not directly from infrastructure)
+import { DatabaseService, WhatsAppServiceTag } from "../../ports";
+// Schema types are still needed for query construction
+import { conversationParticipants, conversations } from "../../../infrastructure/db/schema";
+import { AnalysisServiceTag } from "../../relationship/analysis.service";
 
 export interface AutoDraftConfig {
   /**
@@ -115,7 +117,7 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
           userId = participants[0].contactId;
         }
       }
-    } catch (e) {
+    } catch {
       if (config.verbose) {
         console.log(`[AutoDraft] Could not resolve user ID, will use basic RAG`);
       }
@@ -150,7 +152,7 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
     // Process each new message
     for (const message of newMessages) {
       if (config.verbose) {
-        console.log(`[AutoDraft] Processing message: "${message.text?.substring(0, 50)}..."`);
+        console.log(`[AutoDraft] Processing message: "${message.text?.slice(0, 50)}..."`);
       }
 
       // Skip media-only messages (no text to analyze)
@@ -236,9 +238,9 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
         console.error(`[AutoDraft] Error during polling:`, error);
         // Return success to continue polling despite errors
         return Effect.void;
-      })
+      }),
     ),
-    Schedule.spaced(`${pollInterval} seconds`)
+    Schedule.spaced(`${pollInterval} seconds`),
   ).pipe(Effect.asVoid);
 };
 
@@ -252,14 +254,12 @@ const formatDraftMessage = (
   metadata?: {
     mode?: "signal-enhanced" | "basic";
     qualityScore?: number;
-  }
+  },
 ): string => {
-  const truncatedIncoming =
-    incomingMessage.length > 100 ? incomingMessage.substring(0, 100) + "..." : incomingMessage;
+  const truncatedIncoming = incomingMessage.length > 100 ? incomingMessage.slice(0, 100) + "..." : incomingMessage;
 
   const modeEmoji = metadata?.mode === "signal-enhanced" ? "🎯" : "💬";
-  const qualityInfo =
-    metadata?.qualityScore !== undefined ? `\n📊 Quality: ${metadata.qualityScore}/100` : "";
+  const qualityInfo = metadata?.qualityScore !== undefined ? `\n📊 Quality: ${metadata.qualityScore}/100` : "";
 
   return `${modeEmoji} Draft reply to ${girlfriendName}:
 
@@ -284,7 +284,7 @@ const logDraftGeneration = (
     incomingMessage: string;
     generatedDraft: string;
     timestamp: Date;
-  }
+  },
 ) =>
   Effect.tryPromise({
     try: async () => {
@@ -311,5 +311,5 @@ const logDraftGeneration = (
     },
   }).pipe(
     // Ignore errors in logging - it's not critical
-    Effect.catchAll(() => Effect.void)
+    Effect.catchAll(() => Effect.void),
   );

@@ -12,18 +12,12 @@
  * to determine what "fine" actually means.
  */
 
-import { Command, Args } from "@effect/cli";
+import { Args, Command } from "@effect/cli";
 import { Effect } from "effect";
 import { Box, Text } from "ink";
 import type { DecodedMeaning, FineResponse } from "../../domain/relationship/types";
 import { FINE_PROBABILITY_DISTRIBUTION } from "../../domain/relationship/types";
-import {
-  InkRenderer,
-  InkRendererLive,
-  FineAnalysis,
-  TipOfTheDay,
-  Hint,
-} from "../ui/index.js";
+import { FineAnalysis, Hint, InkRenderer, InkRendererLive, TipOfTheDay } from "../ui/index.js";
 
 /**
  * Known ambiguous phrases and their base probabilities.
@@ -179,7 +173,11 @@ export function analyzeMessage(message: string): FineResponse {
     decoded,
     confidence,
     responseWindowMs: RESPONSE_WINDOWS[decoded],
-    doNotDo: [...PROHIBITED_ACTIONS[decoded], "Say 'calm down'", "Use logic to explain why they shouldn't feel that way"],
+    doNotDo: [
+      ...PROHIBITED_ACTIONS[decoded],
+      "Say 'calm down'",
+      "Use logic to explain why they shouldn't feel that way",
+    ],
     suggestedActions: SUGGESTED_ACTIONS[decoded],
   };
 }
@@ -196,7 +194,7 @@ function ProbabilityDistribution({ decoded }: { readonly decoded: DecodedMeaning
         const isMatch = meaning === decoded;
         return (
           <Box key={meaning}>
-            <Text>   {meaning.padEnd(25)} </Text>
+            <Text> {meaning.padEnd(25)} </Text>
             <Text color={isMatch ? "yellow" : "gray"}>{bar}</Text>
             <Text> {(prob * 100).toFixed(0)}%</Text>
             {isMatch && <Text color="yellow"> ← YOU ARE HERE</Text>}

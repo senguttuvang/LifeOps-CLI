@@ -6,8 +6,8 @@
  */
 
 import { Box, Text } from "ink";
-import { StyledBox } from "./StyledBox.js";
 import { Success } from "./Alert.js";
+import { StyledBox } from "./StyledBox.js";
 
 export interface Memory {
   readonly content: string;
@@ -49,7 +49,7 @@ export function MemoryStored({ memory }: MemoryStoredProps) {
         {"  "}
         {emoji} Category: {memory.category} (auto-detected)
       </Text>
-      {hint && <Text dimColor>  {hint}</Text>}
+      {hint && <Text dimColor> {hint}</Text>}
     </Box>
   );
 }
@@ -63,17 +63,13 @@ export interface MemoryListProps {
  * Display a list of memories
  */
 export function MemoryList({ memories, category }: MemoryListProps) {
-  const title = category
-    ? `${category.charAt(0).toUpperCase() + category.slice(1)} Memories`
-    : "All Memories";
+  const title = category ? `${category.charAt(0).toUpperCase() + category.slice(1)} Memories` : "All Memories";
 
   if (memories.length === 0) {
     return (
       <Box flexDirection="column" marginY={1}>
         <Text color="yellow">No memories found.</Text>
-        <Text dimColor>
-          Use 'bun run cli remember "something to remember"' to add one.
-        </Text>
+        <Text dimColor>Use 'bun run cli remember "something to remember"' to add one.</Text>
       </Box>
     );
   }

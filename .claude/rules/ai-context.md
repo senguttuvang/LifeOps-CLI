@@ -22,13 +22,17 @@ cd /Users/SenG/Projects/CodeCompass/Codecompass2
 # Re-index LifeOps-CLI if code changed significantly
 bun run cli index run LifeOps-CLI
 
-# Generate fresh AI context (when command available)
+# Generate fresh AI context
 bun run cli context ai-export LifeOps --output "/Users/SenG/Projects/Digital/LifeOps CLI/.ai"
+
+# Options:
+#   -v, --verbose    Show detailed progress
+#   -j, --json       Output summary as JSON
 ```
 
-## Manual Regeneration (Current)
+## Manual Updates
 
-Until the CodeCompass `ai-export` command is implemented, manually update:
+For minor updates that don't require full regeneration, manually update:
 
 | File | Update When |
 |------|-------------|

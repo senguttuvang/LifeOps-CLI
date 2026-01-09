@@ -20,6 +20,7 @@
 
 import { Database } from "bun:sqlite";
 import { Context, Effect, Layer } from "effect";
+
 import type { WhatsAppChatData, WhatsAppMessageData, WhatsAppSyncResult } from "../whatsapp/whatsapp.types";
 
 /**
@@ -168,7 +169,7 @@ export const AndroidImportServiceLive = Layer.succeed(
             }
 
             console.log(`   • Loaded ${participantRows.length} group participant memberships`);
-          } catch (_e) {
+          } catch {
             // group_participants table might not exist in all msgstore.db versions
             console.log(`   • No group_participants table found (skipping)`);
           }

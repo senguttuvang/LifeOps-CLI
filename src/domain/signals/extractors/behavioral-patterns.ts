@@ -5,7 +5,7 @@
  * Tracks follow-up questions, voice notes, multi-message sends, edits, and conversation initiation.
  */
 
-import type { MessageForSignals, BehavioralSignals } from "../types";
+import type { BehavioralSignals, MessageForSignals } from "../types";
 
 /**
  * Extract behavioral pattern signals from message history
@@ -35,26 +35,26 @@ export const extractBehavioralPatterns = (messages: MessageForSignals[]): Behavi
 
   // Analyze follow-up questions
   let questionCount = 0;
-  userMessages.forEach((m) => {
+  for (const m of userMessages) {
     if ((m.text || "").includes("?")) {
       questionCount++;
     }
-  });
+  }
 
   // Analyze voice note usage
   let voiceNoteCount = 0;
-  userMessages.forEach((m) => {
+  for (const m of userMessages) {
     if (m.mediaType === "audio" || m.mediaType === "voice") {
       voiceNoteCount++;
     }
-  });
+  }
 
   // Analyze multi-message sends (burst sending)
   // Count sequences where user sends 2+ messages consecutively
   let multiSendCount = 0;
   let consecutiveUserMessages = 0;
 
-  messages.forEach((m) => {
+  for (const m of messages) {
     if (m.fromMe) {
       consecutiveUserMessages++;
     } else {
@@ -64,7 +64,7 @@ export const extractBehavioralPatterns = (messages: MessageForSignals[]): Behavi
       }
       consecutiveUserMessages = 0;
     }
-  });
+  }
 
   // Check for trailing consecutive messages
   if (consecutiveUserMessages >= 2) {
@@ -73,11 +73,11 @@ export const extractBehavioralPatterns = (messages: MessageForSignals[]): Behavi
 
   // Analyze edits
   let editCount = 0;
-  userMessages.forEach((m) => {
+  for (const m of userMessages) {
     if (m.isEdited) {
       editCount++;
     }
-  });
+  }
 
   // Analyze conversation initiation
   // Count how many conversations the user started

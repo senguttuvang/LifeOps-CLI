@@ -6,9 +6,7 @@
 
 import { Effect } from "effect";
 
-export const handleDashboard = (
-  chatId: string
-): Effect.Effect<string, Error, never> => {
+export const handleDashboard = (chatId: string): Effect.Effect<string, Error, never> => {
   // TODO: Implement actual dashboard logic
   // This is a stub implementation
   const response = `

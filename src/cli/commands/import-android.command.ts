@@ -14,7 +14,8 @@
  */
 
 import { Command, Options } from "@effect/cli";
-import { Effect, Console } from "effect";
+import { Console, Effect } from "effect";
+
 import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
 import { AndroidImportServiceTag } from "../../infrastructure/android/android-import.service";
 
@@ -26,9 +27,7 @@ import { AndroidImportServiceTag } from "../../infrastructure/android/android-im
 export const importAndroidCommand = Command.make(
   "import-android",
   {
-    db: Options.text("db").pipe(
-      Options.withDescription("Path to msgstore.db file"),
-    ),
+    db: Options.text("db").pipe(Options.withDescription("Path to msgstore.db file")),
     limit: Options.integer("limit").pipe(
       Options.withDescription("Limit number of messages to import (for testing)"),
       Options.optional,

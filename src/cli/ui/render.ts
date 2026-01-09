@@ -6,7 +6,8 @@
  */
 
 import { Context, Effect, Layer } from "effect";
-import { render, type Instance } from "ink";
+import { type Instance, render } from "ink";
+
 import type { ReactNode } from "react";
 
 /**
@@ -29,19 +30,13 @@ export interface InkRendererService {
    * Render with a spinner while an effect runs.
    * Automatically unmounts the spinner when the effect completes.
    */
-  readonly withSpinner: <A, E, R>(
-    spinnerElement: ReactNode,
-    effect: Effect.Effect<A, E, R>
-  ) => Effect.Effect<A, E, R>;
+  readonly withSpinner: <A, E, R>(spinnerElement: ReactNode, effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
 }
 
 /**
  * InkRenderer service tag
  */
-export class InkRenderer extends Context.Tag("InkRenderer")<
-  InkRenderer,
-  InkRendererService
->() {}
+export class InkRenderer extends Context.Tag("InkRenderer")<InkRenderer, InkRendererService>() {}
 
 /**
  * Create the InkRenderer service implementation
@@ -53,20 +48,16 @@ const makeInkRenderer = (): InkRendererService => ({
       instance.unmount();
     }),
 
-  renderPersistent: (element: ReactNode) =>
-    Effect.sync(() => render(element)),
+  renderPersistent: (element: ReactNode) => Effect.sync(() => render(element)),
 
-  withSpinner: <A, E, R>(
-    spinnerElement: ReactNode,
-    effect: Effect.Effect<A, E, R>
-  ): Effect.Effect<A, E, R> =>
+  withSpinner: <A, E, R>(spinnerElement: ReactNode, effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> =>
     Effect.acquireUseRelease(
       // Acquire: mount the spinner
       Effect.sync(() => render(spinnerElement)),
       // Use: run the effect
       () => effect,
       // Release: unmount the spinner
-      (instance) => Effect.sync(() => instance.unmount())
+      (instance) => Effect.sync(() => instance.unmount()),
     ),
 });
 
@@ -86,8 +77,6 @@ export const renderOnce = (element: ReactNode): Effect.Effect<void, never, InkRe
  */
 export const withSpinner = <A, E, R>(
   spinnerElement: ReactNode,
-  effect: Effect.Effect<A, E, R>
+  effect: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E, R | InkRenderer> =>
-  Effect.flatMap(InkRenderer, (renderer) =>
-    renderer.withSpinner(spinnerElement, effect)
-  );
+  Effect.flatMap(InkRenderer, (renderer) => renderer.withSpinner(spinnerElement, effect));

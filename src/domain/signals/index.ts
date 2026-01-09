@@ -5,43 +5,38 @@
  * RAG+Signals personalization system for LifeOps.
  */
 
-// Core types
-export type {
-  UserSignals,
-  MessageForSignals,
-  ResponseTimeSignals,
-  EmojiSignals,
-  MessageStructureSignals,
-  PhraseSignals,
-  PunctuationSignals,
-  BehavioralSignals,
-  TemporalSignals,
-} from "./types";
-
-// Service
-export { SignalExtractionServiceTag, SignalExtractionLive } from "./signal-extraction.service";
-export type { SignalExtractionService } from "./signal-extraction.service";
-
 // Extractors
 export {
-  extractResponseTimes,
+  extractBehavioralPatterns,
   extractEmojiPatterns,
   extractMessageStructure,
   extractPhrasePatterns,
   extractPunctuationPatterns,
-  extractBehavioralPatterns,
+  extractResponseTimes,
   extractTemporalPatterns,
 } from "./extractors";
-
 // Prompt building
-export { buildSignalEnhancedPrompt, buildBasicPrompt } from "./prompt-builder";
+export { buildBasicPrompt, buildSignalEnhancedPrompt } from "./prompt-builder";
+export type { DraftComparison, DraftQualityScore } from "./quality-scorer";
+// Quality scoring
+export { compareDrafts, scoreDraftQuality } from "./quality-scorer";
+// Caching
+export { signalCache } from "./signal-cache";
 
 // Signal enforcement
 export { enforceSignals, validateDraftAgainstSignals } from "./signal-enforcer";
-
-// Quality scoring
-export { scoreDraftQuality, compareDrafts } from "./quality-scorer";
-export type { DraftQualityScore, DraftComparison } from "./quality-scorer";
-
-// Caching
-export { signalCache } from "./signal-cache";
+export type { SignalExtractionService } from "./signal-extraction.service";
+// Service
+export { SignalExtractionLive, SignalExtractionServiceTag } from "./signal-extraction.service";
+// Core types
+export type {
+  BehavioralSignals,
+  EmojiSignals,
+  MessageForSignals,
+  MessageStructureSignals,
+  PhraseSignals,
+  PunctuationSignals,
+  ResponseTimeSignals,
+  TemporalSignals,
+  UserSignals,
+} from "./types";
