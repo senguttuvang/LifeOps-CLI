@@ -1,5 +1,52 @@
 # Code Quality Rules (MANDATORY)
 
+## Quick Quality Report (Use This Format)
+
+When asked to run code quality analysis, follow this pattern:
+
+```bash
+# Run these in sequence
+bun run typecheck
+bun run test
+bun run lint
+bun run lint:eslint 2>&1 | tail -5   # Just summary line
+bun run quality:arch
+bun run quality:knip 2>&1 | head -40  # First 40 lines sufficient
+```
+
+**Then present results in this format:**
+
+```markdown
+## Quality Report - [Project Name]
+
+| Check | Status | Issues |
+|-------|--------|--------|
+| TypeScript | ✅/❌ | [count] errors |
+| Tests | ✅/❌ | [passed]/[total] |
+| Biome | ✅/⚠️ | [errors] errors, [warnings] warnings |
+| ESLint | ✅/⚠️ | [errors] errors, [warnings] warnings |
+| Architecture | ✅/❌ | [count] DDD violations |
+| Dead Code | ⚠️ | [count] unused files/exports |
+
+### Key Findings
+- [1-3 bullet points of most important issues]
+
+### Recommended Actions
+- [1-3 actionable next steps]
+```
+
+**Do NOT:**
+- Dump full tool output
+- Analyze every single warning
+- Spend time on verbose explanations
+
+**DO:**
+- Summarize counts quickly
+- Highlight critical issues (DDD violations, test failures)
+- Provide actionable next steps
+
+---
+
 ## Run Quality Checks After Significant Changes
 
 **When to run `bun run quality:full`:**
