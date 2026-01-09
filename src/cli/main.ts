@@ -30,6 +30,8 @@ import { relationshipCommand } from "./commands/relationship.command";
 import { rememberCommand } from "./commands/remember.command.js";
 // Commands
 import { syncCommand } from "./commands/sync.command";
+import { ForecastServiceLive } from "../domain/forecast";
+import { ForecastRepositoryLive } from "../domain/forecast/forecast.repository";
 import { AnalysisLive } from "../domain/relationship/analysis.service";
 import { SignalExtractionLive } from "../domain/signals/signal-extraction.service";
 import { SyncServiceLive } from "../domain/whatsapp/sync.service";
@@ -55,7 +57,13 @@ const InfrastructureLive = Layer.mergeAll(
   AILive,
 );
 
-const DomainLive = Layer.mergeAll(SyncServiceLive, AnalysisLive, SignalExtractionLive);
+const DomainLive = Layer.mergeAll(
+  SyncServiceLive,
+  AnalysisLive,
+  SignalExtractionLive,
+  ForecastServiceLive,
+  ForecastRepositoryLive,
+);
 
 const MainLive = DomainLive.pipe(Layer.provide(InfrastructureLive), Layer.merge(InfrastructureLive));
 
