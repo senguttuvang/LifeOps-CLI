@@ -35,7 +35,7 @@ A personal relationship management CLI that syncs WhatsApp messages to a local d
 
 ```bash
 # Clone repository
-git clone https://github.com/AshGw/lifeops-cli.git
+git clone https://github.com/senguttuvang/LifeOps-CLI.git
 cd lifeops-cli
 
 # Install dependencies
