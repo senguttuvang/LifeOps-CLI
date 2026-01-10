@@ -70,14 +70,14 @@ export const VisionEventExtractionServiceLive = Layer.effect(
     })
 
     // WhatsApp Export base path
-    const whatsappExportPath = "./data/whatsapp-export"
+    const whatsappExportPath = process.env.WHATSAPP_EXPORT_PATH ?? "./data/whatsapp-export"
 
     return {
       /**
        * Find messages with image file paths that exist
        */
       findImagesWithPaths: (limit: number) => Effect.gen(function* () {
-        const dbPath = "./data/whatsapp-export/msgstore.db"
+        const dbPath = process.env.WHATSAPP_DB_PATH ?? "./data/msgstore.db"
         const db = yield* Effect.try({
           try: () => new Database(dbPath, { readonly: true }),
           catch: (error) => new DatabaseError({

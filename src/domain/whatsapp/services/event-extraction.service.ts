@@ -65,7 +65,7 @@ export const EventExtractionServiceLive = Layer.effect(
        * Find messages that likely contain event information
        */
       findEventCandidates: (days: number) => Effect.gen(function* () {
-        const dbPath = ".lifeops3.db"
+        const dbPath = process.env.LIFEOPS_DB_PATH ?? "./lifeops.db"
         const db = yield* Effect.try({
           try: () => new Database(dbPath, { readonly: true }),
           catch: (error) => new DatabaseError({

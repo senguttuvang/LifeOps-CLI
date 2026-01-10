@@ -1,170 +1,164 @@
 # @lifeops/cli
 
-> **Relationship Intelligence Platform™**
->
-> Because "fine" rarely means fine.
+> A relationship memory assistant. Because you care—you just forget.
 
 [![Website](https://img.shields.io/badge/Website-lifeops.in-blue)](https://lifeops.in/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-**LifeOps** applies enterprise-grade observability patterns to the most complex distributed system you'll ever manage: your relationships.
+## The Iceland Problem
 
-We've taken everything you hate about corporate software—SLAs, dashboards, incident response—and applied it to the one area where you actually need it: remembering that she mentioned wanting to visit Iceland 3 weeks ago.
+Three weeks ago, your partner mentioned—casually, while scrolling Instagram—that they'd love to visit Iceland someday. You nodded, said "that sounds amazing," and meant it.
 
-## The Problem
+Today, you're planning a surprise for their birthday. You remember they mentioned a travel destination recently... but was it Iceland? Portugal? That place with the Northern Lights? (Wait, that's also Iceland.)
 
-You're a competent professional. You manage production systems handling millions of requests. You've got monitoring, alerting, and runbooks for everything.
+The moment is gone. The detail is lost. And now you're panic-buying a gift card.
 
-And yet:
-- You forgot the anniversary (again)
-- You missed the subtle "I'm stressed" signals for 3 days straight
-- You have no idea what gift she actually wants (hint: she told you. Twice.)
+**LifeOps remembers so you don't have to.**
 
-**LifeOps fixes this.** We're not relationship therapy. We're relationship *observability*.
+---
 
-## What You Get
+## What It Does
 
-### 🔍 The Fine Decoder™
+LifeOps is a personal CLI that syncs your WhatsApp conversations locally and uses AI to help you be more thoughtful in your relationships.
 
+| Feature | What It Does |
+|---------|-------------|
+| **Message Sync** | Keeps a searchable archive of your conversations on your machine |
+| **Context Memory** | Store important details: "She wants to visit Iceland" → retrievable later |
+| **Message Decoder** | Understand what "I'm fine" actually means (spoiler: usually not fine) |
+| **Pattern Insights** | Notice when someone's mentioned stress five times this week |
+| **Draft Help** | AI suggestions when you want to reach out but aren't sure what to say |
+
+---
+
+## Real Scenarios
+
+### 🎂 The Birthday Gift
+
+**Without LifeOps:** "What should I get her?" → *Buys scented candle. Again.*
+
+**With LifeOps:**
 ```bash
-$ bun run cli decode "I'm fine"
+bun run cli search "wants" --contact="Partner"
+# → "wants to learn pottery" (Nov 2)
+# → "wants that cookbook by Samin Nosrat" (Sep 15)
+# → "wants to visit Iceland" (Oct 15)
+```
+*Books a pottery class. Absolute hero.*
 
-🔍 Fine Decoder™ Analysis
+### 📞 The Check-In
 
-Message: "I'm fine"
+**Without:** Dad mentioned a doctor's appointment. Was it this week? Last week? You meant to call...
 
-What they said: Fine
-What they meant: Not fine
-Confidence: 97%
+**With LifeOps:**
+```bash
+bun run cli search "doctor" --contact="Dad"
+# → "colonoscopy scheduled for Tuesday" (5 days ago)
+```
+You call Tuesday evening. He's genuinely touched you remembered.
 
-Recommended response: "I can tell something's up. Want to talk about it?"
+### 💬 The Decode
+
+**Without:** She texts "I'm fine" and you reply "Great!" This was a mistake.
+
+**With LifeOps:**
+```bash
+bun run cli decode "I'm fine"
+
+🔍 Analysis
+───────────────────────────────
+Confidence: 85% — likely not fine
+Context: Previous messages show excitement about dinner plans
+         that were just cancelled
+
+Suggestion: "I can tell something's off. Want to talk about it?"
 ```
 
-Finally, a system that understands subtext. Like Prometheus metrics, but for emotional state.
+---
 
-### 📊 Relationship Observability
+## Who It's For
 
-| Feature | Corporate Equivalent | What It Actually Does |
-|---------|---------------------|----------------------|
-| **Message Sync** | Log aggregation | Syncs WhatsApp messages locally (your data, your machine) |
-| **Signal Extraction** | Anomaly detection | Detects stress patterns, mood shifts, important dates mentioned |
-| **Memory Capture** | Event sourcing | "Remember: she wants to visit Iceland" stored and retrievable |
-| **Health Dashboard** | SLA monitoring | Communication balance, response times, engagement trends |
-| **Draft Assistance** | Auto-remediation | AI-powered message drafts when you need them |
+LifeOps works for **any relationship** you want to nurture:
 
-### 🎯 Core Capabilities
+- **Partners & Spouses** — Remember the little things that add up over years
+- **Parents & Family** — Stay connected even when life gets hectic
+- **Close Friends** — Be the friend who actually follows up
+- **Colleagues** — Maintain professional relationships thoughtfully
 
-- **Sync**: Pull your WhatsApp history to a local database
-- **Decode**: Translate "I'm fine" into actionable intelligence
-- **Remember**: Store important context AI can use later
-- **Analyze**: Communication patterns across all your relationships
-- **Draft**: Context-aware message suggestions (you still press send)
+If you care about someone, LifeOps helps you show it.
 
-### 🔒 Privacy-First Architecture
+---
 
-Your relationship data is *intimate data*. It stays on your machine:
+## Privacy First
 
-- Local SQLite database (not someone else's server)
-- Local vector embeddings for AI (no cloud RAG)
-- API calls only when you explicitly trigger analysis
-- No telemetry, no tracking, no "we value your privacy" doublespeak
+Your conversations are personal. They stay that way.
 
-## Quick Start
+- **Everything on your machine** — Local SQLite database, no cloud sync
+- **You control what's analyzed** — AI only sees what you explicitly ask
+- **No tracking** — We don't collect usage data. We don't want it.
+
+---
+
+## Getting Started
 
 ```bash
-# Install
+# Clone and install
 git clone https://github.com/senguttuvang/LifeOps-CLI.git
-cd lifeops-cli
-bun install
+cd lifeops-cli && bun install
 
-# Initialize
+# Set up database
 bunx drizzle-kit push
-cp .env.example .env
-# Add your API keys
+cp .env.example .env  # Add your API keys
 
-# Authenticate WhatsApp
+# Connect WhatsApp
 ./bin/whatsmeow-cli auth qr
 
 # Start using
 bun run cli sync
-bun run cli decode "I'm fine"
-bun run cli remember "She wants to visit Iceland"
-```
-
-## Usage Examples
-
-```bash
-# Sync recent messages
-bun run cli sync --days=7
-
-# Decode cryptic messages
+bun run cli remember "Mom wants the blue saree from Nalli's"
 bun run cli decode "Sure, whatever you want"
-# → Translation: "I have a strong preference you should know by now"
-
-# Remember important context
-bun run cli remember "Her mom's birthday is March 15"
-
-# Check system health
-bun run cli health
 ```
 
-## FAQ (The Honest Version)
+---
 
-**"Is this creepy?"**
-> You're analyzing your own conversations to be more thoughtful. The bar is low, friend.
+## The Philosophy
 
-**"What if I don't have a girlfriend?"**
-> Works for any relationship. Friends, family, that one colleague who's impossible to read.
+This isn't about faking thoughtfulness. It's about making sure the care you feel actually shows up.
 
-**"Should I tell my partner I use this?"**
-> That's between you and your conscience. We just provide the tools.
+You love your mom. But you forgot she has a check-up this week.
+You care about your friend. But you haven't asked about that thing they were stressed about.
 
-**"What if I message the wrong person?"**
-> Read-only by default. All AI outputs are drafts. You press send. We gave you safeties.
+Using a calendar to remember your anniversary isn't cheating—forgetting it is. LifeOps works the same way.
 
-**See full FAQ →** [docs/faq.md](docs/faq.md)
+**We bridge the gap between intention and action.**
 
-## The Tech (For Those Who Care)
+---
 
-We're built on a modern TypeScript stack with functional programming patterns. If terms like "Effect-TS", "Drizzle ORM", and "local-first RAG" excite you, see our technical documentation:
+## Important Notes
 
-- **[Architecture](docs/architecture.md)** — Domain-driven design, bounded contexts
-- **[Why Effect-TS](docs/why-effect.md)** — Error handling that doesn't gaslight you
-- **[Why TypeScript](docs/why-typescript.md)** — Type safety for emotional safety
+**On WhatsApp:** This tool uses unofficial WhatsApp Web protocols. It's designed for personal use—analyzing your own conversations. While the risk is low, please be aware this operates in a gray area with WhatsApp's terms.
 
-## Philosophy
+**On ethics:** LifeOps is a memory aid, not a manipulation tool. If you're using this to fake care you don't feel, the relationship has bigger issues than software can solve.
 
-LifeOps is a **memory aid**, not a manipulation tool.
+---
 
-- ✅ Using a calendar to remember your anniversary? That's fine.
-- ❌ Forgetting your anniversary? That's the problem.
-- ✅ Using AI to help you BE thoughtful? That's LifeOps.
-- ❌ Using AI to FAKE thoughtfulness? Get therapy.
+## Learn More
 
-Technology amplifies intent. If your intent is good, LifeOps helps. If it's not, we don't want your business.
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-See [docs/architecture.md](docs/architecture.md) for code patterns.
-
-## License
-
-MIT — See [LICENSE](LICENSE)
+| Resource | Description |
+|----------|-------------|
+| [FAQ](docs/faq.md) | Common questions, honest answers |
+| [Tech Stack](docs/tech-stack.md) | How it's built (for the curious) |
+| [Architecture](docs/architecture/architecture.md) | System design deep-dive |
+| [Roadmap](docs/architecture/roadmap.md) | What's coming next |
 
 ---
 
 <p align="center">
   <a href="https://lifeops.in/">lifeops.in</a> ·
   <a href="docs/faq.md">FAQ</a> ·
-  <a href="docs/architecture.md">Architecture</a>
+  <a href="docs/architecture/architecture.md">Docs</a>
 </p>
 
 <p align="center">

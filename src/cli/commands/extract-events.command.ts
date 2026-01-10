@@ -96,8 +96,8 @@ ${getCategoryStats(uniqueEvents)}
 - Location geocoding for mapping
 `
 
-  // Save to vault
-  const vaultPath = "./reports/WhatsApp-Events-Report.md"
+  // Save to vault (configurable via environment variable)
+  const vaultPath = process.env.LIFEOPS_REPORT_PATH ?? "./reports/WhatsApp-Events-Report.md"
   yield* Effect.tryPromise({
     try: () => Bun.write(vaultPath, report),
     catch: (error) => new Error(`Failed to write report: ${error}`),

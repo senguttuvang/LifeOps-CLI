@@ -156,7 +156,7 @@ ${getCategoryStats(events)}
 `
 
   // Save to vault
-  const vaultPath = "./reports/WhatsApp-Image-Events-Report.md"
+  const vaultPath = process.env.LIFEOPS_REPORT_PATH ?? "./reports/WhatsApp-Image-Events-Report.md"
   yield* Effect.tryPromise({
     try: () => Bun.write(vaultPath, report),
     catch: (error) => new Error(`Failed to write report: ${error}`),
