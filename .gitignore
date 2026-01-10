@@ -5,6 +5,10 @@ node_modules/
 dist/
 *.tsbuildinfo
 
+# Compiled binaries (users should build from source)
+bin/
+tools/whatsmeow-cli/bin/
+
 # Database
 *.db
 *.db-wal

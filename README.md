@@ -217,6 +217,24 @@ bun run cli sync
 bun run cli doctor
 ```
 
+### WhatsApp Authentication
+
+When you run `bun run cli sync` for the first time, a QR code will appear in your terminal:
+
+![WhatsApp QR Authentication](docs/images/whatsapp-auth-qr.png)
+
+**To authenticate:**
+1. Open WhatsApp on your phone
+2. Go to **Settings → Linked Devices → Link a Device**
+3. Scan the QR code in your terminal
+4. Wait for "Authentication successful!" message
+
+> **Note:** If using Claude Code or other AI assistants, run the auth command directly in your terminal for proper QR rendering:
+> ```bash
+> ./bin/whatsmeow-cli auth
+> ```
+> Or use `--ascii` flag for ASCII-compatible rendering: `./bin/whatsmeow-cli auth --ascii`
+
 ### Troubleshooting
 
 Run the doctor command to diagnose issues:

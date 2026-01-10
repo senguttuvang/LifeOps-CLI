@@ -6,6 +6,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/mdp/qrterminal/v3 v3.2.1
 	go.mau.fi/whatsmeow v0.0.0-20251217143725-11cf47c62d32
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -27,6 +28,5 @@ require (
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/term v0.38.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )
