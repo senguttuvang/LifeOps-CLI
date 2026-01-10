@@ -1,15 +1,15 @@
-# LifeOps Roadmap
+# LifeOps CLI Roadmap
 
 > **From "I forgot" to "I remembered" - The journey**
 
 Last Updated: 2026-01-10
-Current Phase: **Foundation Complete / Ready for Self-DM Interface**
+Current Phase: **Phase 1 In Progress**
 
 ---
 
 ## Vision
 
-**LifeOps** is the first relationship app to operationalize peer-reviewed relationship psychology into actionable, real-time insights. We're not building another reminder app—we're building a **relationship intelligence platform** powered by decades of scientific research.
+**LifeOps CLI** is a relationship intelligence platform that operationalizes peer-reviewed relationship psychology into actionable, real-time insights. We're not building another reminder app—we're building a **relationship intelligence platform** powered by decades of scientific research.
 
 ### The North Star
 > "Make thoughtfulness effortless, so you can focus on being present."
@@ -18,7 +18,7 @@ Current Phase: **Foundation Complete / Ready for Self-DM Interface**
 1. **Science-backed**: Gottman's research, attachment theory, NVC - no other app does this
 2. **Local-first**: Privacy is a feature, not a compromise
 3. **Signal extraction**: 25-dimension behavioral analysis per contact
-4. **WhatsApp native**: 93% of urban India on one platform
+4. **WhatsApp native**: Dominant messaging platform integration
 
 ---
 
@@ -26,7 +26,7 @@ Current Phase: **Foundation Complete / Ready for Self-DM Interface**
 
 ```
 Phase 0: Foundation        ████████████████████  100% ✅
-Phase 1: Self-DM Interface ░░░░░░░░░░░░░░░░░░░░    0% 🚧
+Phase 1: Self-DM Interface ████████░░░░░░░░░░░░   40% 🚧
 Phase 2: Gottman Features  ░░░░░░░░░░░░░░░░░░░░    0% 📋
 Phase 3: Intelligence      ░░░░░░░░░░░░░░░░░░░░    0% 📋
 Phase 4: Safety            ░░░░░░░░░░░░░░░░░░░░    0% 📋
@@ -49,13 +49,14 @@ Phase 6: Web & Mobile      ░░░░░░░░░░░░░░░░░�
 - [x] Event extraction (text + vision)
 - [x] Fun commands (decode, remember, relationship)
 - [x] Health check system
-- [x] Test infrastructure (51 passing tests)
+- [x] Test infrastructure
+- [x] Android message import
 
-### Key Metrics
-- 1,390 contacts synced
-- 946 conversations tracked
-- 11,323 interactions stored
-- 3,111 messages analyzed for signals
+### Key Capabilities
+- WhatsApp message sync and storage
+- Contact and conversation tracking
+- Message analysis and indexing
+- RAG-ready vector embeddings
 
 ---
 
@@ -65,7 +66,12 @@ Phase 6: Web & Mobile      ░░░░░░░░░░░░░░░░░�
 
 **Why This Matters**: Users shouldn't need to open a terminal. WhatsApp is already open.
 
-### Features
+### Implemented
+- [x] Self-DM message detection
+- [x] Auto-draft monitoring service
+- [x] Signal extraction command
+
+### In Progress
 - [ ] `@lifeops suggest dinner` - Get date suggestions
 - [ ] `@lifeops remember [text]` - Store a memory
 - [ ] `@lifeops remind [contact] [event]` - Set reminder
@@ -73,21 +79,15 @@ Phase 6: Web & Mobile      ░░░░░░░░░░░░░░░░░�
 - [ ] `@lifeops analyze [contact]` - Quick relationship insights
 
 ### Technical Requirements
-- Self-DM message detection
-- Command parser
+- Command parser refinement
 - Response delivery via WhatsApp
 - Rate limiting (don't spam yourself)
-
-### Dependencies
-- Phase 0 complete ✅
 
 ---
 
 ## Phase 2: Gottman Features 📋 PLANNED
 
 **Goal**: Operationalize Gottman's research into real-time features
-
-**Based on**: [relationship-psychology-research.md](./ideas/relationship-psychology-research.md)
 
 ### 2.1 Four Horsemen Detector
 - [ ] Criticism pattern detection
@@ -154,7 +154,7 @@ Phase 6: Web & Mobile      ░░░░░░░░░░░░░░░░░�
 
 ## Phase 4: Safety Features 📋 PLANNED
 
-**Goal**: Women's safety as first-class feature (India market priority)
+**Goal**: Safety as first-class feature
 
 ### 4.1 Travel Safety
 - [ ] Location share detection
@@ -168,7 +168,6 @@ Phase 6: Web & Mobile      ░░░░░░░░░░░░░░░░░�
 - [ ] Unusual pattern alerts
 - [ ] One-tap emergency share
 - [ ] Trusted circle configuration
-- [ ] Police station lookup
 
 ### 4.3 Late Night Check-ins
 - [ ] Travel context awareness
@@ -178,7 +177,7 @@ Phase 6: Web & Mobile      ░░░░░░░░░░░░░░░░░�
 
 ### Safety Principles
 - Opt-in only (no surveillance by default)
-- Partner-controlled (she decides who gets alerts)
+- User-controlled (user decides who gets alerts)
 - Local processing (no cloud location tracking)
 - False positive tolerance (rather safe than sorry)
 
@@ -233,22 +232,6 @@ Anti-corruption layer (Phase 0) means adding channels requires ONLY new adapters
 
 ---
 
-## Feature Backlog (Not Scheduled)
-
-From [feature-backlog-from-research.md](./ideas/feature-backlog-from-research.md):
-
-| Feature | Source | Priority | Notes |
-|---------|--------|----------|-------|
-| Conflict Pattern Analyzer | Multiple | P3 | Recurring topic detection |
-| Apology Language Matcher | Chapman | P4 | Match style to partner |
-| Perpetual Problem Manager | Gottman | P4 | 69% of conflicts recurring |
-| Repair Attempt Detector | Gottman | P4 | De-escalation detection |
-| Intimacy Tracker | Perel | P4 | Security ↔ Desire balance |
-| Boundary Tracker | Tawwab | P4 | Healthy boundary monitoring |
-| Gratitude Journal | Various | P4 | Shared appreciation log |
-
----
-
 ## Success Metrics
 
 ### User Outcomes
@@ -260,30 +243,12 @@ From [feature-backlog-from-research.md](./ideas/feature-backlog-from-research.md
 | Relationship satisfaction | +15% | Self-reported score |
 
 ### Technical Metrics
-| Metric | Target | Current |
-|--------|--------|---------|
-| Sync reliability | 99.9% | ~99% |
-| Analysis accuracy | 85% | ~75% (improving) |
-| Response time | <2s | ~1.5s |
-| Test coverage | 80% | ~60% |
-
-### Engagement Metrics
-| Metric | Target | Notes |
-|--------|--------|-------|
-| Daily active users | 60% | Of registered |
-| Feature discovery | 5+ | Features used per user |
-| Retention (30 day) | 70% | Critical for relationship tools |
-
----
-
-## Release Cadence
-
-- **Minor releases**: Every 2 weeks (bug fixes, small features)
-- **Major releases**: Every 6-8 weeks (new capabilities)
-- **Hotfixes**: As needed (security, critical bugs)
-
-### Version Naming
-Uses relationship-themed codenames. See [fun-taglines-and-codenames.md](./ideas/fun-taglines-and-codenames.md)
+| Metric | Target |
+|--------|--------|
+| Sync reliability | 99.9% |
+| Analysis accuracy | 85% |
+| Response time | <2s |
+| Test coverage | 80% |
 
 ---
 
@@ -303,30 +268,13 @@ Uses relationship-themed codenames. See [fun-taglines-and-codenames.md](./ideas/
 | Over-reliance on AI | Human-in-the-loop for all actions |
 | Relationship damage | Never auto-send, always draft mode |
 
-### Market Risks
-| Risk | Mitigation |
-|------|------------|
-| WhatsApp competition | Multi-channel roadmap |
-| Privacy regulations | Local-first architecture compliant |
-| Copycats | Science-backed moat is hard to replicate |
-
----
-
-## Open Questions
-
-1. **Monetization**: Subscription? One-time? Freemium?
-2. **Couples Mode**: Should partners share a LifeOps instance?
-3. **Therapist Integration**: Export data for couples therapy?
-4. **Enterprise**: Relationship coaching businesses?
-
 ---
 
 ## Contributing
 
 ### How to Propose Features
-1. Check existing backlog in `docs/ideas/`
-2. Create issue with `[FEATURE]` prefix
-3. Include: Source (book/research), Effort estimate, Impact hypothesis
+1. Create issue with `[FEATURE]` prefix
+2. Include: Source (book/research), Effort estimate, Impact hypothesis
 
 ### How to Pick Up Work
 1. Check current phase in this roadmap
@@ -336,6 +284,5 @@ Uses relationship-themed codenames. See [fun-taglines-and-codenames.md](./ideas/
 
 ---
 
-**Maintained by**: User + Claude Code
+**Maintained by**: LifeOps Team
 **Last Roadmap Review**: 2026-01-10
-**Next Review**: 2026-02-10
