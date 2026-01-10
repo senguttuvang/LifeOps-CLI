@@ -310,8 +310,11 @@ const checkMessageSafety = (draft: string, recipientId: string) => {
 - We might feature it in docs (with your permission)
 
 **Found a bug?**
-- GitHub Issues: https://github.com/senguttuvang/LifeOps-CLI/issues
-- **Urgent safety issue?** Email: security@lifeops.dev
+- GitHub Issues: [github.com/senguttuvang/LifeOps-CLI/issues](https://github.com/senguttuvang/LifeOps-CLI/issues)
+- **Urgent safety issue?** Email: security@lifeops.in
+
+**Want to learn more?**
+- Website: [lifeops.in](https://lifeops.in/)
 
 ---
 
