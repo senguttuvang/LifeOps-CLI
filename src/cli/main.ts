@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * LifeOps-Relationship CLI Entry Point
+ * LifeOps CLI CLI Entry Point
  *
  * Simple command dispatcher using Effect-TS.
  * Commands: sync, health, decode, remember, situation
@@ -33,7 +33,7 @@ if (!command || command === "help" || command === "--help" || command === "-h") 
 function showHelp() {
   console.log("");
   console.log("╔═══════════════════════════════════════════════════════════════════╗");
-  console.log("║  LifeOps-Relationship v1.0.0-uncomplicate                         ║");
+  console.log("║  LifeOps CLI v1.0.0-uncomplicate                         ║");
   console.log("║  \"Because 'fine' rarely means fine\"                               ║");
   console.log("║                                                                   ║");
   console.log("║  System Status: OPERATIONAL                                       ║");
@@ -160,7 +160,7 @@ async function runServiceCommand() {
 
       case "relationship": {
         yield* Command.run(relationshipCommand, {
-          name: "LifeOps-Relationship",
+          name: "LifeOps CLI",
           version: "1.0.0",
         })(args);
         break;
@@ -205,7 +205,7 @@ async function runServiceCommand() {
 
       case "extract-signals": {
         yield* Command.run(extractSignalsCommand, {
-          name: "LifeOps-Relationship",
+          name: "LifeOps CLI",
           version: "1.0.0",
         })(args);
         break;
