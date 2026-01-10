@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": ["src/cli/main.ts", "src/cli/commands/*.ts"],
+  "project": ["src/**/*.ts"],
+  "ignore": [
+    "**/*.d.ts",
+    "**/test/**",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "worktrees/**"
+  ],
+  "ignoreBinaries": [
+    "qlty",
+    "dot"
+  ]
+}
