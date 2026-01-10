@@ -12,7 +12,8 @@
  * Because remembering things manually is so 2019.
  */
 
-import { Effect } from "effect";
+import { Command, Args } from "@effect/cli";
+import { Effect, Console } from "effect";
 import type { Memory, MemoryCategory } from "../../domain/relationship/types";
 import { displayMemoryStored, hint, warn } from "../output/relationship-output";
 
@@ -176,64 +177,74 @@ function generateId(): string {
 }
 
 /**
- * The remember command - captures memories for later recall.
+ * Remember Command - @effect/cli based
  *
- * Currently stores to console output (persistence coming soon™).
- * The categorization is real and useful.
+ * The Memory Capture System™ captures and auto-categorizes memories.
  */
-export const rememberCommand = (content: string) =>
-  Effect.gen(function* () {
-    if (!content || content.trim().length === 0) {
-      console.log("\nUsage: bun run cli remember <something to remember>");
-      console.log("\nExamples:");
-      console.log('  bun run cli remember "wants the blue vase from Indiranagar"');
-      console.log('  bun run cli remember "don\'t mention the parking incident"');
-      console.log('  bun run cli remember "anniversary is March 15"');
-      console.log('  bun run cli remember "allergic to shellfish"');
-      console.log("");
-      hint("Memories are auto-categorized as: gift, preference, date, boundary, or context.");
-      return;
-    }
+export const rememberCommand = Command.make(
+  "remember",
+  {
+    content: Args.text({ name: "content" }).pipe(
+      Args.repeated,
+    ),
+  },
+  ({ content }) =>
+    Effect.gen(function* () {
+      // Join all words into a single content string
+      const fullContent = content.join(" ");
 
-    // Categorize the memory
-    const { category, confidence } = categorizeMemory(content);
+      if (!fullContent || fullContent.trim().length === 0) {
+        yield* Console.log("\nUsage: bun run cli remember <something to remember>");
+        yield* Console.log("\nExamples:");
+        yield* Console.log('  bun run cli remember "wants the blue vase from Indiranagar"');
+        yield* Console.log('  bun run cli remember "don\'t mention the parking incident"');
+        yield* Console.log('  bun run cli remember "anniversary is March 15"');
+        yield* Console.log('  bun run cli remember "allergic to shellfish"');
+        yield* Console.log("");
+        hint("Memories are auto-categorized as: gift, preference, date, boundary, or context.");
+        return;
+      }
 
-    // Extract tags
-    const tags = extractTags(content);
+      // Categorize the memory
+      const { category, confidence } = categorizeMemory(fullContent);
 
-    // Create the memory object
-    const memory: Memory = {
-      id: generateId(),
-      content: content.trim(),
-      category,
-      mentionedAt: new Date(),
-      source: "manual",
-      tags,
-    };
+      // Extract tags
+      const tags = extractTags(fullContent);
 
-    // Display the result
-    displayMemoryStored(memory);
+      // Create the memory object
+      const memory: Memory = {
+        id: generateId(),
+        content: fullContent.trim(),
+        category,
+        mentionedAt: new Date(),
+        source: "manual",
+        tags,
+      };
 
-    // Show confidence if not high
-    if (confidence < 0.5) {
-      warn(`Category confidence is ${(confidence * 100).toFixed(0)}%. Review categorization.`);
-    }
+      // Display the result
+      displayMemoryStored(memory);
 
-    // Show extracted tags
-    if (tags.length > 0) {
-      console.log(`  🏷️  Tags: ${tags.join(", ")}`);
-    }
+      // Show confidence if not high
+      if (confidence < 0.5) {
+        warn(`Category confidence is ${(confidence * 100).toFixed(0)}%. Review categorization.`);
+      }
 
-    // Note about persistence
-    console.log("");
-    hint("Memory captured! (Note: Persistence to database coming in next update)");
+      // Show extracted tags
+      if (tags.length > 0) {
+        yield* Console.log(`  🏷️  Tags: ${tags.join(", ")}`);
+      }
 
-    // Suggest related commands based on category
-    if (category === "date") {
-      hint("Tip: Run 'bun run cli relationship dates' to see all remembered dates.");
-    } else if (category === "gift") {
-      hint("Tip: Gift ideas will appear in 'bun run cli relationship gifts' (coming soon).");
-    } else if (category === "boundary") {
-      hint("⚠️  Boundary noted. This will trigger warnings if mentioned in draft responses.");
-    }
-  });
+      // Note about persistence
+      yield* Console.log("");
+      hint("Memory captured! (Note: Persistence to database coming in next update)");
+
+      // Suggest related commands based on category
+      if (category === "date") {
+        hint("Tip: Run 'bun run cli relationship dates' to see all remembered dates.");
+      } else if (category === "gift") {
+        hint("Tip: Gift ideas will appear in 'bun run cli relationship gifts' (coming soon).");
+      } else if (category === "boundary") {
+        hint("⚠️  Boundary noted. This will trigger warnings if mentioned in draft responses.");
+      }
+    }),
+);

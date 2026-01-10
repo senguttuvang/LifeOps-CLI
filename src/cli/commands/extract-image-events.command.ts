@@ -1,9 +1,11 @@
 /**
- * WhatsApp Image Event Extraction - Standalone Script
+ * WhatsApp Image Event Extraction Command
  *
- * Extracts events from image posters using vision models
+ * Extracts events from image captions using LLM.
+ * Usage: bun run cli extract-image-events
  */
 
+import { Command } from "@effect/cli"
 import { Effect, Console } from "effect"
 import { ImageEventExtractionService, ImageEventExtractionServiceLive } from "../../domain/whatsapp/services/image-event-extraction.service"
 import { isVisionExtractionEnabled } from "../../config/feature-flags"
@@ -37,63 +39,84 @@ ${event.caption ? `- Caption: "${event.caption.slice(0, 150)}${event.caption.len
 }
 
 /**
- * Main extraction program
+ * Get statistics by category
  */
-const program = Effect.gen(function* () {
-  // Feature flag check
-  if (!isVisionExtractionEnabled()) {
-    yield* Console.log("⚠️  Vision extraction is disabled via ENABLE_VISION_EXTRACTION flag")
-    yield* Console.log("   Set ENABLE_VISION_EXTRACTION=true in .env to enable this feature\n")
-    return
-  }
+function getCategoryStats(events: ReadonlyArray<{ category: string }>): string {
+  const counts = events.reduce((acc: Record<string, number>, event) => {
+    acc[event.category] = (acc[event.category] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
 
-  yield* Console.log("🖼️  Extracting events from WhatsApp image captions...\n")
-  yield* Console.log("ℹ️  Note: Android backup doesn't include media files")
-  yield* Console.log("   Extracting from image captions instead (often contain full event details)\n")
+  return Object.entries(counts)
+    .sort(([, a], [, b]) => b - a)
+    .map(([category, count]) => `- **${category}**: ${count}`)
+    .join('\n')
+}
 
-  const service = yield* ImageEventExtractionService
+/**
+ * Extract Image Events Command - @effect/cli based
+ *
+ * Extracts events from image captions using LLM analysis.
+ */
+export const extractImageEventsCommand = Command.make(
+  "extract-image-events",
+  {},
+  () =>
+    Effect.gen(function* () {
+      // Feature flag check
+      if (!isVisionExtractionEnabled()) {
+        yield* Console.log("⚠️  Vision extraction is disabled via ENABLE_VISION_EXTRACTION flag")
+        yield* Console.log("   Set ENABLE_VISION_EXTRACTION=true in .env to enable this feature\n")
+        return
+      }
 
-  // Find image messages (last 365 days)
-  yield* Console.log("📊 Finding image messages with event-related captions...")
-  const imageMessages = yield* service.findImageMessages(365)
-  yield* Console.log(`   Found ${imageMessages.length} candidate image captions\n`)
+      yield* Console.log("🖼️  Extracting events from WhatsApp image captions...\n")
+      yield* Console.log("ℹ️  Note: Android backup doesn't include media files")
+      yield* Console.log("   Extracting from image captions instead (often contain full event details)\n")
 
-  if (imageMessages.length === 0) {
-    yield* Console.log("❌ No image messages with event captions found")
-    return
-  }
+      const service = yield* ImageEventExtractionService
 
-  // Extract events from captions
-  yield* Console.log("🤖 Extracting events with LLM (Llama 3.3 70B via OpenRouter)...")
-  yield* Console.log("   Processing up to 15 captions...\n")
+      // Find image messages (last 365 days)
+      yield* Console.log("📊 Finding image messages with event-related captions...")
+      const imageMessages = yield* service.findImageMessages(365)
+      yield* Console.log(`   Found ${imageMessages.length} candidate image captions\n`)
 
-  const events = yield* service.extractEventsFromImages(imageMessages)
+      if (imageMessages.length === 0) {
+        yield* Console.log("❌ No image messages with event captions found")
+        return
+      }
 
-  yield* Console.log(`   ✅ Extracted ${events.length} events from images\n`)
+      // Extract events from captions
+      yield* Console.log("🤖 Extracting events with LLM (Llama 3.3 70B via OpenRouter)...")
+      yield* Console.log("   Processing up to 15 captions...\n")
 
-  if (events.length === 0) {
-    yield* Console.log("❌ No events extracted from images")
-    return
-  }
+      const events = yield* service.extractEventsFromImages(imageMessages)
 
-  // Sort by confidence and date
-  const sortedEvents = events.sort((a, b) => {
-    // First by confidence
-    if (b.confidence !== a.confidence) {
-      return b.confidence - a.confidence
-    }
-    // Then by date
-    if (a.date && b.date) {
-      return new Date(b.date).getTime() - new Date(a.date).getTime()
-    }
-    return 0
-  })
+      yield* Console.log(`   ✅ Extracted ${events.length} events from images\n`)
 
-  // Take top 10
-  const top10 = sortedEvents.slice(0, 10)
+      if (events.length === 0) {
+        yield* Console.log("❌ No events extracted from images")
+        return
+      }
 
-  // Generate report
-  const report = `# Auroville WhatsApp Image Events Report
+      // Sort by confidence and date
+      const sortedEvents = events.sort((a, b) => {
+        // First by confidence
+        if (b.confidence !== a.confidence) {
+          return b.confidence - a.confidence
+        }
+        // Then by date
+        if (a.date && b.date) {
+          return new Date(b.date).getTime() - new Date(a.date).getTime()
+        }
+        return 0
+      })
+
+      // Take top 10
+      const top10 = sortedEvents.slice(0, 10)
+
+      // Generate report
+      const report = `# Auroville WhatsApp Image Events Report
 
 **Generated:** ${new Date().toISOString()}
 **Source:** WhatsApp image message captions (last 365 days)
@@ -155,39 +178,18 @@ ${getCategoryStats(events)}
 **Model:** Qwen2-VL is 10x cheaper than Claude Vision while maintaining good accuracy
 `
 
-  // Save to vault
-  const vaultPath = process.env.LIFEOPS_REPORT_PATH ?? "./reports/WhatsApp-Image-Events-Report.md"
-  yield* Effect.tryPromise({
-    try: () => Bun.write(vaultPath, report),
-    catch: (error) => new Error(`Failed to write report: ${error}`),
-  })
+      // Save to vault
+      const vaultPath = process.env.LIFEOPS_REPORT_PATH ?? "./reports/WhatsApp-Image-Events-Report.md"
+      yield* Effect.tryPromise({
+        try: () => Bun.write(vaultPath, report),
+        catch: (error) => new Error(`Failed to write report: ${error}`),
+      })
 
-  yield* Console.log(`✅ Report saved to: ${vaultPath}`)
-  yield* Console.log(`\n📈 Summary:`)
-  yield* Console.log(`   Images processed: ${Math.min(imageMessages.length, 15)}`)
-  yield* Console.log(`   Events extracted: ${events.length}`)
-  yield* Console.log(`   Top events in report: ${top10.length}`)
-  yield* Console.log(`   Average confidence: ${(events.reduce((sum, e) => sum + e.confidence, 0) / events.length * 100).toFixed(0)}%`)
-})
-
-/**
- * Get statistics by category
- */
-function getCategoryStats(events: ReadonlyArray<any>): string {
-  const counts = events.reduce((acc, event) => {
-    acc[event.category] = (acc[event.category] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
-
-  return Object.entries(counts)
-    .sort(([, a], [, b]) => b - a)
-    .map(([category, count]) => `- **${category}**: ${count}`)
-    .join('\n')
-}
-
-/**
- * Export command function for CLI
- */
-export const extractImageEventsCommand = () => program.pipe(
-  Effect.provide(ImageEventExtractionServiceLive)
+      yield* Console.log(`✅ Report saved to: ${vaultPath}`)
+      yield* Console.log(`\n📈 Summary:`)
+      yield* Console.log(`   Images processed: ${Math.min(imageMessages.length, 15)}`)
+      yield* Console.log(`   Events extracted: ${events.length}`)
+      yield* Console.log(`   Top events in report: ${top10.length}`)
+      yield* Console.log(`   Average confidence: ${(events.reduce((sum, e) => sum + e.confidence, 0) / events.length * 100).toFixed(0)}%`)
+    }).pipe(Effect.provide(ImageEventExtractionServiceLive)),
 )

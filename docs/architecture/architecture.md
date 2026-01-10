@@ -140,14 +140,23 @@ LifeOps follows a **three-layer architecture** inspired by Hexagonal Architectur
 - Handle user errors (invalid arguments, help text)
 - **Dependency**: Domain layer services
 
-**Example**: `sync.command.ts`
+**Example**: `sync.command.ts` (using @effect/cli)
 ```typescript
-export const syncCommand = (options: SyncCommandOptions = {}) =>
-  Effect.gen(function* () {
-    const syncService = yield* SyncServiceTag;  // Get domain service
-    const result = yield* syncService.syncMessages({ days: options.days || 30 });
-    console.log(`✅ Sync complete: ${result.messagesAdded} messages`);
-  });
+export const syncCommand = Command.make(
+  "sync",
+  {
+    days: Options.integer("days").pipe(
+      Options.withDescription("Number of days to sync (default: 30)"),
+      Options.withDefault(30),
+    ),
+  },
+  ({ days }) =>
+    Effect.gen(function* () {
+      const syncService = yield* SyncServiceTag;  // Get domain service
+      const result = yield* syncService.syncMessages({ days });
+      yield* Console.log(`✅ Sync complete: ${result.messagesAdded} messages`);
+    }),
+);
 ```
 
 #### **Domain Layer** (`src/domain/`)
@@ -550,16 +559,37 @@ const syncMessages = (options) =>
 
 **Tradeoff**: Less magical than Prisma, but more explicit.
 
-### 6. **Why Simple CLI Dispatcher (not @effect/cli)?**
+### 6. **Why @effect/cli (CLI Framework)?**
 
-**Decision**: Use switch statement for command dispatching.
+**Decision**: Use @effect/cli for command parsing and dispatching.
 
 **Rationale**:
-- **Simplicity**: @effect/cli caused stack overflow errors
-- **Control**: Manual argument parsing gives full control
-- **Debugging**: Easier to debug than complex CLI framework
+- **Type-Safe Arguments**: `Options.integer`, `Args.text` provide compile-time validation
+- **Auto Help Generation**: Generates help text from command definitions
+- **Composable Commands**: `Command.withSubcommands` enables hierarchical CLI structure
+- **Effect Integration**: Native Effect-TS integration with automatic layer composition
+- **Shell Completions**: Built-in support for bash/zsh/fish completions
 
-**Tradeoff**: Less declarative, but more predictable.
+**Architecture**:
+```typescript
+// Root command with subcommands
+const lifeopsCommand = Command.make("lifeops").pipe(
+  Command.withSubcommands([
+    syncCommand,     // Command.make("sync", { days: Options.integer("days") })
+    healthCommand,   // Command.make("health", {})
+    decodeCommand,   // Command.make("decode", { message: Args.text().pipe(Args.repeated) })
+    // ... more commands
+  ]),
+);
+
+// Run with all layers
+Command.run(lifeopsCommand, { name: "LifeOps CLI", version: "1.0.0" })(process.argv).pipe(
+  Effect.provide(MainLive),
+  NodeRuntime.runMain,
+);
+```
+
+**Tradeoff**: All layers load at startup, but lazy initialization in services prevents unnecessary API calls.
 
 ---
 
