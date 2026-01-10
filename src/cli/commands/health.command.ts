@@ -5,35 +5,45 @@
  * Usage: bun run cli health
  */
 
-import { Effect } from "effect";
+import { Command } from "@effect/cli";
+import { Effect, Console } from "effect";
 import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
 import { WhatsAppServiceTag } from "../../infrastructure/whatsapp/whatsapp.client";
 
-export const healthCommand = () =>
-  Effect.gen(function* () {
-    const whatsapp = yield* WhatsAppServiceTag;
-    const sync = yield* SyncServiceTag;
+/**
+ * Health Command - @effect/cli based
+ *
+ * Displays system health status for LifeOps components.
+ */
+export const healthCommand = Command.make(
+  "health",
+  {},
+  () =>
+    Effect.gen(function* () {
+      const whatsapp = yield* WhatsAppServiceTag;
+      const sync = yield* SyncServiceTag;
 
-    console.log("🏥 LifeOps Health Check\n");
+      yield* Console.log("🏥 LifeOps Health Check\n");
 
-    // WhatsApp CLI
-    const waHealth = yield* whatsapp.healthCheck();
-    console.log(
-      `WhatsApp CLI: ${waHealth.available ? "✅" : "❌"} ${waHealth.available ? "Available" : "Not available"}`,
-    );
-    console.log(`Authenticated: ${waHealth.authenticated ? "✅" : "❌"} ${waHealth.authenticated ? "Yes" : "No"}`);
+      // WhatsApp CLI
+      const waHealth = yield* whatsapp.healthCheck();
+      yield* Console.log(
+        `WhatsApp CLI: ${waHealth.available ? "✅" : "❌"} ${waHealth.available ? "Available" : "Not available"}`,
+      );
+      yield* Console.log(`Authenticated: ${waHealth.authenticated ? "✅" : "❌"} ${waHealth.authenticated ? "Yes" : "No"}`);
 
-    if (waHealth.error) {
-      console.log(`   Error: ${waHealth.error}`);
-    }
+      if (waHealth.error) {
+        yield* Console.log(`   Error: ${waHealth.error}`);
+      }
 
-    // Sync state
-    const syncState = yield* sync.getSyncState();
-    if (syncState?.lastSyncAt) {
-      console.log(`Last sync: ${syncState.lastSyncAt.toISOString()}`);
-    } else {
-      console.log("Last sync: Never");
-    }
+      // Sync state
+      const syncState = yield* sync.getSyncState();
+      if (syncState?.lastSyncAt) {
+        yield* Console.log(`Last sync: ${syncState.lastSyncAt.toISOString()}`);
+      } else {
+        yield* Console.log("Last sync: Never");
+      }
 
-    console.log("\n✅ System operational");
-  });
+      yield* Console.log("\n✅ System operational");
+    }),
+);
