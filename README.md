@@ -165,22 +165,74 @@ Your conversations are personal. They stay that way.
 
 ## Getting Started
 
+### Prerequisites
+
+| Requirement | Why | Install |
+|-------------|-----|---------|
+| **Node.js 18+** | JavaScript runtime | [nodejs.org](https://nodejs.org) |
+| **Bun** | Fast JS runtime & package manager | `curl -fsSL https://bun.sh/install \| bash` |
+| **Go 1.21+** | Build WhatsApp CLI bridge | See below |
+
+**Install Go:**
+- **macOS:** `brew install go`
+- **Ubuntu/Debian:** `sudo apt install golang-go`
+- **Windows:** `choco install golang` or [download](https://go.dev/dl/)
+
+### Quick Setup
+
 ```bash
-# Clone and install
+# 1. Clone and install
 git clone https://github.com/senguttuvang/LifeOps-CLI.git
 cd lifeops-cli && bun install
 
-# Set up database
+# 2. Run the setup wizard (builds WhatsApp CLI, creates config)
+bun run cli setup
+
+# 3. Sync messages (scan QR code when prompted)
+bun run cli sync
+```
+
+### Manual Setup (Alternative)
+
+If you prefer step-by-step control:
+
+```bash
+# 1. Clone and install dependencies
+git clone https://github.com/senguttuvang/LifeOps-CLI.git
+cd lifeops-cli && bun install
+
+# 2. Build the WhatsApp CLI bridge (requires Go)
+cd tools/whatsmeow-cli
+make install-local
+cd ../..
+
+# 3. Set up database and config
 bunx drizzle-kit push
 cp .env.example .env  # Add your API keys
 
-# Connect WhatsApp
-./bin/whatsmeow-cli auth qr
-
-# Start using
+# 4. Connect WhatsApp (scan QR code with your phone)
 bun run cli sync
+
+# 5. Verify setup
+bun run cli doctor
+```
+
+### Troubleshooting
+
+Run the doctor command to diagnose issues:
+
+```bash
+bun run cli doctor
+```
+
+This checks all prerequisites and provides specific fix instructions.
+
+### Start Using
+
+```bash
 bun run cli remember "She wants the blue Zara bag from Phoenix Mall"
 bun run cli decode "Sure, whatever you want"
+bun run cli search "wants" --contact="Girlfriend"
 ```
 
 ---

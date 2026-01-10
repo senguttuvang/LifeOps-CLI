@@ -4,7 +4,7 @@
  * Tests for Gottman's 5:1 Magic Ratio tracking.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { analyzeMessage, calculateRatio } from "./ratio.analyzer";
 
 describe("Ratio Analyzer", () => {

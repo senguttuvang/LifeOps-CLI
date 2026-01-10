@@ -20,6 +20,7 @@ import { Effect, Layer } from "effect";
 // Infrastructure layers
 import { decodeCommand } from "./commands/decode.command.js";
 import { demoUiCommand } from "./commands/demo-ui.command.js";
+import { doctorCommand } from "./commands/doctor.command";
 import { extractEventsCommand } from "./commands/extract-events.command";
 import { extractImageEventsCommand } from "./commands/extract-image-events.command";
 import { extractSignalsCommand } from "./commands/extract-signals.command";
@@ -28,6 +29,7 @@ import { healthCommand } from "./commands/health.command";
 import { importAndroidCommand } from "./commands/import-android.command";
 import { relationshipCommand } from "./commands/relationship.command";
 import { rememberCommand } from "./commands/remember.command.js";
+import { setupCommand } from "./commands/setup.command";
 // Commands
 import { syncCommand } from "./commands/sync.command";
 import { ForecastServiceLive } from "../domain/forecast";
@@ -75,6 +77,10 @@ const MainLive = DomainLive.pipe(Layer.provide(InfrastructureLive), Layer.merge(
  */
 const lifeopsCommand = Command.make("lifeops").pipe(
   Command.withSubcommands([
+    // Setup & Diagnostics
+    setupCommand,
+    doctorCommand,
+
     // Core commands
     syncCommand,
     healthCommand,
