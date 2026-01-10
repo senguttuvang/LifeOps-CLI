@@ -25,6 +25,7 @@ type Config struct {
 	Days       int
 	To         string // For send command: recipient JID
 	Message    string // For send command: message text
+	ASCII      bool   // For auth command: use ASCII-compatible QR rendering
 }
 
 type OutputMessage struct {
@@ -102,12 +103,14 @@ func printUsage() {
 	fmt.Println("  --days N           Number of days to sync (default: 30)")
 	fmt.Println("  --to JID           Recipient JID for send command")
 	fmt.Println("  --message TEXT     Message text for send command")
+	fmt.Println("  --ascii            Use ASCII-compatible QR rendering (for Claude Code)")
 }
 
 func parseConfig() Config {
 	config := Config{
 		SessionDir: "./data/whatsapp",
 		Days:       30,
+		ASCII:      false,
 	}
 
 	for i := 2; i < len(os.Args); i++ {
@@ -132,6 +135,8 @@ func parseConfig() Config {
 				config.Message = os.Args[i+1]
 				i++
 			}
+		case "--ascii":
+			config.ASCII = true
 		}
 	}
 
@@ -181,9 +186,28 @@ func authenticate(config Config) {
 		}
 
 		fmt.Println("Scan the QR code below with your WhatsApp mobile app:")
+		if config.ASCII {
+			fmt.Println("(Using ASCII mode for compatibility)")
+		}
 		for evt := range qrChan {
 			if evt.Event == "code" {
-				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
+				if config.ASCII {
+					// ASCII mode: uses simple characters that render well in Claude Code
+					qrConfig := qrterminal.Config{
+						Level:          qrterminal.L,
+						Writer:         os.Stdout,
+						BlackChar:      "██",
+						WhiteChar:      "  ",
+						QuietZone:      2,
+						HalfBlocks:     false,
+						BlackWhiteChar: "▀",
+						WhiteBlackChar: "▄",
+					}
+					qrterminal.GenerateWithConfig(evt.Code, qrConfig)
+				} else {
+					// Default: half-block mode (best quality in proper terminals)
+					qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
+				}
 			} else {
 				fmt.Println("Login event:", evt.Event)
 				if evt.Event == "success" {
@@ -256,9 +280,39 @@ func syncMessages(config Config) {
 				fmt.Fprintf(os.Stderr, "Captured message: %s from %s\n", msg.ID, msg.ChatID)
 			}
 		case *events.HistorySync:
-			// History sync received - log it
-			fmt.Fprintf(os.Stderr, "History sync received: %d conversations\n", len(v.Data.Conversations))
-			// TODO: Process historical messages properly
+			// Process history sync - extract all messages from all conversations
+			conversations := v.Data.GetConversations()
+			fmt.Fprintf(os.Stderr, "📥 History sync received: %d conversations\n", len(conversations))
+
+			historySyncCount := 0
+			for _, conv := range conversations {
+				chatJID := conv.GetID()
+				convMessages := conv.GetMessages()
+
+				for _, histMsg := range convMessages {
+					webMsg := histMsg.GetMessage()
+					if webMsg == nil || webMsg.GetMessage() == nil {
+						continue
+					}
+
+					// Extract timestamp
+					msgTimestamp := time.Unix(int64(webMsg.GetMessageTimestamp()), 0)
+
+					// Time filter
+					if msgTimestamp.Before(startTime) || msgTimestamp.After(endTime) {
+						continue
+					}
+
+					// Convert to our output format
+					msg := convertHistorySyncMessage(webMsg, chatJID)
+					if msg != nil {
+						messages = append(messages, msg)
+						messageCount++
+						historySyncCount++
+					}
+				}
+			}
+			fmt.Fprintf(os.Stderr, "📥 Extracted %d messages from history sync (within %d day range)\n", historySyncCount, config.Days)
 		}
 	})
 
@@ -351,6 +405,66 @@ func checkHealth(config Config) {
 
 	jsonData, _ := json.Marshal(status)
 	fmt.Println(string(jsonData))
+}
+
+// convertHistorySyncMessage converts a WebMessageInfo from history sync to OutputMessage
+func convertHistorySyncMessage(webMsg *waProto.WebMessageInfo, chatJID string) *OutputMessage {
+	msgContent := webMsg.GetMessage()
+	if msgContent == nil {
+		return nil
+	}
+
+	// Get message key info
+	key := webMsg.GetKey()
+	msgID := ""
+	fromMe := false
+	if key != nil {
+		msgID = key.GetID()
+		fromMe = key.GetFromMe()
+	}
+
+	msg := &OutputMessage{
+		ID:        msgID,
+		ChatID:    chatJID,
+		FromJID:   webMsg.GetParticipant(), // For groups, this is the sender
+		Timestamp: int64(webMsg.GetMessageTimestamp()),
+		IsFromMe:  fromMe,
+	}
+
+	// If no participant (DM), use chat JID
+	if msg.FromJID == "" {
+		msg.FromJID = chatJID
+	}
+
+	// Extract message content based on type
+	if msgContent.Conversation != nil {
+		msg.MessageType = "conversation"
+		msg.Content = *msgContent.Conversation
+	} else if msgContent.ExtendedTextMessage != nil && msgContent.ExtendedTextMessage.Text != nil {
+		msg.MessageType = "extendedTextMessage"
+		msg.Content = *msgContent.ExtendedTextMessage.Text
+	} else if msgContent.ImageMessage != nil {
+		msg.MessageType = "imageMessage"
+		if msgContent.ImageMessage.Caption != nil {
+			msg.Content = *msgContent.ImageMessage.Caption
+		}
+	} else if msgContent.VideoMessage != nil {
+		msg.MessageType = "videoMessage"
+		if msgContent.VideoMessage.Caption != nil {
+			msg.Content = *msgContent.VideoMessage.Caption
+		}
+	} else if msgContent.DocumentMessage != nil {
+		msg.MessageType = "documentMessage"
+		if msgContent.DocumentMessage.Title != nil {
+			msg.Content = *msgContent.DocumentMessage.Title
+		}
+	} else if msgContent.AudioMessage != nil {
+		msg.MessageType = "audioMessage"
+	} else {
+		msg.MessageType = "unknown"
+	}
+
+	return msg
 }
 
 func convertMessage(evt *events.Message) *OutputMessage {
