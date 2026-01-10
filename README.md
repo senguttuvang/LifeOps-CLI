@@ -1,89 +1,32 @@
 # @lifeops/cli
 
-> Relationship Intelligence CLI. Because "fine" rarely means fine.
+> **Relationship Intelligence Platform™**
+>
+> Because "fine" rarely means fine.
 
-A personal relationship management CLI that syncs WhatsApp messages to a local database and provides AI-powered relationship insights using local RAG (Retrieval-Augmented Generation).
+[![Website](https://img.shields.io/badge/Website-lifeops.in-blue)](https://lifeops.in/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Features
+---
 
-- **WhatsApp Sync**: Sync messages from WhatsApp Web to local SQLite database
-- **Fine Decoder**: Decode the true meaning behind messages (what they said vs. what they meant)
-- **Memory Capture**: Remember important relationship moments and context
-- **Relationship Analysis**: AI-powered insights about communication patterns
-- **Local-First**: All data stored locally - your conversations never leave your machine
-- **Effect-TS Architecture**: Type-safe functional programming with explicit errors
+**LifeOps** applies enterprise-grade observability patterns to the most complex distributed system you'll ever manage: your relationships.
 
-## Tech Stack
+We've taken everything you hate about corporate software—SLAs, dashboards, incident response—and applied it to the one area where you actually need it: remembering that she mentioned wanting to visit Iceland 3 weeks ago.
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Runtime | [Bun](https://bun.sh) | Fast JavaScript runtime |
-| Framework | [Effect-TS](https://effect.website) | Type-safe functional programming |
-| Database | [Drizzle ORM](https://orm.drizzle.team) + SQLite | Type-safe SQL with local storage |
-| Vector DB | [LanceDB](https://lancedb.github.io/lancedb/) | Local vector embeddings for RAG |
-| AI | Anthropic Claude + OpenAI | Text generation and embeddings |
-| WhatsApp | [whatsmeow](https://github.com/tulir/whatsmeow) | WhatsApp Web protocol |
+## The Problem
 
-## Installation
+You're a competent professional. You manage production systems handling millions of requests. You've got monitoring, alerting, and runbooks for everything.
 
-### Prerequisites
+And yet:
+- You forgot the anniversary (again)
+- You missed the subtle "I'm stressed" signals for 3 days straight
+- You have no idea what gift she actually wants (hint: she told you. Twice.)
 
-- [Bun](https://bun.sh) v1.0+
-- WhatsApp account
+**LifeOps fixes this.** We're not relationship therapy. We're relationship *observability*.
 
-### Setup
+## What You Get
 
-```bash
-# Clone repository
-git clone https://github.com/senguttuvang/LifeOps-CLI.git
-cd lifeops-cli
-
-# Install dependencies
-bun install
-
-# Initialize database
-bunx drizzle-kit push
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-### WhatsApp Authentication
-
-```bash
-# Check authentication status
-bun run cli health
-
-# If not authenticated, scan QR code
-./bin/whatsmeow-cli auth qr
-```
-
-## Usage
-
-### CLI Commands
-
-```bash
-# Show available commands
-bun run cli
-
-# Sync WhatsApp messages (default: last 30 days)
-bun run cli sync
-
-# Sync specific number of days
-bun run cli sync --days=7
-
-# Decode a message (what they really meant)
-bun run cli decode "I'm fine"
-
-# Remember something important
-bun run cli remember "First date at that coffee shop"
-
-# Check system health
-bun run cli health
-```
-
-### Example: Fine Decoder
+### 🔍 The Fine Decoder™
 
 ```bash
 $ bun run cli decode "I'm fine"
@@ -99,83 +42,131 @@ Confidence: 97%
 Recommended response: "I can tell something's up. Want to talk about it?"
 ```
 
-## Configuration
+Finally, a system that understands subtext. Like Prometheus metrics, but for emotional state.
 
-Configure via environment variables (`.env`):
+### 📊 Relationship Observability
+
+| Feature | Corporate Equivalent | What It Actually Does |
+|---------|---------------------|----------------------|
+| **Message Sync** | Log aggregation | Syncs WhatsApp messages locally (your data, your machine) |
+| **Signal Extraction** | Anomaly detection | Detects stress patterns, mood shifts, important dates mentioned |
+| **Memory Capture** | Event sourcing | "Remember: she wants to visit Iceland" stored and retrievable |
+| **Health Dashboard** | SLA monitoring | Communication balance, response times, engagement trends |
+| **Draft Assistance** | Auto-remediation | AI-powered message drafts when you need them |
+
+### 🎯 Core Capabilities
+
+- **Sync**: Pull your WhatsApp history to a local database
+- **Decode**: Translate "I'm fine" into actionable intelligence
+- **Remember**: Store important context AI can use later
+- **Analyze**: Communication patterns across all your relationships
+- **Draft**: Context-aware message suggestions (you still press send)
+
+### 🔒 Privacy-First Architecture
+
+Your relationship data is *intimate data*. It stays on your machine:
+
+- Local SQLite database (not someone else's server)
+- Local vector embeddings for AI (no cloud RAG)
+- API calls only when you explicitly trigger analysis
+- No telemetry, no tracking, no "we value your privacy" doublespeak
+
+## Quick Start
 
 ```bash
-# Required API Keys
-ANTHROPIC_API_KEY=your-key      # Claude API
-OPENAI_API_KEY=your-key         # Embeddings
-OPENROUTER_API_KEY=your-key     # Vision models
+# Install
+git clone https://github.com/senguttuvang/LifeOps-CLI.git
+cd lifeops-cli
+bun install
 
-# WhatsApp
-SELF_CHAT_ID=1234567890@s.whatsapp.net
+# Initialize
+bunx drizzle-kit push
+cp .env.example .env
+# Add your API keys
 
-# Optional: Custom paths
-LIFEOPS_DB_PATH=lifeops.db
-LIFEOPS_VECTOR_PATH=data/lancedb
+# Authenticate WhatsApp
+./bin/whatsmeow-cli auth qr
+
+# Start using
+bun run cli sync
+bun run cli decode "I'm fine"
+bun run cli remember "She wants to visit Iceland"
 ```
 
-## Architecture
+## Usage Examples
 
+```bash
+# Sync recent messages
+bun run cli sync --days=7
+
+# Decode cryptic messages
+bun run cli decode "Sure, whatever you want"
+# → Translation: "I have a strong preference you should know by now"
+
+# Remember important context
+bun run cli remember "Her mom's birthday is March 15"
+
+# Check system health
+bun run cli health
 ```
-src/
-├── cli/                 # CLI commands
-│   ├── commands/        # Command implementations
-│   └── main.ts          # Entry point
-├── domain/              # Business logic
-│   ├── relationship/    # Analysis & drafting
-│   ├── signals/         # Behavioral signal extraction
-│   └── whatsapp/        # Sync & event extraction
-└── infrastructure/      # External integrations
-    ├── db/              # SQLite via Drizzle
-    ├── llm/             # AI services
-    ├── rag/             # Vector store
-    └── whatsapp/        # WhatsApp adapter
-```
 
-## Privacy
+## FAQ (The Honest Version)
 
-Your data stays on your machine:
+**"Is this creepy?"**
+> You're analyzing your own conversations to be more thoughtful. The bar is low, friend.
 
-- All messages stored in local SQLite database
-- Vector embeddings stored in local LanceDB
-- API calls send only the data you explicitly analyze
-- No telemetry, no cloud sync, no third-party access
+**"What if I don't have a girlfriend?"**
+> Works for any relationship. Friends, family, that one colleague who's impossible to read.
 
-## FAQ
+**"Should I tell my partner I use this?"**
+> That's between you and your conscience. We just provide the tools.
 
-### Is this legal?
+**"What if I message the wrong person?"**
+> Read-only by default. All AI outputs are drafts. You press send. We gave you safeties.
 
-You're analyzing your own messages from your own conversations. Use at your own risk.
+**See full FAQ →** [docs/faq.md](docs/faq.md)
 
-### Why local-first?
+## The Tech (For Those Who Care)
 
-Your relationship conversations are intimate data. They belong on your machine, not someone else's server.
+We're built on a modern TypeScript stack with functional programming patterns. If terms like "Effect-TS", "Drizzle ORM", and "local-first RAG" excite you, see our technical documentation:
 
-### What about other platforms?
+- **[Architecture](docs/architecture.md)** — Domain-driven design, bounded contexts
+- **[Why Effect-TS](docs/why-effect.md)** — Error handling that doesn't gaslight you
+- **[Why TypeScript](docs/why-typescript.md)** — Type safety for emotional safety
 
-Currently focused on WhatsApp. PRs welcome for other platforms.
+## Philosophy
+
+LifeOps is a **memory aid**, not a manipulation tool.
+
+- ✅ Using a calendar to remember your anniversary? That's fine.
+- ❌ Forgetting your anniversary? That's the problem.
+- ✅ Using AI to help you BE thoughtful? That's LifeOps.
+- ❌ Using AI to FAKE thoughtfulness? Get therapy.
+
+Technology amplifies intent. If your intent is good, LifeOps helps. If it's not, we don't want your business.
 
 ## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feat/amazing-feature`)
+3. Commit your changes
+4. Push to the branch
 5. Open a Pull Request
 
-### Code Style
-
-- Effect-TS patterns (Effect.gen, Context.Tag, Layer)
-- Explicit error handling (no throw)
-- TypeScript strict mode
+See [docs/architecture.md](docs/architecture.md) for code patterns.
 
 ## License
 
-MIT - See [LICENSE](LICENSE) for details.
+MIT — See [LICENSE](LICENSE)
 
 ---
 
-**Built with [Effect-TS](https://effect.website) for type-safe functional programming.**
+<p align="center">
+  <a href="https://lifeops.in/">lifeops.in</a> ·
+  <a href="docs/faq.md">FAQ</a> ·
+  <a href="docs/architecture.md">Architecture</a>
+</p>
+
+<p align="center">
+  <em>Built by people who also forget birthdays.</em>
+</p>
