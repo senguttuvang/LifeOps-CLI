@@ -1,181 +1,228 @@
 # @lifeops/cli
 
-> Relationship Intelligence CLI. Because "fine" rarely means fine.
+> A relationship memory assistant for developers.
+> Because your RAM can't store "She mentioned Goa 3 weeks ago."
 
-A personal relationship management CLI that syncs WhatsApp messages to a local database and provides AI-powered relationship insights using local RAG (Retrieval-Augmented Generation).
-
-## Features
-
-- **WhatsApp Sync**: Sync messages from WhatsApp Web to local SQLite database
-- **Fine Decoder**: Decode the true meaning behind messages (what they said vs. what they meant)
-- **Memory Capture**: Remember important relationship moments and context
-- **Relationship Analysis**: AI-powered insights about communication patterns
-- **Local-First**: All data stored locally - your conversations never leave your machine
-- **Effect-TS Architecture**: Type-safe functional programming with explicit errors
-
-## Tech Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Runtime | [Bun](https://bun.sh) | Fast JavaScript runtime |
-| Framework | [Effect-TS](https://effect.website) | Type-safe functional programming |
-| Database | [Drizzle ORM](https://orm.drizzle.team) + SQLite | Type-safe SQL with local storage |
-| Vector DB | [LanceDB](https://lancedb.github.io/lancedb/) | Local vector embeddings for RAG |
-| AI | Anthropic Claude + OpenAI | Text generation and embeddings |
-| WhatsApp | [whatsmeow](https://github.com/tulir/whatsmeow) | WhatsApp Web protocol |
-
-## Installation
-
-### Prerequisites
-
-- [Bun](https://bun.sh) v1.0+
-- WhatsApp account
-
-### Setup
-
-```bash
-# Clone repository
-git clone https://github.com/senguttuvang/LifeOps-CLI.git
-cd lifeops-cli
-
-# Install dependencies
-bun install
-
-# Initialize database
-bunx drizzle-kit push
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-### WhatsApp Authentication
-
-```bash
-# Check authentication status
-bun run cli health
-
-# If not authenticated, scan QR code
-./bin/whatsmeow-cli auth qr
-```
-
-## Usage
-
-### CLI Commands
-
-```bash
-# Show available commands
-bun run cli
-
-# Sync WhatsApp messages (default: last 30 days)
-bun run cli sync
-
-# Sync specific number of days
-bun run cli sync --days=7
-
-# Decode a message (what they really meant)
-bun run cli decode "I'm fine"
-
-# Remember something important
-bun run cli remember "First date at that coffee shop"
-
-# Check system health
-bun run cli health
-```
-
-### Example: Fine Decoder
-
-```bash
-$ bun run cli decode "I'm fine"
-
-🔍 Fine Decoder™ Analysis
-
-Message: "I'm fine"
-
-What they said: Fine
-What they meant: Not fine
-Confidence: 97%
-
-Recommended response: "I can tell something's up. Want to talk about it?"
-```
-
-## Configuration
-
-Configure via environment variables (`.env`):
-
-```bash
-# Required API Keys
-ANTHROPIC_API_KEY=your-key      # Claude API
-OPENAI_API_KEY=your-key         # Embeddings
-OPENROUTER_API_KEY=your-key     # Vision models
-
-# WhatsApp
-SELF_CHAT_ID=1234567890@s.whatsapp.net
-
-# Optional: Custom paths
-LIFEOPS_DB_PATH=lifeops.db
-LIFEOPS_VECTOR_PATH=data/lancedb
-```
-
-## Architecture
-
-```
-src/
-├── cli/                 # CLI commands
-│   ├── commands/        # Command implementations
-│   └── main.ts          # Entry point
-├── domain/              # Business logic
-│   ├── relationship/    # Analysis & drafting
-│   ├── signals/         # Behavioral signal extraction
-│   └── whatsapp/        # Sync & event extraction
-└── infrastructure/      # External integrations
-    ├── db/              # SQLite via Drizzle
-    ├── llm/             # AI services
-    ├── rag/             # Vector store
-    └── whatsapp/        # WhatsApp adapter
-```
-
-## Privacy
-
-Your data stays on your machine:
-
-- All messages stored in local SQLite database
-- Vector embeddings stored in local LanceDB
-- API calls send only the data you explicitly analyze
-- No telemetry, no cloud sync, no third-party access
-
-## FAQ
-
-### Is this legal?
-
-You're analyzing your own messages from your own conversations. Use at your own risk.
-
-### Why local-first?
-
-Your relationship conversations are intimate data. They belong on your machine, not someone else's server.
-
-### What about other platforms?
-
-Currently focused on WhatsApp. PRs welcome for other platforms.
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feat/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style
-
-- Effect-TS patterns (Effect.gen, Context.Tag, Layer)
-- Explicit error handling (no throw)
-- TypeScript strict mode
-
-## License
-
-MIT - See [LICENSE](LICENSE) for details.
+[![Website](https://img.shields.io/badge/Website-lifeops.in-blue)](https://lifeops.in/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-**Built with [Effect-TS](https://effect.website) for type-safe functional programming.**
+## The Problem
+
+Three weeks ago, your girlfriend mentioned—casually, while scrolling Instagram—that she'd love to visit Goa someday. You nodded, said "that sounds amazing," and meant it.
+
+Today, you're planning a surprise for her birthday. You remember she mentioned a travel destination recently... but was it Goa? Manali? That place with the beach resorts?
+
+The moment is gone. The detail is lost. And now you're panic-buying a Nykaa gift card.
+
+**LifeOps remembers so you don't have to.**
+
+---
+
+## What It Does
+
+LifeOps is a CLI tool that syncs your WhatsApp conversations locally and uses AI to help you be more thoughtful. Built for developers who can manage production systems but somehow can't remember her coffee order.
+
+| Feature | What It Does |
+|---------|-------------|
+| **Message Sync** | Keeps a searchable archive of your conversations on your machine |
+| **Context Memory** | Store important details: "She wants to visit Goa" → retrievable months later |
+| **Message Decoder** | Understand what "I'm fine" actually means (spoiler: 3% chance it's fine) |
+| **Pattern Insights** | Notice when she's mentioned work stress 5 times this week |
+| **Draft Help** | AI suggestions when you want to text but aren't sure what to say |
+
+---
+
+## Real Scenarios
+
+### 🎂 The Birthday Gift
+
+**Without LifeOps:** "What should I get her?" → *Orders random Myntra kurta. Again.*
+
+**With LifeOps:**
+```bash
+bun run cli search "wants" --contact="Girlfriend"
+# → "wants that Zara bag she saw at Phoenix Mall" (Nov 2)
+# → "wants to learn Kathak" (Sep 15)
+# → "wants to visit Goa with college friends" (Oct 15)
+```
+*Books a Kathak class. Absolute legend.*
+
+### 📞 The Family Check-In
+
+**Without:** Mom mentioned something about a puja. Was it this week? You meant to call...
+
+**With LifeOps:**
+```bash
+bun run cli search "puja" --contact="Mom"
+# → "Satyanarayan puja on Thursday, be home by 6" (3 days ago)
+```
+You show up on time. She's genuinely impressed.
+
+### 💬 The Decode
+
+**Without:** She texts "I'm fine" and you reply "Cool!" This was a mistake.
+
+**With LifeOps:**
+```bash
+bun run cli decode "I'm fine"
+
+🔍 Analysis
+───────────────────────────────
+Confidence: 97% — NOT fine
+Context: She was excited about dinner plans you just cancelled
+
+⚠️ DO NOT: Say "okay then" and go back to gaming
+✅ DO: "I can tell something's off. Want to talk about it?"
+```
+
+### 👀 The Family Group Survival Guide
+
+Family WhatsApp groups require patience. LifeOps helps you remember context and respond thoughtfully.
+
+**The Situation:**
+```
+Sharma Aunty: Beta, when are you getting married?
+              Pinky's son is already settled!
+```
+
+**Your Context:**
+```bash
+bun run cli search "Sharma Aunty" --contact="Family Group"
+# → Asked about marriage 4 times in 2 months
+# → Last response: "focusing on career, Aunty" (Nov 15)
+# → Uncle had knee surgery recently (good topic to redirect)
+# → Aunty's grandson started 10th standard (she's proud of him)
+```
+
+**Thoughtful Responses:**
+```bash
+bun run cli draft "respectful redirect"
+
+# Warm Deflection (recommended):
+"Aunty, your blessings are always with me 🙏 Right now focusing
+on a big project at work. How is uncle's recovery going?
+Mom said he's walking better now!"
+
+# Involve Parents (classic Indian move):
+"Aunty, Mom and Dad are looking into it! Will definitely
+share good news when the time comes. How is Rahul's
+board exam preparation going?"
+
+# Self-Deprecating Humour:
+"Aunty, pehle salary double karni hai, tabhi rishte aayenge! 😅
+Please keep me in your prayers. How is everyone at home?"
+
+# Nuclear Option (use once per decade):
+"Aunty, actually I've been thinking about becoming a sanyasi.
+The Himalayas are calling. Worldly attachments and all that...
+But don't worry, I'll visit during Diwali. 🙏"
+```
+
+*The goal isn't to "win"—it's to maintain warmth while buying yourself time. Aunties come from a place of care, even if the timing feels off. (The sanyasi line works exactly once—use wisely.)*
+
+### 🎯 The "We Never Talk" Accusation
+
+**The Situation:** She says "You never ask about my day anymore."
+
+**Your Defense:**
+```bash
+bun run cli stats --contact="Girlfriend" --days=30
+# → Initiated conversation: 47 times
+# → Asked about her day: 12 times
+# → Average response time: 8 minutes
+# → Topics discussed: work (34%), family (28%), us (22%), random (16%)
+```
+
+*You have data. Use it wisely. (Or don't use it at all—some battles aren't worth winning.)*
+
+---
+
+## Who It's For
+
+You're a developer. You manage servers, write clean code, debug production issues at 2 AM.
+
+But you also:
+- Forgot what she wanted for her birthday (she told you twice)
+- Missed that she's been stressed about her promotion
+- Can't remember if Mom's Satyanarayan puja is this Thursday or next
+- Get ambushed by relatives in family WhatsApp groups
+
+**LifeOps is `git log` for your relationships.**
+
+---
+
+## Privacy First
+
+Your conversations are personal. They stay that way.
+
+- **Everything on your machine** — Local SQLite database, no cloud sync
+- **You control what's analyzed** — AI only sees what you explicitly ask
+- **No tracking** — We don't collect usage data. We don't want it.
+
+---
+
+## Getting Started
+
+```bash
+# Clone and install
+git clone https://github.com/senguttuvang/LifeOps-CLI.git
+cd lifeops-cli && bun install
+
+# Set up database
+bunx drizzle-kit push
+cp .env.example .env  # Add your API keys
+
+# Connect WhatsApp
+./bin/whatsmeow-cli auth qr
+
+# Start using
+bun run cli sync
+bun run cli remember "She wants the blue Zara bag from Phoenix Mall"
+bun run cli decode "Sure, whatever you want"
+```
+
+---
+
+## The Philosophy
+
+This isn't about faking thoughtfulness. It's about making sure the care you feel actually shows up.
+
+You love your girlfriend. But you forgot she has an interview this week.
+You care about Mom. But you missed the puja timing she mentioned.
+
+Using a calendar to remember her birthday isn't cheating—forgetting it is. LifeOps works the same way.
+
+**We bridge the gap between intention and action.**
+
+---
+
+## Important Notes
+
+**On WhatsApp:** This tool uses unofficial WhatsApp Web protocols. It's designed for personal use—analyzing your own conversations. While the risk is low for normal usage, please be aware this operates in a gray area with WhatsApp's terms.
+
+**On ethics:** LifeOps is a memory aid, not a manipulation tool. If you're using this to fake care you don't feel, the relationship has bigger issues than software can solve.
+
+---
+
+## Learn More
+
+| Resource | Description |
+|----------|-------------|
+| [FAQ](docs/guides/faq.md) | Common questions, honest answers |
+| [Tech Stack](docs/architecture/tech-stack.md) | Bun, Effect-TS, Drizzle, LanceDB |
+| [Architecture](docs/architecture/architecture.md) | System design deep-dive |
+| [Roadmap](docs/architecture/roadmap.md) | What's coming next |
+
+---
+
+<p align="center">
+  <a href="https://lifeops.in/">lifeops.in</a> ·
+  <a href="docs/guides/faq.md">FAQ</a> ·
+  <a href="docs/architecture/architecture.md">Docs</a>
+</p>
+
+<p align="center">
+  <em>Built by developers who also forget birthdays.</em>
+</p>
