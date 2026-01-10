@@ -4,7 +4,7 @@
  * Tests for Gottman's Four Horsemen pattern detection.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import {
   detectInMessage,
   calculateScore,
