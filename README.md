@@ -1,19 +1,20 @@
 # @lifeops/cli
 
-> A relationship memory assistant. Because you care—you just forget.
+> A relationship memory assistant for developers.
+> Because your RAM can't store "She mentioned Goa 3 weeks ago."
 
 [![Website](https://img.shields.io/badge/Website-lifeops.in-blue)](https://lifeops.in/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
-## The Iceland Problem
+## The Problem
 
-Three weeks ago, your partner mentioned—casually, while scrolling Instagram—that they'd love to visit Iceland someday. You nodded, said "that sounds amazing," and meant it.
+Three weeks ago, your girlfriend mentioned—casually, while scrolling Instagram—that she'd love to visit Goa someday. You nodded, said "that sounds amazing," and meant it.
 
-Today, you're planning a surprise for their birthday. You remember they mentioned a travel destination recently... but was it Iceland? Portugal? That place with the Northern Lights? (Wait, that's also Iceland.)
+Today, you're planning a surprise for her birthday. You remember she mentioned a travel destination recently... but was it Goa? Manali? That place with the beach resorts?
 
-The moment is gone. The detail is lost. And now you're panic-buying a gift card.
+The moment is gone. The detail is lost. And now you're panic-buying a Nykaa gift card.
 
 **LifeOps remembers so you don't have to.**
 
@@ -21,15 +22,15 @@ The moment is gone. The detail is lost. And now you're panic-buying a gift card.
 
 ## What It Does
 
-LifeOps is a personal CLI that syncs your WhatsApp conversations locally and uses AI to help you be more thoughtful in your relationships.
+LifeOps is a CLI tool that syncs your WhatsApp conversations locally and uses AI to help you be more thoughtful. Built for developers who can manage production systems but somehow can't remember her coffee order.
 
 | Feature | What It Does |
 |---------|-------------|
 | **Message Sync** | Keeps a searchable archive of your conversations on your machine |
-| **Context Memory** | Store important details: "She wants to visit Iceland" → retrievable later |
-| **Message Decoder** | Understand what "I'm fine" actually means (spoiler: usually not fine) |
-| **Pattern Insights** | Notice when someone's mentioned stress five times this week |
-| **Draft Help** | AI suggestions when you want to reach out but aren't sure what to say |
+| **Context Memory** | Store important details: "She wants to visit Goa" → retrievable months later |
+| **Message Decoder** | Understand what "I'm fine" actually means (spoiler: 3% chance it's fine) |
+| **Pattern Insights** | Notice when she's mentioned work stress 5 times this week |
+| **Draft Help** | AI suggestions when you want to text but aren't sure what to say |
 
 ---
 
@@ -37,31 +38,31 @@ LifeOps is a personal CLI that syncs your WhatsApp conversations locally and use
 
 ### 🎂 The Birthday Gift
 
-**Without LifeOps:** "What should I get her?" → *Buys scented candle. Again.*
+**Without LifeOps:** "What should I get her?" → *Orders random Myntra kurta. Again.*
 
 **With LifeOps:**
 ```bash
-bun run cli search "wants" --contact="Partner"
-# → "wants to learn pottery" (Nov 2)
-# → "wants that cookbook by Samin Nosrat" (Sep 15)
-# → "wants to visit Iceland" (Oct 15)
+bun run cli search "wants" --contact="Girlfriend"
+# → "wants that Zara bag she saw at Phoenix Mall" (Nov 2)
+# → "wants to learn Kathak" (Sep 15)
+# → "wants to visit Goa with college friends" (Oct 15)
 ```
-*Books a pottery class. Absolute hero.*
+*Books a Kathak class. Absolute legend.*
 
-### 📞 The Check-In
+### 📞 The Family Check-In
 
-**Without:** Dad mentioned a doctor's appointment. Was it this week? Last week? You meant to call...
+**Without:** Mom mentioned something about a puja. Was it this week? You meant to call...
 
 **With LifeOps:**
 ```bash
-bun run cli search "doctor" --contact="Dad"
-# → "colonoscopy scheduled for Tuesday" (5 days ago)
+bun run cli search "puja" --contact="Mom"
+# → "Satyanarayan puja on Thursday, be home by 6" (3 days ago)
 ```
-You call Tuesday evening. He's genuinely touched you remembered.
+You show up on time. She's genuinely impressed.
 
 ### 💬 The Decode
 
-**Without:** She texts "I'm fine" and you reply "Great!" This was a mistake.
+**Without:** She texts "I'm fine" and you reply "Cool!" This was a mistake.
 
 **With LifeOps:**
 ```bash
@@ -69,25 +70,70 @@ bun run cli decode "I'm fine"
 
 🔍 Analysis
 ───────────────────────────────
-Confidence: 85% — likely not fine
-Context: Previous messages show excitement about dinner plans
-         that were just cancelled
+Confidence: 97% — NOT fine
+Context: She was excited about dinner plans you just cancelled
 
-Suggestion: "I can tell something's off. Want to talk about it?"
+⚠️ DO NOT: Say "okay then" and go back to gaming
+✅ DO: "I can tell something's off. Want to talk about it?"
 ```
+
+### 👀 The Nosy Aunty Defense
+
+Family WhatsApp groups are a warzone. LifeOps helps you track patterns and prepare responses.
+
+**The Attack:**
+```
+Sharma Aunty: Beta, when are you getting married?
+              Pinky's son is already settled!
+```
+
+**Your Intel:**
+```bash
+bun run cli search "marriage" --contact="Family Group"
+# → Sharma Aunty asked this 4 times in last 2 months
+# → Last deflection: "focusing on career" (used 3x, effectiveness declining)
+# → Pinky's son reference: new ammunition, appeared 2 weeks ago
+```
+
+**AI-Assisted Response:**
+```bash
+bun run cli draft "polite deflection for marriage question from aunty"
+
+Suggested: "Aunty, Pinky's son is very lucky! I'm working on a
+promotion right now—once I'm settled in career, definitely
+next step. How is uncle's knee doing?"
+
+# → Deflects + redirects + shows you "care"
+```
+
+### 🎯 The "We Never Talk" Accusation
+
+**The Situation:** She says "You never ask about my day anymore."
+
+**Your Defense:**
+```bash
+bun run cli stats --contact="Girlfriend" --days=30
+# → Initiated conversation: 47 times
+# → Asked about her day: 12 times
+# → Average response time: 8 minutes
+# → Topics discussed: work (34%), family (28%), us (22%), random (16%)
+```
+
+*You have data. Use it wisely. (Or don't use it at all—some battles aren't worth winning.)*
 
 ---
 
 ## Who It's For
 
-LifeOps works for **any relationship** you want to nurture:
+You're a developer. You manage servers, write clean code, debug production issues at 2 AM.
 
-- **Partners & Spouses** — Remember the little things that add up over years
-- **Parents & Family** — Stay connected even when life gets hectic
-- **Close Friends** — Be the friend who actually follows up
-- **Colleagues** — Maintain professional relationships thoughtfully
+But you also:
+- Forgot what she wanted for her birthday (she told you twice)
+- Missed that she's been stressed about her promotion
+- Can't remember if Mom's Satyanarayan puja is this Thursday or next
+- Get ambushed by relatives in family WhatsApp groups
 
-If you care about someone, LifeOps helps you show it.
+**LifeOps is `git log` for your relationships.**
 
 ---
 
@@ -117,7 +163,7 @@ cp .env.example .env  # Add your API keys
 
 # Start using
 bun run cli sync
-bun run cli remember "Mom wants the blue saree from Nalli's"
+bun run cli remember "She wants the blue Zara bag from Phoenix Mall"
 bun run cli decode "Sure, whatever you want"
 ```
 
@@ -127,10 +173,10 @@ bun run cli decode "Sure, whatever you want"
 
 This isn't about faking thoughtfulness. It's about making sure the care you feel actually shows up.
 
-You love your mom. But you forgot she has a check-up this week.
-You care about your friend. But you haven't asked about that thing they were stressed about.
+You love your girlfriend. But you forgot she has an interview this week.
+You care about Mom. But you missed the puja timing she mentioned.
 
-Using a calendar to remember your anniversary isn't cheating—forgetting it is. LifeOps works the same way.
+Using a calendar to remember her birthday isn't cheating—forgetting it is. LifeOps works the same way.
 
 **We bridge the gap between intention and action.**
 
@@ -138,7 +184,7 @@ Using a calendar to remember your anniversary isn't cheating—forgetting it is.
 
 ## Important Notes
 
-**On WhatsApp:** This tool uses unofficial WhatsApp Web protocols. It's designed for personal use—analyzing your own conversations. While the risk is low, please be aware this operates in a gray area with WhatsApp's terms.
+**On WhatsApp:** This tool uses unofficial WhatsApp Web protocols. It's designed for personal use—analyzing your own conversations. While the risk is low for normal usage, please be aware this operates in a gray area with WhatsApp's terms.
 
 **On ethics:** LifeOps is a memory aid, not a manipulation tool. If you're using this to fake care you don't feel, the relationship has bigger issues than software can solve.
 
@@ -148,8 +194,8 @@ Using a calendar to remember your anniversary isn't cheating—forgetting it is.
 
 | Resource | Description |
 |----------|-------------|
-| [FAQ](docs/faq.md) | Common questions, honest answers |
-| [Tech Stack](docs/tech-stack.md) | How it's built (for the curious) |
+| [FAQ](docs/guides/faq.md) | Common questions, honest answers |
+| [Tech Stack](docs/architecture/tech-stack.md) | Bun, Effect-TS, Drizzle, LanceDB |
 | [Architecture](docs/architecture/architecture.md) | System design deep-dive |
 | [Roadmap](docs/architecture/roadmap.md) | What's coming next |
 
@@ -157,10 +203,10 @@ Using a calendar to remember your anniversary isn't cheating—forgetting it is.
 
 <p align="center">
   <a href="https://lifeops.in/">lifeops.in</a> ·
-  <a href="docs/faq.md">FAQ</a> ·
+  <a href="docs/guides/faq.md">FAQ</a> ·
   <a href="docs/architecture/architecture.md">Docs</a>
 </p>
 
 <p align="center">
-  <em>Built by people who also forget birthdays.</em>
+  <em>Built by developers who also forget birthdays.</em>
 </p>
