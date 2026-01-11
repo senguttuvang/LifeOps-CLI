@@ -3,21 +3,11 @@
  *
  * Database access layer for breakup forecasting.
  * Provides methods to query contacts, messages, and relationships.
- *
- * v3 Schema Changes:
- * - contacts → parties (with partyType instead of type)
- * - interactions → communicationEvents (with eventType instead of interactionType)
- * - relationships → partyRelationships (with bidirectional partyA/partyB)
- * - messages.interactionId → messages.eventId
- * - conversations.sourceConversationId → externalId
- * - conversations.source → channelId FK to channels
- * - conversationType "1:1" → "direct"
  */
 
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
 import { DatabaseService } from "../../infrastructure/db/client";
-// v3: Import from new schema location with updated table names
 import * as schema from "../../infrastructure/db/schema/index";
 
 // =============================================================================
@@ -28,13 +18,13 @@ export interface ContactRecord {
   id: string;
   displayName: string;
   preferredName: string | null;
-  partyType: "individual" | "organization"; // v3: type → partyType
+  partyType: "individual" | "organization";
 }
 
 export interface RelationshipRecord {
-  partyId: string; // v3: contactId → partyId
-  partyName: string; // v3: contactName → partyName
-  relationshipTypeId: string; // v3: relationshipType → relationshipTypeId
+  partyId: string;
+  partyName: string;
+  relationshipTypeId: string;
   strengthScore: number | null;
   lastInteractionAt: Date | null;
 }
@@ -50,14 +40,14 @@ export interface ContactWithJid {
   id: string;
   displayName: string;
   preferredName: string | null;
-  partyType: "individual" | "organization"; // v3: type → partyType
+  partyType: "individual" | "organization";
   whatsappJid: string | null;
   messageCount: number;
   relationshipType: "partner" | "family" | "friend" | "colleague" | "acquaintance" | null;
 }
 
 export interface SaveRelationshipInput {
-  partyId: string; // v3: contactId → partyId
+  partyId: string;
   displayName: string;
   preferredName: string | null;
   relationshipType: "partner" | "family" | "friend" | "colleague" | "acquaintance";
@@ -70,7 +60,6 @@ export interface SaveRelationshipInput {
 interface ForecastRepository {
   /**
    * Find a party by display name (partial match)
-   * v3: contacts → parties
    */
   findContactByName(name: string): Effect.Effect<ContactRecord | null>;
 
@@ -80,38 +69,32 @@ interface ForecastRepository {
    * Flow: displayName → party_id → conversation_participants → conversations.externalId
    *
    * Returns null if name not found or no WhatsApp conversation exists
-   * v3: sourceConversationId → externalId, source → channelId
    */
   resolveChatIdByName(name: string): Effect.Effect<string | null>;
 
   /**
    * Get messages for a party within a time window
-   * v3: contactId → partyId, interactions → communicationEvents
    */
   getMessagesForContact(partyId: string, days: number): Effect.Effect<MessageRecord[]>;
 
   /**
    * Get all relationships marked as 'partner' type
-   * v3: Uses relationshipTypes table with bidirectional partyRelationships
    */
   getPartnerRelationships(): Effect.Effect<RelationshipRecord[]>;
 
   /**
    * Get all parties with their WhatsApp JIDs and message counts
    * Used for contact setup flow
-   * v3: contacts → parties
    */
   getContactsForSetup(): Effect.Effect<ContactWithJid[]>;
 
   /**
    * Save or update a relationship for a party
-   * v3: relationships → partyRelationships
    */
   saveRelationship(input: SaveRelationshipInput): Effect.Effect<void>;
 
   /**
    * Update party's preferred name
-   * v3: contacts → parties
    */
   updateContactName(partyId: string, preferredName: string | null): Effect.Effect<void>;
 }
@@ -142,7 +125,6 @@ const make = Effect.gen(function* () {
   return ForecastRepositoryTag.of({
     findContactByName: (name: string) =>
       Effect.sync(() => {
-        // v3: contacts → parties, type → partyType
         const results = db
           .select({
             id: schema.parties.id,
@@ -164,7 +146,6 @@ const make = Effect.gen(function* () {
       Effect.sync(() => {
         // Strategy 1: For direct (1:1) chats, the conversation title often matches the contact name
         // This is the most common case and works without conversation_participants
-        // v3: sourceConversationId → externalId, source → channelId, conversationType "1:1" → "direct"
         const directMatch = db
           .select({
             externalId: schema.conversations.externalId,
@@ -185,7 +166,6 @@ const make = Effect.gen(function* () {
         }
 
         // Strategy 2: Fallback - search via parties table + conversation_participants (for groups)
-        // v3: contacts → parties
         const partyResults = db
           .select({
             id: schema.parties.id,
@@ -202,7 +182,6 @@ const make = Effect.gen(function* () {
         const partyId = partyResults[0].id;
 
         // Find conversations via participant mapping
-        // v3: contactId → partyId, sourceConversationId → externalId
         const conversationResults = db
           .select({
             externalId: schema.conversations.externalId,
@@ -232,7 +211,6 @@ const make = Effect.gen(function* () {
         cutoffDate.setDate(cutoffDate.getDate() - days);
 
         // First get conversations for this party
-        // v3: contactId → partyId
         const convos = db
           .select({ id: schema.conversations.id })
           .from(schema.conversations)
@@ -248,7 +226,6 @@ const make = Effect.gen(function* () {
         const conversationIds = convos.map((c) => c.id);
 
         // Get communication events from those conversations
-        // v3: interactions → communicationEvents, interactionType → eventType
         const events = db
           .select({
             id: schema.communicationEvents.id,
@@ -271,7 +248,6 @@ const make = Effect.gen(function* () {
           .all();
 
         // Get actual message content from messages table
-        // v3: interactionId → eventId
         const messageRecords: MessageRecord[] = [];
         for (const event of events) {
           const msgContent = db
@@ -296,9 +272,7 @@ const make = Effect.gen(function* () {
 
     getPartnerRelationships: () =>
       Effect.sync(() => {
-        // v3: relationships → partyRelationships with bidirectional structure
         // Join with relationshipTypes to get the type name
-        // In v3, we look for relationship type "partner" in the relationshipTypes table
         // Note: lastActivityAt is now tracked in engagementMetrics, using updatedAt as fallback
         const results = db
           .select({
@@ -306,7 +280,7 @@ const make = Effect.gen(function* () {
             partyName: schema.parties.displayName,
             relationshipTypeId: schema.partyRelationships.relationshipTypeId,
             strengthScore: schema.partyRelationships.strengthScore,
-            lastInteractionAt: schema.partyRelationships.updatedAt, // v3: using updatedAt as proxy
+            lastInteractionAt: schema.partyRelationships.updatedAt,
           })
           .from(schema.partyRelationships)
           .innerJoin(schema.parties, eq(schema.partyRelationships.partyBId, schema.parties.id))
@@ -323,8 +297,7 @@ const make = Effect.gen(function* () {
 
     getContactsForSetup: () =>
       Effect.sync(() => {
-        // Get all parties with their WhatsApp JIDs and message counts
-        // v3: contacts → parties, type → partyType, filter for individuals
+        // Get all parties with their WhatsApp JIDs and message counts, filter for individuals
         const results = db
           .select({
             id: schema.parties.id,
@@ -339,7 +312,6 @@ const make = Effect.gen(function* () {
         // Enrich with WhatsApp JIDs and message counts
         const enriched: ContactWithJid[] = results.map((party) => {
           // Get WhatsApp JID from conversation
-          // v3: sourceConversationId → externalId, source → channelId, "1:1" → "direct"
           const convResult = db
             .select({
               externalId: schema.conversations.externalId,
@@ -356,7 +328,6 @@ const make = Effect.gen(function* () {
             .all();
 
           // Count messages for this party's conversations
-          // v3: interactions → communicationEvents
           let messageCount = 0;
           if (convResult.length > 0) {
             const countResult = db
@@ -374,7 +345,6 @@ const make = Effect.gen(function* () {
           }
 
           // Get existing relationship type if any
-          // v3: relationships → partyRelationships, contactId → partyBId
           // Need to join with relationshipTypes to get the name
           const relResult = db
             .select({ typeName: schema.relationshipTypes.name })
@@ -406,7 +376,7 @@ const make = Effect.gen(function* () {
       Effect.sync(() => {
         const { randomUUID } = require("node:crypto");
 
-        // v3: First, find or create the relationship type
+        // First, find or create the relationship type
         let relationshipTypeId: string;
         const existingType = db
           .select({ id: schema.relationshipTypes.id })
@@ -431,7 +401,7 @@ const make = Effect.gen(function* () {
             .run();
         }
 
-        // v3: Check if relationship already exists
+        // Check if relationship already exists
         // partyAId is typically "me" (the user), partyBId is the contact
         const existing = db
           .select({ id: schema.partyRelationships.id })
@@ -469,7 +439,6 @@ const make = Effect.gen(function* () {
         }
 
         // Also update preferred name if provided
-        // v3: contacts → parties
         if (input.preferredName) {
           db.update(schema.parties)
             .set({
@@ -483,7 +452,6 @@ const make = Effect.gen(function* () {
 
     updateContactName: (partyId: string, preferredName: string | null) =>
       Effect.sync(() => {
-        // v3: contacts → parties
         db.update(schema.parties)
           .set({
             preferredName,

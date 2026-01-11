@@ -1,7 +1,5 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-// Schema types are still needed for query construction
-// v3: interactions → communicationEvents, interactionId → eventId, sourceConversationId → externalId
 import { communicationEvents, conversations, messages } from "../../infrastructure/db/schema/index";
 // Import from domain ports (not directly from infrastructure)
 import { AIServiceTag, DatabaseService, VectorStoreService } from "../ports";

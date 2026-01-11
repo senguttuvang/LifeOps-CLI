@@ -252,7 +252,6 @@ const HealthCommand = Command.make(
         console.log("─".repeat(60));
 
         for (const rel of relationships) {
-          // v3: contactId → partyId, contactName → partyName
           const messages = yield* _(repo.getMessagesForContact(rel.partyId, 30));
           if (messages.length < 10) {
             console.log(

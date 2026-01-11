@@ -7,8 +7,6 @@
  * Domain services never see WhatsApp-specific types.
  *
  * Protection: When WhatsApp API changes, only this file needs updates.
- *
- * See: docs/adr/003-domain-model-redesign.md
  */
 
 import { randomUUID } from "node:crypto";
@@ -16,10 +14,6 @@ import { randomUUID } from "node:crypto";
 import { Context, Effect, Layer } from "effect";
 
 import type { WhatsAppChatData, WhatsAppMessageData, WhatsAppSyncResult } from "../../whatsapp/whatsapp.types";
-
-// =============================================================================
-// EFFECT-TS SERVICE LAYER
-// =============================================================================
 
 // =============================================================================
 // WHATSAPP TYPES (External Protocol) - Imported from whatsapp.types.ts
@@ -37,35 +31,35 @@ export interface WhatsAppCallLog {
 }
 
 // =============================================================================
-// DOMAIN TYPES (Internal Model)
+// DOMAIN TYPES (Internal Model) - Using v3 Schema Terminology
 // =============================================================================
 
 /**
  * Domain events returned by adapter (used by domain services)
- * These are source-agnostic representations.
+ * These are source-agnostic representations using Party pattern.
  */
 
-export interface DomainContact {
+export interface DomainParty {
   id: string; // UUID (generated if new)
   displayName: string;
-  type: "person" | "business" | "group";
-  identifiers: DomainContactIdentifier[];
+  partyType: "individual" | "organization";
+  contactPoints: DomainContactPoint[];
 }
 
-export interface DomainContactIdentifier {
+export interface DomainContactPoint {
   id: string; // UUID
-  contactId: string; // UUID (link to contact)
-  source: "whatsapp";
-  identifier: string; // Normalized (no @s.whatsapp.net suffix)
+  partyId: string; // UUID (link to party)
+  channelId: "whatsapp";
+  value: string; // Normalized (no @s.whatsapp.net suffix)
   isPrimary: boolean;
 }
 
 export interface DomainConversation {
   id: string; // UUID (generated if new)
   title: string | null;
-  conversationType: "1:1" | "group" | "broadcast";
-  source: "whatsapp";
-  sourceConversationId: string; // JID (raw)
+  conversationType: "direct" | "group" | "broadcast";
+  channelId: "whatsapp";
+  externalId: string; // JID (raw)
   isArchived: boolean;
   isPinned: boolean;
   lastActivityAt: Date;
@@ -73,38 +67,38 @@ export interface DomainConversation {
 
 export interface DomainConversationParticipant {
   conversationId: string; // UUID (linked to DomainConversation)
-  contactId: string; // UUID (linked to DomainContact)
+  partyId: string; // UUID (linked to DomainParty)
   role: "member" | "admin" | "owner" | null;
   joinedAt: Date;
   leftAt: Date | null;
 }
 
-export interface DomainInteraction {
+export interface DomainCommunicationEvent {
   id: string; // UUID (generated)
   conversationId: string; // UUID (linked to DomainConversation)
-  interactionType: "message" | "call";
+  eventType: "message" | "call";
   direction: "inbound" | "outbound";
-  fromContactId: string; // UUID (linked to DomainContact)
+  fromPartyId: string; // UUID (linked to DomainParty)
   occurredAt: Date;
-  source: "whatsapp";
-  sourceInteractionId: string; // WhatsApp message/call ID
+  channelId: "whatsapp";
+  externalId: string; // WhatsApp message/call ID
   isIndexed: boolean;
 }
 
 export interface DomainMessage {
-  interactionId: string; // UUID (linked to DomainInteraction)
+  eventId: string; // UUID (linked to DomainCommunicationEvent)
   content: string | null;
   contentType: "text" | "image" | "video" | "audio" | "document" | "sticker" | "location" | "contact";
   mediaUrl: string | null;
   mediaMimeType: string | null;
-  quotedInteractionId: string | null; // UUID (if exists)
+  quotedEventId: string | null; // UUID (if exists)
   reactionEmoji: string | null;
   isStarred: boolean;
   rawMetadata: string | null; // JSON
 }
 
 export interface DomainCall {
-  interactionId: string; // UUID (linked to DomainInteraction)
+  eventId: string; // UUID (linked to DomainCommunicationEvent)
   callType: "voice" | "video";
   durationSeconds: number | null;
   callStatus: "completed" | "missed" | "declined" | "failed";
@@ -112,10 +106,10 @@ export interface DomainCall {
 }
 
 export interface TranslatedSyncResult {
-  contacts: DomainContact[];
+  parties: DomainParty[];
   conversations: DomainConversation[];
   conversationParticipants: DomainConversationParticipant[];
-  interactions: DomainInteraction[];
+  communicationEvents: DomainCommunicationEvent[];
   messages: DomainMessage[];
   calls: DomainCall[];
 }
@@ -126,9 +120,9 @@ export interface TranslatedSyncResult {
 
 export class WhatsAppAdapter {
   // Store JID→UUID mappings during translation
-  private readonly contactJidToUuid = new Map<string, string>();
+  private readonly partyJidToUuid = new Map<string, string>();
   private readonly conversationJidToUuid = new Map<string, string>();
-  private readonly messageIdToInteractionUuid = new Map<string, string>();
+  private readonly messageIdToEventUuid = new Map<string, string>();
 
   /**
    * Main translation method: WhatsApp data → Domain entities
@@ -141,8 +135,8 @@ export class WhatsAppAdapter {
   translateSyncResult(whatsappData: WhatsAppSyncResult): Effect.Effect<TranslatedSyncResult, Error> {
     return Effect.gen(
       function* (this: WhatsAppAdapter) {
-        // Step 1: Extract unique contacts from chats + messages + group participants
-        const contacts = yield* this.extractContacts(whatsappData);
+        // Step 1: Extract unique parties from chats + messages + group participants
+        const parties = yield* this.extractParties(whatsappData);
 
         // Step 2: Translate chats → conversations
         const conversations = yield* this.translateChats(whatsappData.chats);
@@ -150,14 +144,14 @@ export class WhatsAppAdapter {
         // Step 3: Extract group participants
         const conversationParticipants = yield* this.extractConversationParticipants(whatsappData.chats);
 
-        // Step 4: Translate messages → interactions + messages
-        const { interactions, messages } = yield* this.translateMessages(whatsappData.messages);
+        // Step 4: Translate messages → communication events + messages
+        const { communicationEvents, messages } = yield* this.translateMessages(whatsappData.messages);
 
         return {
-          contacts,
+          parties,
           conversations,
           conversationParticipants,
-          interactions,
+          communicationEvents,
           messages,
           calls: [], // No call data in current sync (future: extract from msgstore.db)
         };
@@ -166,13 +160,13 @@ export class WhatsAppAdapter {
   }
 
   /**
-   * Extract contacts from WhatsApp data
+   * Extract parties from WhatsApp data
    *
-   * Contacts appear as:
+   * Parties appear as:
    * - Chat participants (chat.jid)
    * - Message senders (message.senderJid)
    */
-  private extractContacts(whatsappData: WhatsAppSyncResult): Effect.Effect<DomainContact[], Error> {
+  private extractParties(whatsappData: WhatsAppSyncResult): Effect.Effect<DomainParty[], Error> {
     return Effect.try(() => {
       const jidSet = new Set<string>();
       const jidToName = new Map<string, string | undefined>();
@@ -201,37 +195,40 @@ export class WhatsAppAdapter {
         }
       }
 
-      // Translate JIDs → Domain Contacts
-      const contacts: DomainContact[] = [];
+      // Translate JIDs → Domain Parties
+      const parties: DomainParty[] = [];
 
       for (const jid of jidSet) {
         // Only generate UUID if not already mapped
-        let contactUuid = this.contactJidToUuid.get(jid);
-        if (!contactUuid) {
-          contactUuid = randomUUID();
-          this.contactJidToUuid.set(jid, contactUuid);
+        let partyUuid = this.partyJidToUuid.get(jid);
+        if (!partyUuid) {
+          partyUuid = randomUUID();
+          this.partyJidToUuid.set(jid, partyUuid);
         }
 
         const normalizedJid = this.normalizeJid(jid);
         const name = jidToName.get(jid);
 
-        contacts.push({
-          id: contactUuid,
+        // Groups are organizations, individuals are individual
+        const isGroup = jid.includes("@g.us");
+
+        parties.push({
+          id: partyUuid,
           displayName: name || this.extractNameFromJid(jid),
-          type: jid.includes("@g.us") ? "group" : "person",
-          identifiers: [
+          partyType: isGroup ? "organization" : "individual",
+          contactPoints: [
             {
               id: randomUUID(),
-              contactId: contactUuid,
-              source: "whatsapp",
-              identifier: normalizedJid,
+              partyId: partyUuid,
+              channelId: "whatsapp",
+              value: normalizedJid,
               isPrimary: true,
             },
           ],
         });
       }
 
-      return contacts;
+      return parties;
     });
   }
 
@@ -247,9 +244,9 @@ export class WhatsAppAdapter {
         return {
           id: conversationUuid,
           title: chat.name || null,
-          conversationType: (chat.isGroup ? "group" : "1:1") as "1:1" | "group" | "broadcast",
-          source: "whatsapp" as const,
-          sourceConversationId: chat.jid, // Store raw JID
+          conversationType: (chat.isGroup ? "group" : "direct") as "direct" | "group" | "broadcast",
+          channelId: "whatsapp" as const,
+          externalId: chat.jid, // Store raw JID
           isArchived: false, // Not provided by current CLI
           isPinned: false, // Not provided by current CLI
           lastActivityAt: chat.lastMessageTime ? new Date(chat.lastMessageTime * 1000) : new Date(),
@@ -262,7 +259,7 @@ export class WhatsAppAdapter {
    * Extract conversation participants from group chats
    *
    * For each group chat with participants, creates participant records linking
-   * conversation UUID to contact UUIDs.
+   * conversation UUID to party UUIDs.
    */
   private extractConversationParticipants(
     chats: WhatsAppChatData[],
@@ -284,15 +281,15 @@ export class WhatsAppAdapter {
 
         // Create participant entry for each group member
         for (const participantJid of chat.participants) {
-          const contactUuid = this.contactJidToUuid.get(participantJid);
-          if (!contactUuid) {
-            console.warn(`No contact UUID found for participant ${participantJid}`);
+          const partyUuid = this.partyJidToUuid.get(participantJid);
+          if (!partyUuid) {
+            console.warn(`No party UUID found for participant ${participantJid}`);
             continue;
           }
 
           participants.push({
             conversationId: conversationUuid,
-            contactId: contactUuid,
+            partyId: partyUuid,
             role: null, // Role not available in basic participant list (would need admin metadata)
             joinedAt: new Date(), // Default to current time (msgstore.db doesn't have historical join dates)
             leftAt: null, // Active members only
@@ -305,53 +302,53 @@ export class WhatsAppAdapter {
   }
 
   /**
-   * Translate WhatsApp messages → Domain interactions + messages
+   * Translate WhatsApp messages → Domain communication events + messages
    */
   private translateMessages(messages: WhatsAppMessageData[]): Effect.Effect<
     {
-      interactions: DomainInteraction[];
+      communicationEvents: DomainCommunicationEvent[];
       messages: DomainMessage[];
     },
     Error
   > {
     return Effect.try(() => {
-      const interactions: DomainInteraction[] = [];
+      const communicationEvents: DomainCommunicationEvent[] = [];
       const domainMessages: DomainMessage[] = [];
 
       for (const msg of messages) {
-        const interactionUuid = randomUUID();
-        this.messageIdToInteractionUuid.set(msg.id, interactionUuid);
+        const eventUuid = randomUUID();
+        this.messageIdToEventUuid.set(msg.id, eventUuid);
 
         const conversationUuid = this.conversationJidToUuid.get(msg.chatJid);
-        const fromContactUuid = this.contactJidToUuid.get(msg.senderJid);
+        const fromPartyUuid = this.partyJidToUuid.get(msg.senderJid);
 
-        if (!conversationUuid || !fromContactUuid) {
+        if (!conversationUuid || !fromPartyUuid) {
           console.warn(`Missing mapping for message ${msg.id}, skipping`);
           continue;
         }
 
-        // Create interaction (base entity)
-        interactions.push({
-          id: interactionUuid,
+        // Create communication event (base entity)
+        communicationEvents.push({
+          id: eventUuid,
           conversationId: conversationUuid,
-          interactionType: "message",
+          eventType: "message",
           direction: msg.isFromMe ? "outbound" : "inbound",
-          fromContactId: fromContactUuid,
+          fromPartyId: fromPartyUuid,
           occurredAt: new Date(msg.timestamp * 1000),
-          source: "whatsapp",
-          sourceInteractionId: msg.id,
+          channelId: "whatsapp",
+          externalId: msg.id,
           isIndexed: false, // RAG will process later
         });
 
         // Create message (subtype entity)
         domainMessages.push({
-          interactionId: interactionUuid,
+          eventId: eventUuid,
           content: msg.text || null,
           contentType: msg.messageType,
           mediaUrl: msg.mediaUrl || null,
           mediaMimeType: msg.mediaMimeType || null,
-          quotedInteractionId: msg.quotedMessageId
-            ? this.messageIdToInteractionUuid.get(msg.quotedMessageId) || null
+          quotedEventId: msg.quotedMessageId
+            ? this.messageIdToEventUuid.get(msg.quotedMessageId) || null
             : null,
           reactionEmoji: null, // Future: extract from rawJson
           isStarred: false, // Future: extract from rawJson
@@ -359,51 +356,51 @@ export class WhatsAppAdapter {
         });
       }
 
-      return { interactions, messages: domainMessages };
+      return { communicationEvents, messages: domainMessages };
     });
   }
 
   /**
-   * Translate WhatsApp call logs → Domain interactions + calls
+   * Translate WhatsApp call logs → Domain communication events + calls
    */
   translateCallLogs(callLogs: WhatsAppCallLog[]): Effect.Effect<
     {
-      interactions: DomainInteraction[];
+      communicationEvents: DomainCommunicationEvent[];
       calls: DomainCall[];
     },
     Error
   > {
     return Effect.try(() => {
-      const interactions: DomainInteraction[] = [];
+      const communicationEvents: DomainCommunicationEvent[] = [];
       const calls: DomainCall[] = [];
 
       for (const call of callLogs) {
-        const interactionUuid = randomUUID();
+        const eventUuid = randomUUID();
 
         const conversationUuid = this.conversationJidToUuid.get(call.chatJid);
-        const fromContactUuid = this.contactJidToUuid.get(call.fromJid);
+        const fromPartyUuid = this.partyJidToUuid.get(call.fromJid);
 
-        if (!conversationUuid || !fromContactUuid) {
+        if (!conversationUuid || !fromPartyUuid) {
           console.warn(`Missing mapping for call ${call.id}, skipping`);
           continue;
         }
 
-        // Create interaction
-        interactions.push({
-          id: interactionUuid,
+        // Create communication event
+        communicationEvents.push({
+          id: eventUuid,
           conversationId: conversationUuid,
-          interactionType: "call",
+          eventType: "call",
           direction: "inbound", // Assuming incoming (refine with call metadata)
-          fromContactId: fromContactUuid,
+          fromPartyId: fromPartyUuid,
           occurredAt: new Date(call.timestamp * 1000),
-          source: "whatsapp",
-          sourceInteractionId: call.id,
+          channelId: "whatsapp",
+          externalId: call.id,
           isIndexed: false,
         });
 
         // Create call
         calls.push({
-          interactionId: interactionUuid,
+          eventId: eventUuid,
           callType: call.callType,
           durationSeconds: call.durationSeconds,
           callStatus: call.status,
@@ -411,7 +408,7 @@ export class WhatsAppAdapter {
         });
       }
 
-      return { interactions, calls };
+      return { communicationEvents, calls };
     });
   }
 
@@ -460,11 +457,11 @@ export class WhatsAppAdapter {
   }
 
   /**
-   * Reverse lookup: Find contact UUID from WhatsApp JID
+   * Reverse lookup: Find party UUID from WhatsApp JID
    * Used by external code that needs to query domain entities by JID
    */
-  getContactUuidByJid(jid: string): string | undefined {
-    return this.contactJidToUuid.get(jid);
+  getPartyUuidByJid(jid: string): string | undefined {
+    return this.partyJidToUuid.get(jid);
   }
 
   /**
@@ -478,9 +475,9 @@ export class WhatsAppAdapter {
    * Clear mapping cache (call between sync sessions)
    */
   clearMappings(): void {
-    this.contactJidToUuid.clear();
+    this.partyJidToUuid.clear();
     this.conversationJidToUuid.clear();
-    this.messageIdToInteractionUuid.clear();
+    this.messageIdToEventUuid.clear();
   }
 }
 

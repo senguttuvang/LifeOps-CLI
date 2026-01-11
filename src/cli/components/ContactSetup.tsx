@@ -27,7 +27,7 @@ export interface ContactInfo {
 }
 
 export interface ContactSetupResult {
-  partyId: string; // v3: contactId → partyId
+  partyId: string;
   displayName: string;
   preferredName: string | null;
   relationshipType: "partner" | "family" | "friend" | "colleague" | "acquaintance";
@@ -102,7 +102,7 @@ export const ContactSetup: React.FC<ContactSetupProps> = ({
       } else if (key.return) {
         // Save this contact and move to next
         const result: ContactSetupResult = {
-          partyId: currentContact.id, // v3: contactId → partyId
+          partyId: currentContact.id,
           displayName: currentContact.displayName,
           preferredName: editedName !== currentContact.displayName ? editedName : null,
           relationshipType: RELATIONSHIP_TYPES[selectedRelationship].key,

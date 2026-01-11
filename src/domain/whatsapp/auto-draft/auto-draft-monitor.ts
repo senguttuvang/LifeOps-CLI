@@ -14,8 +14,6 @@
 
 import { eq, sql } from "drizzle-orm";
 import { Effect, Schedule } from "effect";
-// Schema types are still needed for query construction
-// v3: sourceConversationId → externalId, contactId → partyId
 import { conversationParticipants, conversations } from "../../../infrastructure/db/schema/index";
 // Import from domain ports (not directly from infrastructure)
 import { DatabaseService, WhatsAppServiceTag } from "../../ports";
@@ -87,7 +85,6 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
     const db = yield* DatabaseService;
 
     // Get party ID for signal loading (needed for signal-enhanced generation)
-    // v3: contactId → partyId, sourceConversationId → externalId
     let userId: string | undefined;
     try {
       const conversation = yield* Effect.tryPromise({
@@ -115,7 +112,7 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
         });
 
         if (participants.length > 0) {
-          userId = participants[0].partyId; // v3: contactId → partyId
+          userId = participants[0].partyId;
         }
       }
     } catch {

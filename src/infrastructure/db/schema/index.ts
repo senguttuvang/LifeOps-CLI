@@ -107,22 +107,3 @@ export {
 
 // Sync
 export { type NewSyncState, type SyncState, syncState } from "./sync";
-
-// =============================================================================
-// BACKWARD COMPATIBILITY ALIASES
-// =============================================================================
-// These aliases map old v2 table/type names to new v3 equivalents
-// to ease migration of existing code.
-
-export type { BehaviorSignal as UserSignal, NewBehaviorSignal as NewUserSignal } from "./analytics";
-export { behaviorSignals as userSignals } from "./analytics";
-export type { ContactPoint as ContactIdentifier, NewContactPoint as NewContactIdentifier } from "./channels";
-export { contactPoints as contactIdentifiers } from "./channels";
-export type { CommunicationEvent as Interaction, NewCommunicationEvent as NewInteraction } from "./communications";
-export { communicationEvents as interactions } from "./communications";
-// Type Aliases
-export type { NewParty as NewContact, Party as Contact } from "./parties";
-// Table Aliases
-export { parties as contacts } from "./parties";
-export type { NewPartyRelationship as NewRelationship, PartyRelationship as Relationship } from "./relationships";
-export { partyRelationships as relationships } from "./relationships";

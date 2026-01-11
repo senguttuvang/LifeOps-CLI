@@ -58,7 +58,7 @@ export const importAndroidCommand = Command.make(
       const result = yield* syncService.syncFromData(whatsappData);
 
       yield* Console.log(`\n✅ Sync complete:`);
-      yield* Console.log(`   • Contacts: ${result.contactsAdded}`);
+      yield* Console.log(`   • Parties: ${result.partiesAdded}`);
       yield* Console.log(`   • Conversations: ${result.conversationsAdded}`);
       yield* Console.log(`   • Participants: ${result.participantsAdded}`);
       yield* Console.log(`   • Messages: ${result.messagesAdded}`);

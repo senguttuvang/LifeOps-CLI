@@ -116,7 +116,7 @@ const runContactSelector = (
  * Wrapper for import operation with animated progress UI
  */
 interface ImportStats {
-  contactsAdded: number;
+  partiesAdded: number;
   conversationsAdded: number;
   messagesAdded: number;
   syncedAt: Date;
@@ -150,7 +150,7 @@ const runImportWithProgress = (
               totalMessages,
               phase: "complete",
               stats: {
-                contactsImported: stats.contactsAdded,
+                contactsImported: stats.partiesAdded,
                 messagesImported: stats.messagesAdded,
                 conversationsImported: stats.conversationsAdded,
               },

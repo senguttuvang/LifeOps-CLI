@@ -16,10 +16,10 @@ describe("WhatsAppAdapter", () => {
 
       const result = await Effect.runPromise(adapter.translateSyncResult(emptySyncResult));
 
-      expect(result.contacts).toHaveLength(0);
+      expect(result.parties).toHaveLength(0);
       expect(result.conversations).toHaveLength(0);
       expect(result.conversationParticipants).toHaveLength(0);
-      expect(result.interactions).toHaveLength(0);
+      expect(result.communicationEvents).toHaveLength(0);
       expect(result.messages).toHaveLength(0);
     });
 
@@ -51,16 +51,16 @@ describe("WhatsAppAdapter", () => {
 
       const result = await Effect.runPromise(adapter.translateSyncResult(syncResult));
 
-      // Should create one contact
-      expect(result.contacts).toHaveLength(1);
-      expect(result.contacts[0]?.displayName).toBe("John Doe");
+      // Should create one party
+      expect(result.parties).toHaveLength(1);
+      expect(result.parties[0]?.displayName).toBe("John Doe");
 
       // Should create one conversation
       expect(result.conversations).toHaveLength(1);
-      expect(result.conversations[0]?.conversationType).toBe("1:1");
+      expect(result.conversations[0]?.conversationType).toBe("direct");
 
-      // Should create one interaction
-      expect(result.interactions).toHaveLength(1);
+      // Should create one communication event
+      expect(result.communicationEvents).toHaveLength(1);
 
       // Should create one message
       expect(result.messages).toHaveLength(1);
@@ -85,8 +85,8 @@ describe("WhatsAppAdapter", () => {
 
       const result = await Effect.runPromise(adapter.translateSyncResult(syncResult));
 
-      // Should create contacts for all participants
-      expect(result.contacts.length).toBeGreaterThanOrEqual(3);
+      // Should create parties for all participants
+      expect(result.parties.length).toBeGreaterThanOrEqual(3);
 
       // Should create one group conversation
       expect(result.conversations).toHaveLength(1);
@@ -127,8 +127,8 @@ describe("WhatsAppAdapter", () => {
 
       expect(result.messages).toHaveLength(1);
       expect(result.messages[0]?.content).toBe("Thanks for the update!");
-      expect(result.interactions).toHaveLength(1);
-      expect(result.interactions[0]?.direction).toBe("outbound");
+      expect(result.communicationEvents).toHaveLength(1);
+      expect(result.communicationEvents[0]?.direction).toBe("outbound");
     });
 
     test("should generate valid UUIDs for all entities", async () => {
@@ -151,7 +151,7 @@ describe("WhatsAppAdapter", () => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
       // All generated IDs should be valid UUIDs
-      expect(result.contacts[0]?.id).toMatch(uuidRegex);
+      expect(result.parties[0]?.id).toMatch(uuidRegex);
       expect(result.conversations[0]?.id).toMatch(uuidRegex);
     });
 
@@ -196,8 +196,8 @@ describe("WhatsAppAdapter", () => {
 
       // Both messages should reference the same conversation UUID
       const conversationUuid = result.conversations[0]?.id;
-      expect(result.interactions[0]?.conversationId).toBe(conversationUuid);
-      expect(result.interactions[1]?.conversationId).toBe(conversationUuid);
+      expect(result.communicationEvents[0]?.conversationId).toBe(conversationUuid);
+      expect(result.communicationEvents[1]?.conversationId).toBe(conversationUuid);
     });
   });
 });
