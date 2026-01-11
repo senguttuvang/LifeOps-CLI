@@ -810,46 +810,48 @@ export const syncState = sqliteTable("sync_state", {
   channelId: text("channel_id")
     .notNull()
     .references(() => channels.id),
-  cursor: text("cursor"),                    // For future delta sync
+  // Note: No cursor field - WhatsApp doesn't provide delta sync cursors
+  // We use metadata.highestMessageTimestamp for incremental sync instead
   lastSyncAt: integer("last_sync_at"),       // Watermark timestamp
   lastSyncStatus: text("last_sync_status"),  // "success" | "partial" | "failed"
   errorMessage: text("error_message"),
   syncedCount: integer("synced_count"),      // Items in last run
   totalCount: integer("total_count"),        // Total known items
-  metadata: text("metadata"),                // JSON for channel-specific data
+  metadata: text("metadata"),                // JSON: { highestMessageTimestamp, syncMode, ... }
 });
 ```
 
 ### Current Usage
 
 ```typescript
-// sync.service.ts - After successful sync
+// sync.service.ts - After successful sync via SyncStateRepository
 
-await db.insert(syncState).values({
-  id: "whatsapp",
-  channelId: "whatsapp",
-  lastSyncAt: syncedAt,
-  lastSyncStatus: "success",
-  cursor: null,  // ← Not used (WhatsApp doesn't provide cursors)
-}).onConflictDoUpdate({
-  target: syncState.id,
-  set: {
-    lastSyncAt: syncedAt,
-    lastSyncStatus: "success",
-  },
+yield* syncStateRepo.recordSuccess("whatsapp", {
+  syncedCount: messagesAdded + callsAdded,
+  totalCount: messagesAdded + callsAdded,
+  syncedAt,
+});
+
+// Store watermark for incremental sync
+yield* syncStateRepo.updateMetadata("whatsapp", {
+  highestMessageTimestamp: whatsappData.highestTimestamp,
+  syncMode: "full",
 });
 ```
 
-### Schema Design for Future Patterns
+### Schema Design Rationale
 
-The schema supports multiple sync patterns:
+The schema uses metadata for watermark tracking instead of a dedicated cursor field:
 
-| Field | Current Use | Future Use |
-|-------|-------------|------------|
-| `cursor` | Unused | Real-time event offset |
-| `metadata` | Unused | `{ highestTimestamp: X, pendingMessageIds: [...] }` |
-| `syncedCount` | Basic count | Progress tracking |
-| `totalCount` | Unused | Discovery phase count |
+| Field | Current Use | Notes |
+|-------|-------------|-------|
+| `lastSyncAt` | Watermark timestamp | When last successful sync completed |
+| `metadata.highestMessageTimestamp` | ✅ Active | Unix timestamp of newest message - used for `--since` |
+| `metadata.syncMode` | ✅ Active | "full" or "incremental" |
+| `syncedCount` | Basic count | Messages synced in last run |
+| `totalCount` | Total count | Total messages known |
+
+**Why no cursor field?** WhatsApp's history sync doesn't provide delta cursors like APIs such as Slack or Gmail. Instead, we track the highest message timestamp and use that as the `--since` parameter for the Go CLI.
 
 ### Potential Enhanced Metadata
 
@@ -883,11 +885,11 @@ interface SyncStateRepository {
   // Update sync state after failed sync
   recordFailure(channelId: string, error: string): Effect<void, Error>;
 
-  // Get watermark for incremental sync
-  getWatermark(channelId: string): Effect<{ lastSyncAt: Date; cursor: string | null } | null, Error>;
+  // Get watermark for incremental sync (uses metadata.highestMessageTimestamp)
+  getWatermark(channelId: string): Effect<{ lastSyncAt: Date; metadata: SyncMetadata | null } | null, Error>;
 
-  // Update metadata (for enhanced tracking)
-  updateMetadata(channelId: string, metadata: SyncMetadata): Effect<void, Error>;
+  // Update metadata (for enhanced tracking - includes highestMessageTimestamp)
+  updateMetadata(channelId: string, metadata: Partial<SyncMetadata>): Effect<void, Error>;
 }
 ```
 

@@ -35,7 +35,6 @@ describe("SyncStateRepository", () => {
       const existingState: SyncStateRecord = {
         id: "whatsapp",
         channelId: "whatsapp",
-        cursor: "cursor123",
         lastSyncAt: new Date("2026-01-10"),
         lastSyncStatus: "success",
         errorMessage: null,
@@ -74,7 +73,6 @@ describe("SyncStateRepository", () => {
       const existingState: SyncStateRecord = {
         id: "whatsapp",
         channelId: "whatsapp",
-        cursor: "msg_12345",
         lastSyncAt: lastSync,
         lastSyncStatus: "success",
         errorMessage: null,
@@ -93,7 +91,6 @@ describe("SyncStateRepository", () => {
       const result = await expectSuccess(Effect.provide(program, TestLayer));
       expect(result).not.toBeNull();
       expect(result?.lastSyncAt).toEqual(lastSync);
-      expect(result?.cursor).toBe("msg_12345");
       expect(result?.metadata?.highestMessageTimestamp).toBe(1704931200);
     });
   });
@@ -123,7 +120,6 @@ describe("SyncStateRepository", () => {
       const existingState: SyncStateRecord = {
         id: "whatsapp",
         channelId: "whatsapp",
-        cursor: "old_cursor",
         lastSyncAt: firstSync,
         lastSyncStatus: "success",
         errorMessage: null,
@@ -145,8 +141,6 @@ describe("SyncStateRepository", () => {
       expect(result?.syncedCount).toBe(25);
       expect(result?.totalCount).toBe(225);
       expect(result?.lastSyncAt).toEqual(secondSync);
-      // Cursor should be preserved
-      expect(result?.cursor).toBe("old_cursor");
       // Metadata should be preserved
       expect(result?.metadata?.syncMode).toBe("full");
     });
@@ -155,7 +149,6 @@ describe("SyncStateRepository", () => {
       const existingState: SyncStateRecord = {
         id: "whatsapp",
         channelId: "whatsapp",
-        cursor: null,
         lastSyncAt: new Date("2026-01-08"),
         lastSyncStatus: "failed",
         errorMessage: "Previous error",
@@ -198,7 +191,6 @@ describe("SyncStateRepository", () => {
       const existingState: SyncStateRecord = {
         id: "whatsapp",
         channelId: "whatsapp",
-        cursor: null,
         lastSyncAt: previousSync,
         lastSyncStatus: "success",
         errorMessage: null,
@@ -241,7 +233,6 @@ describe("SyncStateRepository", () => {
       const existingState: SyncStateRecord = {
         id: "whatsapp",
         channelId: "whatsapp",
-        cursor: null,
         lastSyncAt: new Date(),
         lastSyncStatus: "success",
         errorMessage: null,
@@ -262,47 +253,6 @@ describe("SyncStateRepository", () => {
       expect(result?.metadata?.syncMode).toBe("full"); // Preserved
       expect(result?.metadata?.deviceId).toBe("device123"); // Preserved
       expect(result?.metadata?.highestMessageTimestamp).toBe(1704931200); // Added
-    });
-  });
-
-  describe("updateCursor", () => {
-    it("should update cursor for existing state", async () => {
-      const existingState: SyncStateRecord = {
-        id: "whatsapp",
-        channelId: "whatsapp",
-        cursor: "old_cursor",
-        lastSyncAt: new Date(),
-        lastSyncStatus: "success",
-        errorMessage: null,
-        syncedCount: 100,
-        totalCount: 500,
-        metadata: null,
-      };
-
-      const TestLayer = createMockSyncStateRepositoryLayer({ state: existingState });
-
-      const program = Effect.gen(function* () {
-        const repo = yield* SyncStateRepositoryTag;
-        yield* repo.updateCursor("whatsapp", "new_cursor");
-        return yield* repo.getState("whatsapp");
-      });
-
-      const result = await expectSuccess(Effect.provide(program, TestLayer));
-      expect(result?.cursor).toBe("new_cursor");
-    });
-
-    it("should create state with cursor if none exists", async () => {
-      const TestLayer = createMockSyncStateRepositoryLayer();
-
-      const program = Effect.gen(function* () {
-        const repo = yield* SyncStateRepositoryTag;
-        yield* repo.updateCursor("whatsapp", "first_cursor");
-        return yield* repo.getState("whatsapp");
-      });
-
-      const result = await expectSuccess(Effect.provide(program, TestLayer));
-      expect(result?.channelId).toBe("whatsapp");
-      expect(result?.cursor).toBe("first_cursor");
     });
   });
 
@@ -338,38 +288,30 @@ describe("SyncStateRepository", () => {
         const firstSync = new Date("2026-01-10T10:00:00Z");
         yield* repo.recordSuccess("whatsapp", { syncedCount: 100, totalCount: 100, syncedAt: firstSync });
 
-        // 3. Update metadata with highest timestamp
+        // 3. Update metadata with highest timestamp (used as watermark for incremental sync)
         yield* repo.updateMetadata("whatsapp", {
           highestMessageTimestamp: 1704931200,
           syncMode: "full",
         });
 
-        // 4. Update cursor
-        yield* repo.updateCursor("whatsapp", "msg_100");
-
-        // 5. Check watermark after first sync
+        // 4. Check watermark after first sync
         const firstWatermark = yield* repo.getWatermark("whatsapp");
         expect(firstWatermark?.lastSyncAt).toEqual(firstSync);
-        expect(firstWatermark?.cursor).toBe("msg_100");
         expect(firstWatermark?.metadata?.highestMessageTimestamp).toBe(1704931200);
 
-        // 6. Second sync - incremental
+        // 5. Second sync - incremental (uses highestMessageTimestamp from metadata)
         const secondSync = new Date("2026-01-10T12:00:00Z");
         yield* repo.recordSuccess("whatsapp", { syncedCount: 20, totalCount: 120, syncedAt: secondSync });
 
-        // 7. Update cursor for incremental
-        yield* repo.updateCursor("whatsapp", "msg_120");
-
-        // 8. Update metadata with new highest timestamp
+        // 6. Update metadata with new highest timestamp
         yield* repo.updateMetadata("whatsapp", {
           highestMessageTimestamp: 1704938400,
           syncMode: "incremental",
         });
 
-        // 9. Final state check
+        // 7. Final state check
         const finalState = yield* repo.getState("whatsapp");
         expect(finalState?.lastSyncAt).toEqual(secondSync);
-        expect(finalState?.cursor).toBe("msg_120");
         expect(finalState?.syncedCount).toBe(20);
         expect(finalState?.totalCount).toBe(120);
         expect(finalState?.metadata?.highestMessageTimestamp).toBe(1704938400);

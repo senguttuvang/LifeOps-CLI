@@ -36,7 +36,7 @@ export interface SyncStats {
 export interface SyncService {
   readonly syncMessages: (options?: { days?: number; chatJid?: string }) => Effect.Effect<SyncStats, Error, never>;
   readonly syncFromData: (data: WhatsAppSyncResult) => Effect.Effect<SyncStats, Error, never>;
-  readonly getSyncState: () => Effect.Effect<{ lastSyncAt: Date | null; cursor: string | null } | null, Error, never>;
+  readonly getSyncState: () => Effect.Effect<{ lastSyncAt: Date | null; metadata: SyncMetadata | null } | null, Error, never>;
 }
 
 /**
@@ -180,7 +180,7 @@ export interface MockSyncOptions {
   syncResult?: Partial<SyncStats>;
   shouldFail?: boolean;
   failureMessage?: string;
-  syncState?: { lastSyncAt: Date | null; cursor: string | null } | null;
+  syncState?: { lastSyncAt: Date | null; metadata: SyncMetadata | null } | null;
 }
 
 export const createMockSyncLayer = (options: MockSyncOptions = {}): Layer.Layer<SyncServiceTag> => {
@@ -216,7 +216,7 @@ export const createMockSyncLayer = (options: MockSyncOptions = {}): Layer.Layer<
       return Effect.succeed(
         options.syncState !== undefined
           ? options.syncState
-          : { lastSyncAt: new Date(), cursor: null },
+          : { lastSyncAt: new Date(), metadata: null },
       );
     },
   };
@@ -419,7 +419,6 @@ export interface SyncMetadata {
  */
 export interface SyncWatermark {
   readonly lastSyncAt: Date;
-  readonly cursor: string | null;
   readonly metadata: SyncMetadata | null;
 }
 
@@ -429,7 +428,6 @@ export interface SyncWatermark {
 export interface SyncStateRecord {
   readonly id: string;
   readonly channelId: string;
-  readonly cursor: string | null;
   readonly lastSyncAt: Date | null;
   readonly lastSyncStatus: "success" | "partial" | "failed" | null;
   readonly errorMessage: string | null;
@@ -447,7 +445,6 @@ export interface SyncStateRepository {
   readonly recordSuccess: (channelId: string, stats: { syncedCount: number; totalCount?: number; syncedAt: Date }) => Effect.Effect<void, Error>;
   readonly recordFailure: (channelId: string, error: string) => Effect.Effect<void, Error>;
   readonly updateMetadata: (channelId: string, metadata: Partial<SyncMetadata>) => Effect.Effect<void, Error>;
-  readonly updateCursor: (channelId: string, cursor: string) => Effect.Effect<void, Error>;
 }
 
 /**
@@ -495,7 +492,6 @@ export const createMockSyncStateRepositoryLayer = (
       if (currentState?.channelId === channelId && currentState.lastSyncAt) {
         return Effect.succeed({
           lastSyncAt: currentState.lastSyncAt,
-          cursor: currentState.cursor,
           metadata: currentState.metadata,
         });
       }
@@ -509,7 +505,6 @@ export const createMockSyncStateRepositoryLayer = (
       currentState = {
         id: channelId,
         channelId,
-        cursor: currentState?.cursor ?? null,
         lastSyncAt: stats.syncedAt,
         lastSyncStatus: "success",
         errorMessage: null,
@@ -527,7 +522,6 @@ export const createMockSyncStateRepositoryLayer = (
       currentState = {
         id: channelId,
         channelId,
-        cursor: currentState?.cursor ?? null,
         lastSyncAt: currentState?.lastSyncAt ?? null,
         lastSyncStatus: "failed",
         errorMessage: error,
@@ -551,35 +545,12 @@ export const createMockSyncStateRepositoryLayer = (
         currentState = {
           id: channelId,
           channelId,
-          cursor: null,
           lastSyncAt: null,
           lastSyncStatus: null,
           errorMessage: null,
           syncedCount: 0,
           totalCount: 0,
           metadata: metadata as SyncMetadata,
-        };
-      }
-      return Effect.succeed(undefined);
-    },
-
-    updateCursor: (channelId, cursor) => {
-      if (options.shouldFail) {
-        return Effect.fail(new Error(options.failureMessage || "Update cursor failed"));
-      }
-      if (currentState?.channelId === channelId) {
-        currentState = { ...currentState, cursor };
-      } else {
-        currentState = {
-          id: channelId,
-          channelId,
-          cursor,
-          lastSyncAt: null,
-          lastSyncStatus: null,
-          errorMessage: null,
-          syncedCount: 0,
-          totalCount: 0,
-          metadata: null,
         };
       }
       return Effect.succeed(undefined);

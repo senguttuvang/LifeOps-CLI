@@ -5,9 +5,12 @@
  * Follows the Repository pattern from DDD.
  *
  * Key Responsibilities:
- * 1. Track sync watermarks (lastSyncAt, cursor) per channel
+ * 1. Track sync watermarks (lastSyncAt, highestMessageTimestamp in metadata)
  * 2. Record sync success/failure with statistics
  * 3. Support metadata for enhanced tracking (gaps, modes)
+ *
+ * Note: No cursor field - WhatsApp doesn't provide delta sync cursors.
+ * We use highestMessageTimestamp in metadata instead.
  *
  * @see docs/architecture/whatsapp-sync.md#syncstaterepository-abstraction
  */
@@ -49,10 +52,12 @@ export interface SyncMetadata {
 
 /**
  * Watermark for incremental sync
+ *
+ * Uses metadata.highestMessageTimestamp for WhatsApp sync
+ * since WhatsApp doesn't provide delta cursors.
  */
 export interface SyncWatermark {
   readonly lastSyncAt: Date;
-  readonly cursor: string | null;
   readonly metadata: SyncMetadata | null;
 }
 
@@ -62,7 +67,6 @@ export interface SyncWatermark {
 export interface SyncStateRecord {
   readonly id: string;
   readonly channelId: string;
-  readonly cursor: string | null;
   readonly lastSyncAt: Date | null;
   readonly lastSyncStatus: "success" | "partial" | "failed" | null;
   readonly errorMessage: string | null;
@@ -121,14 +125,6 @@ export interface SyncStateRepository {
    * @param metadata - Partial metadata to merge
    */
   readonly updateMetadata: (channelId: string, metadata: Partial<SyncMetadata>) => Effect.Effect<void, Error>;
-
-  /**
-   * Update cursor for pagination/event tracking
-   *
-   * @param channelId - Channel identifier
-   * @param cursor - New cursor value
-   */
-  readonly updateCursor: (channelId: string, cursor: string) => Effect.Effect<void, Error>;
 }
 
 // =============================================================================
@@ -171,7 +167,6 @@ export const SyncStateRepositoryLive = Layer.effect(
           return {
             id: row.id,
             channelId: row.channelId,
-            cursor: row.cursor,
             lastSyncAt: row.lastSyncAt,
             lastSyncStatus: row.lastSyncStatus as "success" | "partial" | "failed" | null,
             errorMessage: row.errorMessage,
@@ -196,7 +191,6 @@ export const SyncStateRepositoryLive = Layer.effect(
 
         return {
           lastSyncAt: state.lastSyncAt,
-          cursor: state.cursor,
           metadata: state.metadata,
         };
       });
@@ -288,37 +282,12 @@ export const SyncStateRepositoryLive = Layer.effect(
         });
       });
 
-    /**
-     * Update cursor
-     */
-    const updateCursor = (channelId: string, cursor: string): Effect.Effect<void, Error> =>
-      Effect.tryPromise({
-        try: async () => {
-          await db
-            .insert(syncStateTable)
-            .values({
-              id: channelId,
-              channelId: channelId,
-              cursor: cursor,
-            })
-            .onConflictDoUpdate({
-              target: syncStateTable.id,
-              set: {
-                cursor: cursor,
-                updatedAt: new Date(),
-              },
-            });
-        },
-        catch: (e) => new Error(`Failed to update cursor: ${e}`),
-      });
-
     return {
       getState,
       getWatermark,
       recordSuccess,
       recordFailure,
       updateMetadata,
-      updateCursor,
     };
   }),
 );

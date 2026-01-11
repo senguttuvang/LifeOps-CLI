@@ -15,6 +15,10 @@ import { channels } from "./channels";
  * Sync State - Track sync progress per channel
  *
  * Enables incremental sync (fetch only new data since last sync).
+ * Uses highestMessageTimestamp in metadata for watermark-based sync.
+ *
+ * Note: No cursor field - WhatsApp doesn't provide delta sync cursors.
+ * Instead, we track highestMessageTimestamp in metadata JSON.
  */
 export const syncState = sqliteTable(
   "sync_state",
@@ -23,7 +27,6 @@ export const syncState = sqliteTable(
     channelId: text("channel_id")
       .notNull()
       .references(() => channels.id),
-    cursor: text("cursor"), // Pagination cursor
     lastSyncAt: integer("last_sync_at", { mode: "timestamp" }),
     lastSyncStatus: text("last_sync_status", {
       enum: ["success", "partial", "failed"],
@@ -31,7 +34,7 @@ export const syncState = sqliteTable(
     errorMessage: text("error_message"),
     syncedCount: integer("synced_count").default(0), // Items synced in last run
     totalCount: integer("total_count").default(0), // Total items known
-    metadata: text("metadata"), // JSON for channel-specific sync data
+    metadata: text("metadata"), // JSON: { highestMessageTimestamp, syncMode, ... }
     createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
     updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   },

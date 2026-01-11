@@ -62,7 +62,10 @@ export interface SyncService {
   /**
    * Get current sync state
    */
-  readonly getSyncState: () => Effect.Effect<{ lastSyncAt: Date | null; cursor: string | null } | null, Error, never>;
+  readonly getSyncState: () => Effect.Effect<{
+    lastSyncAt: Date | null;
+    metadata: import("../../infrastructure/db/sync-state.repository").SyncMetadata | null;
+  } | null, Error, never>;
 }
 
 /**
@@ -387,7 +390,7 @@ export const SyncServiceLive = Layer.effect(
         }
         return {
           lastSyncAt: state.lastSyncAt,
-          cursor: state.cursor,
+          metadata: state.metadata,
         };
       });
 
