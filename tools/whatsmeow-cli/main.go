@@ -26,6 +26,10 @@ type Config struct {
 	To         string // For send command: recipient JID
 	Message    string // For send command: message text
 	ASCII      bool   // For auth command: use ASCII-compatible QR rendering
+	Passive    bool   // For sync command: don't mark messages as read (default: true)
+	MarkRead   bool   // For sync command: explicitly mark messages as read
+	Since      int64  // For sync command: Unix timestamp for incremental sync
+	Timeout    int    // For sync command: timeout in seconds (default: 30)
 }
 
 type OutputMessage struct {
@@ -52,10 +56,13 @@ type OutputChat struct {
 }
 
 type SyncResult struct {
-	Messages []OutputMessage `json:"messages"`
-	Chats    []OutputChat    `json:"chats"`
-	SyncedAt int64           `json:"syncedAt"`
-	Error    string          `json:"error,omitempty"`
+	Messages          []OutputMessage `json:"messages"`
+	Chats             []OutputChat    `json:"chats"`
+	SyncedAt          int64           `json:"syncedAt"`
+	HighestTimestamp  int64           `json:"highestTimestamp,omitempty"`  // For watermark tracking
+	MessageCount      int             `json:"messageCount"`
+	SinceTimestamp    int64           `json:"sinceTimestamp,omitempty"`    // Input --since value
+	Error             string          `json:"error,omitempty"`
 }
 
 func main() {
@@ -70,7 +77,7 @@ func main() {
 
 	switch command {
 	case "version":
-		fmt.Println("whatsmeow-cli version 1.0.0")
+		fmt.Println("whatsmeow-cli version 1.1.0")
 	case "auth":
 		authenticate(config)
 	case "sync":
@@ -81,6 +88,8 @@ func main() {
 		checkHealth(config)
 	case "send":
 		sendMessage(config)
+	case "monitor":
+		monitorMessages(config)
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", command)
 		printUsage()
@@ -97,10 +106,15 @@ func printUsage() {
 	fmt.Println("  chats              List all chats")
 	fmt.Println("  health             Check connection health")
 	fmt.Println("  send               Send a message to a chat")
+	fmt.Println("  monitor            Monitor for real-time messages")
 	fmt.Println()
 	fmt.Println("Options:")
 	fmt.Println("  --session-dir DIR  Session directory (default: ./data/whatsapp)")
 	fmt.Println("  --days N           Number of days to sync (default: 30)")
+	fmt.Println("  --since TIMESTAMP  Unix timestamp for incremental sync (overrides --days)")
+	fmt.Println("  --passive          Don't mark messages as read (default: true)")
+	fmt.Println("  --mark-read        Mark messages as read after sync")
+	fmt.Println("  --timeout N        Timeout in seconds (default: 30)")
 	fmt.Println("  --to JID           Recipient JID for send command")
 	fmt.Println("  --message TEXT     Message text for send command")
 	fmt.Println("  --ascii            Use ASCII-compatible QR rendering (for Claude Code)")
@@ -111,6 +125,10 @@ func parseConfig() Config {
 		SessionDir: "./data/whatsapp",
 		Days:       30,
 		ASCII:      false,
+		Passive:    true,  // Default: don't mark messages as read
+		MarkRead:   false,
+		Since:      0,
+		Timeout:    30,
 	}
 
 	for i := 2; i < len(os.Args); i++ {
@@ -125,6 +143,16 @@ func parseConfig() Config {
 				fmt.Sscanf(os.Args[i+1], "%d", &config.Days)
 				i++
 			}
+		case "--since":
+			if i+1 < len(os.Args) {
+				fmt.Sscanf(os.Args[i+1], "%d", &config.Since)
+				i++
+			}
+		case "--timeout":
+			if i+1 < len(os.Args) {
+				fmt.Sscanf(os.Args[i+1], "%d", &config.Timeout)
+				i++
+			}
 		case "--to":
 			if i+1 < len(os.Args) {
 				config.To = os.Args[i+1]
@@ -137,6 +165,11 @@ func parseConfig() Config {
 			}
 		case "--ascii":
 			config.ASCII = true
+		case "--passive":
+			config.Passive = true
+		case "--mark-read":
+			config.MarkRead = true
+			config.Passive = false // --mark-read overrides --passive
 		}
 	}
 
@@ -253,12 +286,28 @@ func syncMessages(config Config) {
 
 	// Calculate time range
 	endTime := time.Now()
-	startTime := endTime.AddDate(0, 0, -config.Days)
+	var startTime time.Time
 
-	fmt.Fprintf(os.Stderr, "Syncing messages from %s to %s (%d days)...\n",
-		startTime.Format("2006-01-02"),
-		endTime.Format("2006-01-02"),
-		config.Days)
+	// Use --since timestamp if provided, otherwise use --days
+	if config.Since > 0 {
+		startTime = time.Unix(config.Since, 0)
+		fmt.Fprintf(os.Stderr, "Syncing messages since %s (timestamp: %d)...\n",
+			startTime.Format("2006-01-02 15:04:05"),
+			config.Since)
+	} else {
+		startTime = endTime.AddDate(0, 0, -config.Days)
+		fmt.Fprintf(os.Stderr, "Syncing messages from %s to %s (%d days)...\n",
+			startTime.Format("2006-01-02"),
+			endTime.Format("2006-01-02"),
+			config.Days)
+	}
+
+	// Log passive/mark-read mode
+	if config.Passive && !config.MarkRead {
+		fmt.Fprintf(os.Stderr, "Mode: passive (messages will NOT be marked as read)\n")
+	} else if config.MarkRead {
+		fmt.Fprintf(os.Stderr, "Mode: mark-read (messages WILL be marked as read)\n")
+	}
 
 	// Register message handler
 	messageCount := 0
@@ -317,22 +366,33 @@ func syncMessages(config Config) {
 	})
 
 	// Wait for connection and messages
-	fmt.Fprintf(os.Stderr, "Listening for messages (30 second window)...\n")
+	fmt.Fprintf(os.Stderr, "Listening for messages (%d second window)...\n", config.Timeout)
 	fmt.Fprintf(os.Stderr, "For testing: Send a message to yourself or a group now.\n")
 
-	// Timeout after 30 seconds
+	// Timeout after configured seconds
 	go func() {
-		time.Sleep(30 * time.Second)
+		time.Sleep(time.Duration(config.Timeout) * time.Second)
 		done <- true
 	}()
 
 	<-done
 
+	// Calculate highest timestamp for watermark tracking
+	var highestTimestamp int64 = 0
+	for _, msg := range messages {
+		if msg.Timestamp > highestTimestamp {
+			highestTimestamp = msg.Timestamp
+		}
+	}
+
 	// Build result with messages (chats will be empty for now)
 	result := SyncResult{
-		Messages: make([]OutputMessage, 0, len(messages)),
-		Chats:    make([]OutputChat, 0),
-		SyncedAt: time.Now().Unix(),
+		Messages:         make([]OutputMessage, 0, len(messages)),
+		Chats:            make([]OutputChat, 0),
+		SyncedAt:         time.Now().Unix(),
+		HighestTimestamp: highestTimestamp,
+		MessageCount:     messageCount,
+		SinceTimestamp:   config.Since,
 	}
 
 	// Convert pointers to values
@@ -348,7 +408,7 @@ func syncMessages(config Config) {
 	}
 	fmt.Println(string(jsonData))
 
-	fmt.Fprintf(os.Stderr, "Synced %d messages\n", messageCount)
+	fmt.Fprintf(os.Stderr, "Synced %d messages (highest timestamp: %d)\n", messageCount, highestTimestamp)
 }
 
 func listChats(config Config) {
@@ -599,4 +659,64 @@ func handleSignals(client *whatsmeow.Client) {
 	fmt.Fprintf(os.Stderr, "\nReceived interrupt, disconnecting...\n")
 	client.Disconnect()
 	os.Exit(0)
+}
+
+// monitorMessages listens for real-time messages and outputs them as JSON
+func monitorMessages(config Config) {
+	client, _, err := getClient(config.SessionDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create client: %v\n", err)
+		os.Exit(1)
+	}
+
+	if client.Store.ID == nil {
+		fmt.Fprintf(os.Stderr, "Not authenticated. Run 'auth' command first.\n")
+		os.Exit(1)
+	}
+
+	err = client.Connect()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to connect: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Fprintf(os.Stderr, "Connected. Monitoring for new messages...\n")
+	fmt.Fprintf(os.Stderr, "Press Ctrl+C to stop.\n")
+
+	// Log passive mode
+	if config.Passive && !config.MarkRead {
+		fmt.Fprintf(os.Stderr, "Mode: passive (messages will NOT be marked as read)\n")
+	}
+
+	// Register message handler - output each message as JSON line
+	client.AddEventHandler(func(evt interface{}) {
+		switch v := evt.(type) {
+		case *events.Message:
+			msg := convertMessage(v)
+			if msg != nil {
+				jsonData, err := json.Marshal(msg)
+				if err == nil {
+					fmt.Println(string(jsonData))
+				}
+			}
+		case *events.Receipt:
+			// Log receipt events to stderr for debugging
+			fmt.Fprintf(os.Stderr, "Receipt: type=%s from=%s\n", v.Type, v.Chat.String())
+		}
+	})
+
+	// Handle graceful shutdown
+	go handleSignals(client)
+
+	// If timeout is set, exit after that duration
+	if config.Timeout > 0 {
+		fmt.Fprintf(os.Stderr, "Will stop monitoring after %d seconds.\n", config.Timeout)
+		time.Sleep(time.Duration(config.Timeout) * time.Second)
+		fmt.Fprintf(os.Stderr, "Timeout reached. Disconnecting...\n")
+		client.Disconnect()
+		return
+	}
+
+	// Otherwise, run forever until interrupted
+	select {}
 }
