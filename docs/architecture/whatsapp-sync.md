@@ -10,11 +10,12 @@
 2. [WhatsApp Multi-Device Architecture](#whatsapp-multi-device-architecture)
 3. [How Offline Devices Catch Up](#how-offline-devices-catch-up)
 4. [Our Integration Strategy](#our-integration-strategy)
-5. [The Challenge](#the-challenge)
-6. [Two-Phase Sync Architecture](#two-phase-sync-architecture)
-7. [Data Integration Patterns (DDIA)](#data-integration-patterns-ddia)
-8. [Schema: Sync State Tracking](#schema-sync-state-tracking)
-9. [Gap Analysis & Future Improvements](#gap-analysis--future-improvements)
+5. [CLI Passive Reading: Zero Phone Impact](#cli-passive-reading-zero-phone-impact)
+6. [The Challenge](#the-challenge)
+7. [Two-Phase Sync Architecture](#two-phase-sync-architecture)
+8. [Data Integration Patterns (DDIA)](#data-integration-patterns-ddia)
+9. [Schema: Sync State Tracking](#schema-sync-state-tracking)
+10. [Gap Analysis & Future Improvements](#gap-analysis--future-improvements)
 
 ---
 
@@ -290,6 +291,74 @@ WhatsApp's E2EE architecture fundamentally prevents server-side delta tracking:
 2. **Server can't index by timestamp**: No plaintext metadata
 3. **Messages deleted after delivery**: No server-side history
 4. **Each device is independent**: No central "last sync cursor"
+
+---
+
+## CLI Passive Reading: Zero Phone Impact
+
+A critical design decision: **our CLI operates in "stealth mode"** and does NOT affect your normal WhatsApp experience.
+
+### Current Behavior
+
+Our Go CLI (`tools/whatsmeow-cli/main.go`) is completely passive:
+
+```go
+client.AddEventHandler(func(evt interface{}) {
+    switch v := evt.(type) {
+    case *events.Message:
+        msg := convertMessage(v)      // Convert to our format
+        messages = append(messages, msg) // Store locally
+        // ⚠️ NO MarkRead call - sender never sees "read"
+    case *events.HistorySync:
+        // Process history passively - no receipts sent
+    }
+})
+```
+
+**Key point**: We NEVER call `MarkRead()`, so:
+- Messages remain "delivered" (double gray check) to senders
+- Senders don't know you've seen their messages via CLI
+- Your phone's unread state is completely unaffected
+
+### whatsmeow Read Receipt Options
+
+| Method | Effect | Sender Sees |
+|--------|--------|-------------|
+| `MarkRead(ids...)` | Blue checks | ✅ "Read" |
+| `ReceiptTypeReadSelf` | Sync across YOUR devices only | ❌ Still "Delivered" |
+| No call (our approach) | Nothing sent | ❌ Still "Delivered" |
+
+### Passive Mode Settings
+
+For production use, we recommend these whatsmeow settings:
+
+```go
+// Stealth configuration
+client.SetPassive(true)                        // Don't appear "online"
+client.SetForceActiveDeliveryReceipts(false)   // Inactive delivery receipts
+// Don't call MarkRead() - keep messages unread for sender
+```
+
+### Implementation Phases
+
+| Phase | Behavior | Phone Impact |
+|-------|----------|--------------|
+| **Current** | Passive receive only | ✅ Zero impact |
+| **Phase 2** | Add `--passive`/`--mark-read` flags | User choice |
+| **Phase 3** | Optional ReceiptTypeReadSelf | Syncs YOUR read state only |
+
+### Why This Matters
+
+Users can run the CLI to analyze their messages without:
+- Alerting senders that messages were read
+- Changing their phone's unread counts
+- Appearing "online" to contacts
+- Affecting their normal WhatsApp workflow
+
+This is essential for use cases like:
+- Relationship pattern analysis without revealing you're analyzing
+- Batch processing old conversations
+- Background sync for AI indexing
 
 ---
 
