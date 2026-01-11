@@ -341,11 +341,19 @@ client.SetForceActiveDeliveryReceipts(false)   // Inactive delivery receipts
 
 ### Implementation Phases
 
-| Phase | Behavior | Phone Impact |
-|-------|----------|--------------|
-| **Current** | Passive receive only | ✅ Zero impact |
-| **Phase 2** | Add `--passive`/`--mark-read` flags | User choice |
-| **Phase 3** | Optional ReceiptTypeReadSelf | Syncs YOUR read state only |
+| Phase | Behavior | Phone Impact | Status |
+|-------|----------|--------------|--------|
+| **Phase 1** | Passive receive only | ✅ Zero impact | ✅ Complete |
+| **Phase 2** | `--passive`/`--mark-read` flags | User choice | ✅ Complete |
+| **Phase 3** | Optional ReceiptTypeReadSelf | Syncs YOUR read state only | Planned |
+
+**Phase 2 Implementation Details:**
+
+The Go CLI now supports:
+- `--passive` (default): Don't mark messages as read
+- `--mark-read`: Explicitly mark messages as read (sender sees blue ticks)
+- `--since <timestamp>`: Fetch messages newer than timestamp (for incremental sync)
+- `--timeout <seconds>`: Sync timeout (default: 30)
 
 ### Why This Matters
 
@@ -513,7 +521,24 @@ bun run cli sync --skip-dump
 
 # Keep dump file after import
 bun run cli sync --keep-dump
+
+# Incremental sync: only fetch messages since last sync (watermark-based)
+bun run cli sync --incremental
+
+# Incremental with custom time window
+bun run cli sync --incremental --days 7
 ```
+
+### Incremental Sync Mode
+
+When `--incremental` is used, the sync bypasses the dump phase and uses watermark-based sync:
+
+1. Reads `highestMessageTimestamp` from `sync_states` table
+2. Passes `--since <timestamp>` to Go CLI
+3. Fetches only messages newer than last sync
+4. Stores new `highestMessageTimestamp` for next run
+
+This is ideal for scheduled background syncs or keeping the database up-to-date.
 
 ## Design Decisions
 
@@ -897,12 +922,19 @@ const syncMessages = (options: SyncOptions) =>
 
 ### Current Gaps
 
-| Gap | Impact | Solution Path |
-|-----|--------|---------------|
-| No real-time events | Manual re-sync needed | Add `monitor` command with event subscription |
-| No backward pagination | Can't fill history gaps | Implement `BuildHistorySyncRequest` wrapper |
-| Offline catch-up relies on overlap | Potential missed messages | Use `metadata.gaps` to track and fill |
-| Read receipts not synced | Incomplete conversation state | Subscribe to receipt events |
+| Gap | Impact | Solution Path | Status |
+|-----|--------|---------------|--------|
+| No real-time events | Manual re-sync needed | Add `monitor` command with event subscription | ✅ Complete |
+| No incremental sync | Re-fetch all messages each time | Watermark-based `--incremental` flag | ✅ Complete |
+| No backward pagination | Can't fill history gaps | Implement `BuildHistorySyncRequest` wrapper | Planned |
+| Offline catch-up relies on overlap | Potential missed messages | Use `metadata.gaps` to track and fill | Planned |
+| Read receipts not synced | Incomplete conversation state | Subscribe to receipt events | Planned |
+
+**Completed Improvements:**
+
+1. **Real-time Event Monitoring**: `whatsmeow-cli monitor` command subscribes to live events
+2. **Incremental Sync**: `--since` flag enables watermark-based sync, `--incremental` CLI flag uses stored watermarks
+3. **Passive Mode Flags**: `--passive`/`--mark-read` give users control over read receipts
 
 ### Proposed Enhancement: Hybrid Sync Modes
 
@@ -923,16 +955,21 @@ interface EnhancedSyncOptions {
 
 ### Roadmap
 
-1. **Phase 1**: Real-time event monitoring
-   - Add `monitor` command
-   - Subscribe to `events.Message`, `events.Receipt`
-   - Store events with `isRealtime: true` flag
+1. **Phase 1**: Real-time event monitoring ✅ Complete
+   - ✅ Add `monitor` command to Go CLI
+   - ✅ Subscribe to `events.Message`, `events.Receipt`, `events.HistorySync`
+   - TypeScript integration pending
 
-2. **Phase 2**: Gap detection and backfill
+2. **Phase 2**: Incremental sync ✅ Complete
+   - ✅ Go CLI `--since` flag for timestamp-based fetch
+   - ✅ SyncStateRepository for watermark management
+   - ✅ CLI `--incremental` flag for automated watermark sync
+
+3. **Phase 3**: Gap detection and backfill (Planned)
    - Track gaps in `metadata.gaps`
    - On reconnect, use backward pagination to fill
 
-3. **Phase 3**: Conflict resolution
+4. **Phase 4**: Conflict resolution (Planned)
    - Handle edits/deletes received out of order
    - Implement vector clocks for multi-device consistency
 
@@ -960,8 +997,10 @@ interface EnhancedSyncOptions {
 ## Legacy: Future Improvements (Original)
 
 1. ~~**Ink-based UI**~~: ✅ Completed - using Ink for contact selection
-2. **Incremental sync**: Track cursor for subsequent real-time messages
-3. **Media download**: Optional media file download with selection
-4. **Export formats**: Export selected contacts to other formats
-5. **Local embeddings**: Replace OpenAI embeddings with Ollama for full privacy
-6. **Adaptive chunking**: Chunk long messages for better RAG retrieval
+2. ~~**Incremental sync**~~: ✅ Completed - watermark-based `--incremental` flag
+3. ~~**Passive mode flags**~~: ✅ Completed - `--passive`/`--mark-read` in Go CLI
+4. ~~**Real-time monitoring**~~: ✅ Completed - `monitor` command in Go CLI
+5. **Media download**: Optional media file download with selection
+6. **Export formats**: Export selected contacts to other formats
+7. **Local embeddings**: Replace OpenAI embeddings with Ollama for full privacy
+8. **Adaptive chunking**: Chunk long messages for better RAG retrieval
