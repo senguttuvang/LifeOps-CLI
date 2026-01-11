@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Context, Effect, Layer } from "effect";
 
-import * as schema from "./schema";
+import * as schema from "./schema/index";
 
 // Define the Service Tag
 export class DatabaseService extends Context.Tag("DatabaseService")<
@@ -23,3 +23,6 @@ export const DatabaseLive = Layer.effect(
     return drizzle(sqlite, { schema });
   }),
 );
+
+// Export raw SQLite access for migrations
+export const getRawDatabase = () => new Database(DB_PATH);

@@ -1,13 +1,14 @@
 /**
- * WhatsApp Sync Domain Service (v2 - Domain Model)
+ * WhatsApp Sync Domain Service (v3 - Refactored Schema)
  *
  * Orchestrates the sync flow: WhatsApp CLI → Adapter → Domain Entities → Database
  * Uses anti-corruption layer to isolate WhatsApp protocol from domain model.
  *
- * Key Changes from v1:
- * - Uses WhatsAppAdapter to translate WhatsApp → Domain entities
- * - Stores in domain tables (contacts, interactions) not WhatsApp tables
- * - Source-agnostic design (works for any future data source)
+ * Schema v3 Changes:
+ * - contacts → parties (with partyType instead of type)
+ * - contactIdentifiers → contactPoints (with channelId, value, partyId)
+ * - interactions → communicationEvents (with eventType, fromPartyId, externalId)
+ * - conversations use channelId and externalId instead of source/sourceConversationId
  */
 
 import { and, eq } from "drizzle-orm";
@@ -15,17 +16,17 @@ import { Context, Effect, Layer } from "effect";
 
 // Import from domain ports (not directly from infrastructure)
 import { DatabaseService, WhatsAppAdapterTag, WhatsAppServiceTag } from "../ports";
-// Schema types are still needed for query construction
+// Schema imports - using new v3 schema
 import {
   calls,
-  contactIdentifiers,
-  contacts,
+  communicationEvents,
+  contactPoints,
   conversationParticipants,
   conversations,
-  interactions,
   messages,
+  parties,
   syncState,
-} from "../../infrastructure/db/schema";
+} from "../../infrastructure/db/schema/index";
 
 /**
  * Sync statistics returned after sync operation
@@ -105,30 +106,40 @@ export const SyncServiceLive = Layer.effect(
                 return;
               }
 
+              // v3: Use contactPoints with partyId, channelId, value
               const existingIdentifier = await db
-                .select({ contactId: contactIdentifiers.contactId })
-                .from(contactIdentifiers)
+                .select({ partyId: contactPoints.partyId })
+                .from(contactPoints)
                 .where(
                   and(
-                    eq(contactIdentifiers.source, firstIdentifier.source),
-                    eq(contactIdentifiers.identifier, firstIdentifier.identifier),
+                    eq(contactPoints.channelId, firstIdentifier.source), // source → channelId
+                    eq(contactPoints.value, firstIdentifier.identifier), // identifier → value
                   ),
                 )
                 .limit(1);
 
               if (existingIdentifier.length === 0) {
-                // New contact - insert
-                await db.insert(contacts).values({
+                // New contact - insert into parties (v3)
+                await db.insert(parties).values({
                   id: contact.id,
                   displayName: contact.displayName,
                   preferredName: null,
-                  type: contact.type,
+                  partyType: contact.type === "person" ? "individual" : "organization", // type → partyType
                   notes: null,
                 });
 
-                // Insert identifier
+                // Insert identifiers as contact points (v3)
                 for (const identifier of contact.identifiers) {
-                  await db.insert(contactIdentifiers).values(identifier);
+                  await db.insert(contactPoints).values({
+                    id: identifier.id,
+                    partyId: identifier.contactId, // contactId → partyId
+                    channelId: identifier.source, // source → channelId
+                    value: identifier.identifier, // identifier → value
+                    normalized: identifier.identifier,
+                    isPrimary: identifier.isPrimary,
+                    isVerified: false, // Default to not verified
+                    verifiedAt: null,
+                  });
                 }
 
                 contactsAdded++;
@@ -137,12 +148,12 @@ export const SyncServiceLive = Layer.effect(
                 const existing = existingIdentifier[0];
                 if (existing) {
                   await db
-                    .update(contacts)
+                    .update(parties)
                     .set({
                       displayName: contact.displayName,
                       updatedAt: new Date(),
                     })
-                    .where(eq(contacts.id, existing.contactId));
+                    .where(eq(parties.id, existing.partyId));
                 }
               }
             },
@@ -150,26 +161,35 @@ export const SyncServiceLive = Layer.effect(
           });
         }
 
-        // 3b. Store conversations (upsert by source_conversation_id)
+        // Store conversations (v3: channelId, externalId)
         let conversationsAdded = 0;
         for (const conversation of domainData.conversations) {
           yield* Effect.tryPromise({
             try: async () => {
-              // Check if conversation exists
+              // Check if conversation exists (v3: channelId + externalId)
               const existing = await db
                 .select({ id: conversations.id })
                 .from(conversations)
                 .where(
                   and(
-                    eq(conversations.source, conversation.source),
-                    eq(conversations.sourceConversationId, conversation.sourceConversationId),
+                    eq(conversations.channelId, conversation.source), // source → channelId
+                    eq(conversations.externalId, conversation.sourceConversationId), // sourceConversationId → externalId
                   ),
                 )
                 .limit(1);
 
               if (existing.length === 0) {
-                // New conversation
-                await db.insert(conversations).values(conversation);
+                // New conversation (v3 schema)
+                await db.insert(conversations).values({
+                  id: conversation.id,
+                  channelId: conversation.source,
+                  externalId: conversation.sourceConversationId,
+                  conversationType: conversation.conversationType === "1:1" ? "direct" : conversation.conversationType,
+                  title: conversation.title,
+                  isArchived: conversation.isArchived,
+                  isPinned: conversation.isPinned,
+                  lastActivityAt: conversation.lastActivityAt,
+                });
                 conversationsAdded++;
               } else {
                 // Update existing conversation
@@ -192,79 +212,112 @@ export const SyncServiceLive = Layer.effect(
           });
         }
 
-        // 3c. Store conversation participants (skip duplicates)
+        // Store conversation participants (v3: partyId instead of contactId)
         let participantsAdded = 0;
         for (const participant of domainData.conversationParticipants) {
           yield* Effect.tryPromise({
             try: async () => {
-              // Check if participant already exists (conversation + contact pair is unique)
+              // Check if participant already exists (v3: partyId)
               const existing = await db
                 .select()
                 .from(conversationParticipants)
                 .where(
                   and(
                     eq(conversationParticipants.conversationId, participant.conversationId),
-                    eq(conversationParticipants.contactId, participant.contactId),
+                    eq(conversationParticipants.partyId, participant.contactId), // contactId → partyId
                   ),
                 )
                 .limit(1);
 
               if (existing.length === 0) {
-                // New participant
-                await db.insert(conversationParticipants).values(participant);
+                // New participant (v3 schema)
+                await db.insert(conversationParticipants).values({
+                  conversationId: participant.conversationId,
+                  partyId: participant.contactId, // contactId → partyId
+                  role: participant.role,
+                  joinedAt: participant.joinedAt,
+                  leftAt: participant.leftAt,
+                });
                 participantsAdded++;
               }
-              // If already exists, skip (no need to update - participant data is static)
             },
             catch: (e) => new Error(`Failed to store conversation participant: ${e}`),
           });
         }
 
-        // 3d. Store interactions (skip duplicates via source_interaction_id check)
+        // Store interactions (v3: communicationEvents with eventType, fromPartyId, externalId)
         let messagesAdded = 0;
         let callsAdded = 0;
 
         for (const interaction of domainData.interactions) {
           yield* Effect.tryPromise({
             try: async () => {
-              // Check if interaction already exists
+              // Check if interaction already exists (v3: channelId + externalId)
               const existing = await db
-                .select({ id: interactions.id })
-                .from(interactions)
+                .select({ id: communicationEvents.id })
+                .from(communicationEvents)
                 .where(
                   and(
-                    eq(interactions.source, interaction.source),
-                    eq(interactions.sourceInteractionId, interaction.sourceInteractionId),
+                    eq(communicationEvents.channelId, interaction.source), // source → channelId
+                    eq(communicationEvents.externalId, interaction.sourceInteractionId), // sourceInteractionId → externalId
                   ),
                 )
                 .limit(1);
 
               if (existing.length === 0) {
-                // New interaction - insert
-                await db.insert(interactions).values(interaction);
+                // New interaction - insert as communication event (v3)
+                await db.insert(communicationEvents).values({
+                  id: interaction.id,
+                  conversationId: interaction.conversationId,
+                  eventType: interaction.interactionType, // interactionType → eventType
+                  direction: interaction.direction,
+                  fromPartyId: interaction.fromContactId, // fromContactId → fromPartyId
+                  channelId: interaction.source, // source → channelId
+                  externalId: interaction.sourceInteractionId, // sourceInteractionId → externalId
+                  occurredAt: interaction.occurredAt,
+                  isIndexed: interaction.isIndexed,
+                });
 
-                // Insert corresponding message or call (subtype)
+                // Insert corresponding message or call (subtype) with eventId
                 if (interaction.interactionType === "message") {
                   const message = domainData.messages.find((m) => m.interactionId === interaction.id);
                   if (message) {
-                    await db.insert(messages).values(message);
+                    await db.insert(messages).values({
+                      eventId: message.interactionId, // interactionId → eventId
+                      content: message.content,
+                      contentType: message.contentType,
+                      mediaUrl: message.mediaUrl,
+                      mediaMimeType: message.mediaMimeType,
+                      quotedEventId: message.quotedInteractionId ?? null, // quotedInteractionId → quotedEventId
+                      forwardedFromPartyId: null, // Not in domain type yet
+                      reactionEmoji: message.reactionEmoji,
+                      isStarred: message.isStarred,
+                      editedAt: null, // Not in domain type yet
+                      deletedAt: null, // Not in domain type yet
+                      rawMetadata: message.rawMetadata,
+                    });
                     messagesAdded++;
                   }
                 } else if (interaction.interactionType === "call") {
                   const call = domainData.calls.find((c) => c.interactionId === interaction.id);
                   if (call) {
-                    await db.insert(calls).values(call);
+                    await db.insert(calls).values({
+                      eventId: call.interactionId, // interactionId → eventId
+                      callType: call.callType,
+                      durationSeconds: call.durationSeconds,
+                      callStatus: call.callStatus,
+                      participantsCount: call.participantsCount,
+                    });
                     callsAdded++;
                   }
                 }
               }
-              // Skip if duplicate (onConflictDoNothing equivalent)
             },
             catch: (e) => new Error(`Failed to store interaction: ${e}`),
           });
         }
 
-        // 4. Update sync state
+        // Update sync state (v3: channelId instead of source)
         const syncedAt = new Date();
         yield* Effect.tryPromise({
           try: async () => {
@@ -272,7 +325,7 @@ export const SyncServiceLive = Layer.effect(
               .insert(syncState)
               .values({
                 id: "whatsapp",
-                source: "whatsapp",
+                channelId: "whatsapp", // source → channelId
                 lastSyncAt: syncedAt,
                 lastSyncStatus: "success",
                 cursor: null,
