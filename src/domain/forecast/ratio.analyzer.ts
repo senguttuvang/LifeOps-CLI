@@ -31,13 +31,7 @@ const POSITIVE_PATTERNS = {
   ],
 
   // Appreciation
-  appreciation: [
-    /\bthank(s| you)\b/i,
-    /\bappreciate\b/i,
-    /\bgrateful\b/i,
-    /\blucky to have\b/i,
-    /\bmeans a lot\b/i,
-  ],
+  appreciation: [/\bthank(s| you)\b/i, /\bappreciate\b/i, /\bgrateful\b/i, /\blucky to have\b/i, /\bmeans a lot\b/i],
 
   // Support
   support: [
@@ -59,14 +53,7 @@ const POSITIVE_PATTERNS = {
   ],
 
   // Humor & playfulness
-  humor: [
-    /\bhaha\b/i,
-    /\blol\b/i,
-    /\blmao\b/i,
-    /\b(😂|🤣|😆|😄)\b/,
-    /\bjk\b/i,
-    /\bjust kidding\b/i,
-  ],
+  humor: [/\bhaha\b/i, /\blol\b/i, /\blmao\b/i, /\b(😂|🤣|😆|😄)\b/, /\bjk\b/i, /\bjust kidding\b/i],
 
   // Agreement & validation
   validation: [
@@ -92,20 +79,10 @@ const NEGATIVE_PATTERNS = {
   ],
 
   // Anger
-  anger: [
-    /\bi('?m| am) (mad|angry|upset)\b/i,
-    /\bstop (it|doing)\b/i,
-    /\bi hate\b/i,
-    /\bpissed off\b/i,
-  ],
+  anger: [/\bi('?m| am) (mad|angry|upset)\b/i, /\bstop (it|doing)\b/i, /\bi hate\b/i, /\bpissed off\b/i],
 
   // Disappointment
-  disappointment: [
-    /\bi('?m| am) disappointed\b/i,
-    /\bi expected\b/i,
-    /\blet me down\b/i,
-    /\bi thought you\b/i,
-  ],
+  disappointment: [/\bi('?m| am) disappointed\b/i, /\bi expected\b/i, /\blet me down\b/i, /\bi thought you\b/i],
 
   // Hurt
   hurt: [
@@ -126,29 +103,64 @@ const NEGATIVE_PATTERNS = {
   ],
 
   // Blame
-  blame: [
-    /\bit('?s| is) your fault\b/i,
-    /\byou ruined\b/i,
-    /\bbecause of you\b/i,
-    /\byou made this\b/i,
-  ],
+  blame: [/\bit('?s| is) your fault\b/i, /\byou ruined\b/i, /\bbecause of you\b/i, /\byou made this\b/i],
 };
 
 /**
  * Positive emojis
  */
 const POSITIVE_EMOJIS = new Set([
-  "❤️", "💕", "💗", "💖", "💝", "😍", "🥰", "😘", "😊",
-  "😄", "😁", "🥺", "✨", "🎉", "👏", "💪", "🙏", "❤️‍🔥",
-  "💯", "🤗", "😌", "🌹", "💐", "🤩", "😇", "💓", "💞",
+  "❤️",
+  "💕",
+  "💗",
+  "💖",
+  "💝",
+  "😍",
+  "🥰",
+  "😘",
+  "😊",
+  "😄",
+  "😁",
+  "🥺",
+  "✨",
+  "🎉",
+  "👏",
+  "💪",
+  "🙏",
+  "❤️‍🔥",
+  "💯",
+  "🤗",
+  "😌",
+  "🌹",
+  "💐",
+  "🤩",
+  "😇",
+  "💓",
+  "💞",
 ]);
 
 /**
  * Negative emojis
  */
 const NEGATIVE_EMOJIS = new Set([
-  "😢", "😭", "😤", "😠", "😡", "💔", "😞", "😔", "😒",
-  "😑", "🙄", "😪", "😩", "😫", "😰", "😥", "🤬", "👎",
+  "😢",
+  "😭",
+  "😤",
+  "😠",
+  "😡",
+  "💔",
+  "😞",
+  "😔",
+  "😒",
+  "😑",
+  "🙄",
+  "😪",
+  "😩",
+  "😫",
+  "😰",
+  "😥",
+  "🤬",
+  "👎",
 ]);
 
 // =============================================================================
@@ -177,10 +189,7 @@ interface RatioAnalyzer {
   /**
    * Calculate ratio score from messages
    */
-  calculateRatio(
-    messages: MessageInput[],
-    previousScore?: RatioScore,
-  ): Effect.Effect<RatioScore>;
+  calculateRatio(messages: MessageInput[], previousScore?: RatioScore): Effect.Effect<RatioScore>;
 }
 
 // =============================================================================
@@ -190,16 +199,13 @@ interface RatioAnalyzer {
 /**
  * Service tag for dependency injection
  */
-export class RatioAnalyzerTag extends Context.Tag("RatioAnalyzer")<
-  RatioAnalyzerTag,
-  RatioAnalyzer
->() {}
+export class RatioAnalyzerTag extends Context.Tag("RatioAnalyzer")<RatioAnalyzerTag, RatioAnalyzer>() {}
 
 /**
  * Count pattern matches in text
  */
 function countPatternMatches(text: string, patterns: RegExp[]): number {
-  return patterns.filter(p => p.test(text)).length;
+  return patterns.filter((p) => p.test(text)).length;
 }
 
 /**
@@ -276,10 +282,7 @@ function analyzeMessage(message: MessageInput): MessageValence {
 /**
  * Calculate ratio score from analyzed messages
  */
-function calculateRatio(
-  valences: MessageValence[],
-  previousScore?: RatioScore,
-): RatioScore {
+function calculateRatio(valences: MessageValence[], previousScore?: RatioScore): RatioScore {
   let positiveCount = 0;
   let negativeCount = 0;
   let neutralCount = 0;
@@ -311,11 +314,12 @@ function calculateRatio(
   }
 
   // Calculate ratio (avoid division by zero)
-  const ratio = negativeCount > 0
-    ? positiveCount / negativeCount
-    : positiveCount > 0
-    ? 10 // Cap at 10:1 if no negatives
-    : 5; // Default to 5:1 if all neutral
+  const ratio =
+    negativeCount > 0
+      ? positiveCount / negativeCount
+      : positiveCount > 0
+        ? 10 // Cap at 10:1 if no negatives
+        : 5; // Default to 5:1 if all neutral
 
   // Determine status based on Gottman's thresholds
   let status: "healthy" | "borderline" | "danger" = "healthy";
@@ -371,13 +375,9 @@ function calculateRatio(
 export const RatioAnalyzerLive = Layer.succeed(
   RatioAnalyzerTag,
   RatioAnalyzerTag.of({
-    analyzeMessage: (message: MessageInput) =>
-      Effect.sync(() => analyzeMessage(message)),
+    analyzeMessage: (message: MessageInput) => Effect.sync(() => analyzeMessage(message)),
 
-    calculateRatio: (
-      messages: MessageInput[],
-      previousScore?: RatioScore,
-    ) =>
+    calculateRatio: (messages: MessageInput[], previousScore?: RatioScore) =>
       Effect.sync(() => {
         // Analyze all messages
         const valences = messages.map(analyzeMessage);
@@ -390,11 +390,4 @@ export const RatioAnalyzerLive = Layer.succeed(
 // EXPORTS
 // =============================================================================
 
-export {
-  POSITIVE_PATTERNS,
-  NEGATIVE_PATTERNS,
-  POSITIVE_EMOJIS,
-  NEGATIVE_EMOJIS,
-  analyzeMessage,
-  calculateRatio,
-};
+export { POSITIVE_PATTERNS, NEGATIVE_PATTERNS, POSITIVE_EMOJIS, NEGATIVE_EMOJIS, analyzeMessage, calculateRatio };

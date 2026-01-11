@@ -5,11 +5,10 @@
  */
 
 import { Effect, Schedule } from "effect";
-
-import { dispatchCommand } from "./dispatcher";
-import { parseCommand } from "./parser";
 // Import from domain ports (not directly from infrastructure)
 import { WhatsAppServiceTag } from "../../ports";
+import { dispatchCommand } from "./dispatcher";
+import { parseCommand } from "./parser";
 
 export interface MonitorConfig {
   /**

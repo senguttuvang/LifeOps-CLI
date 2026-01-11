@@ -196,8 +196,14 @@ export const extractSignalsCommand = Command.make(
  * Helper: Get emoji position label
  */
 const getEmojiPositionLabel = (position: { start: number; middle: number; end: number }): string => {
-  if (position.end > 0.6) {return `End (${(position.end * 100).toFixed(1)}%)`;}
-  if (position.start > 0.6) {return `Start (${(position.start * 100).toFixed(1)}%)`;}
-  if (position.middle > 0.4) {return `Middle (${(position.middle * 100).toFixed(1)}%)`;}
+  if (position.end > 0.6) {
+    return `End (${(position.end * 100).toFixed(1)}%)`;
+  }
+  if (position.start > 0.6) {
+    return `Start (${(position.start * 100).toFixed(1)}%)`;
+  }
+  if (position.middle > 0.4) {
+    return `Middle (${(position.middle * 100).toFixed(1)}%)`;
+  }
   return "Mixed";
 };

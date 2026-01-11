@@ -10,25 +10,21 @@
  * Pattern: Domain → Ports → Infrastructure (dependency inversion)
  */
 
+// WhatsApp adapter port
+export { type WhatsAppAdapter, WhatsAppAdapterTag } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";
 // Database port - domain services use this for persistence
 export { DatabaseService } from "../../infrastructure/db/client";
 
-// Vector store port - domain services use this for RAG operations
-export { VectorStoreService, type Document, type VectorStore } from "../../infrastructure/rag/vector.store";
-
 // AI service port - domain services use this for LLM operations
-export { AIServiceTag, type AIService, type AIMessage, type AIProvider } from "../../infrastructure/llm/ai.service";
-
+export { type AIMessage, type AIProvider, type AIService, AIServiceTag } from "../../infrastructure/llm/ai.service";
+// Vector store port - domain services use this for RAG operations
+export { type Document, type VectorStore, VectorStoreService } from "../../infrastructure/rag/vector.store";
 // WhatsApp service port - domain services use this for WhatsApp operations
-export { WhatsAppServiceTag, type WhatsAppService } from "../../infrastructure/whatsapp/whatsapp.client";
-
+export { type WhatsAppService, WhatsAppServiceTag } from "../../infrastructure/whatsapp/whatsapp.client";
 // WhatsApp types needed by domain
 export type {
-  WhatsAppSyncResult,
+  WhatsAppAuthStatus,
   WhatsAppChatData,
   WhatsAppMessageData,
-  WhatsAppAuthStatus,
+  WhatsAppSyncResult,
 } from "../../infrastructure/whatsapp/whatsapp.types";
-
-// WhatsApp adapter port
-export { WhatsAppAdapterTag, type WhatsAppAdapter } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";

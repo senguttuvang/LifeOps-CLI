@@ -9,6 +9,8 @@
  */
 
 import { Context, Effect, Layer } from "effect";
+import { FourHorsemenDetectorLive, FourHorsemenDetectorTag, getAntidote } from "./four-horsemen.detector";
+import { RatioAnalyzerLive, RatioAnalyzerTag } from "./ratio.analyzer";
 import {
   type BreakupForecast,
   type ConnectionScore,
@@ -16,21 +18,12 @@ import {
   type FourHorsemenScore,
   type RatioScore,
   type Recommendation,
+  RISK_THRESHOLDS,
   type RiskLevel,
+  SCORE_WEIGHTS,
   type TrendAnalysis,
   type Warning,
-  RISK_THRESHOLDS,
-  SCORE_WEIGHTS,
 } from "./types";
-import {
-  FourHorsemenDetectorTag,
-  FourHorsemenDetectorLive,
-  getAntidote,
-} from "./four-horsemen.detector";
-import {
-  RatioAnalyzerTag,
-  RatioAnalyzerLive,
-} from "./ratio.analyzer";
 
 // =============================================================================
 // SERVICE INTERFACE
@@ -84,10 +77,7 @@ interface ForecastService {
 /**
  * Service tag for dependency injection
  */
-export class ForecastServiceTag extends Context.Tag("ForecastService")<
-  ForecastServiceTag,
-  ForecastService
->() {}
+export class ForecastServiceTag extends Context.Tag("ForecastService")<ForecastServiceTag, ForecastService>() {}
 
 /**
  * Calculate engagement metrics from messages
@@ -111,9 +101,7 @@ function calculateEngagement(messages: MessageInput[]): EngagementMetrics {
   }
 
   // Sort by timestamp
-  const sorted = [...messages].sort(
-    (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-  );
+  const sorted = [...messages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
   // Calculate response times
   const responseTimes: number[] = [];
@@ -133,20 +121,15 @@ function calculateEngagement(messages: MessageInput[]): EngagementMetrics {
     }
   }
 
-  const avgResponseTime = responseTimes.length > 0
-    ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
-    : 0;
+  const avgResponseTime =
+    responseTimes.length > 0 ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length : 0;
 
   const sortedTimes = [...responseTimes].sort((a, b) => a - b);
-  const p50 = sortedTimes.length > 0
-    ? sortedTimes[Math.floor(sortedTimes.length * 0.5)]
-    : 0;
+  const p50 = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length * 0.5)] : 0;
 
   // Calculate initiation ratio
-  const userMessages = messages.filter(m => m.fromMe);
-  const initiationRatio = messages.length > 0
-    ? userMessages.length / messages.length
-    : 0.5;
+  const userMessages = messages.filter((m) => m.fromMe);
+  const initiationRatio = messages.length > 0 ? userMessages.length / messages.length : 0.5;
 
   let initiator: "user" | "partner" | "balanced" = "balanced";
   if (initiationRatio > 0.6) {
@@ -156,28 +139,19 @@ function calculateEngagement(messages: MessageInput[]): EngagementMetrics {
   }
 
   // Calculate message lengths
-  const userLengths = userMessages
-    .filter(m => m.text)
-    .map(m => m.text.length);
-  const avgMessageLength = userLengths.length > 0
-    ? userLengths.reduce((a, b) => a + b, 0) / userLengths.length
-    : 0;
+  const userLengths = userMessages.filter((m) => m.text).map((m) => m.text.length);
+  const avgMessageLength = userLengths.length > 0 ? userLengths.reduce((a, b) => a + b, 0) / userLengths.length : 0;
 
   // Calculate question rate
-  const questionsAsked = userMessages.filter(
-    m => m.text && m.text.includes("?")
-  ).length;
-  const questionRate = userMessages.length > 0
-    ? questionsAsked / userMessages.length
-    : 0;
+  const questionsAsked = userMessages.filter((m) => m.text && m.text.includes("?")).length;
+  const questionRate = userMessages.length > 0 ? questionsAsked / userMessages.length : 0;
 
   // Estimate conversations per week
-  const windowDays = messages.length > 0
-    ? (sorted[sorted.length - 1].timestamp.getTime() - sorted[0].timestamp.getTime()) / 1000 / 60 / 60 / 24
-    : 7;
-  const conversationsPerWeek = windowDays > 0
-    ? (messages.length / windowDays) * 7
-    : 0;
+  const windowDays =
+    messages.length > 0
+      ? (sorted[sorted.length - 1].timestamp.getTime() - sorted[0].timestamp.getTime()) / 1000 / 60 / 60 / 24
+      : 7;
+  const conversationsPerWeek = windowDays > 0 ? (messages.length / windowDays) * 7 : 0;
 
   // Calculate engagement score (0-100)
   // Based on: response time, balance, activity level
@@ -245,10 +219,10 @@ function calculateConnection(messages: MessageInput[]): ConnectionScore {
     /\btalk about\b/i,
   ];
 
-  const deepMessages = messages.filter(m => {
+  const deepMessages = messages.filter((m) => {
     if (!m.text) return false;
     const isLong = m.text.length > 200;
-    const hasMarkers = deepMarkers.some(p => p.test(m.text));
+    const hasMarkers = deepMarkers.some((p) => p.test(m.text));
     const hasQuestions = (m.text.match(/\?/g) || []).length >= 2;
     return isLong || hasMarkers || hasQuestions;
   });
@@ -256,13 +230,10 @@ function calculateConnection(messages: MessageInput[]): ConnectionScore {
   const deepConvoCount = deepMessages.length;
 
   // Calculate days since last deep conversation
-  const sorted = [...deepMessages].sort(
-    (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
-  );
+  const sorted = [...deepMessages].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   const now = new Date();
-  const daysSinceDeepConvo = sorted.length > 0
-    ? (now.getTime() - sorted[0].timestamp.getTime()) / 1000 / 60 / 60 / 24
-    : 30;
+  const daysSinceDeepConvo =
+    sorted.length > 0 ? (now.getTime() - sorted[0].timestamp.getTime()) / 1000 / 60 / 60 / 24 : 30;
 
   // Target: deep convo every 3-4 days
   const targetFrequency = 3.5;
@@ -328,10 +299,7 @@ function determineRiskLevel(score: number): RiskLevel {
 /**
  * Calculate trend from historical data
  */
-function calculateTrend(
-  currentScore: number,
-  historical: HistoricalSnapshot[],
-): TrendAnalysis {
+function calculateTrend(currentScore: number, historical: HistoricalSnapshot[]): TrendAnalysis {
   if (historical.length < 2) {
     return {
       direction: "stable",
@@ -342,9 +310,7 @@ function calculateTrend(
   }
 
   // Sort by date
-  const sorted = [...historical].sort(
-    (a, b) => a.date.getTime() - b.date.getTime()
-  );
+  const sorted = [...historical].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   // Calculate week-over-week changes
   const weeklyChanges: number[] = [];
@@ -356,9 +322,7 @@ function calculateTrend(
   }
 
   // Average velocity (points per week)
-  const velocity = weeklyChanges.length > 0
-    ? weeklyChanges.reduce((a, b) => a + b, 0) / weeklyChanges.length
-    : 0;
+  const velocity = weeklyChanges.length > 0 ? weeklyChanges.reduce((a, b) => a + b, 0) / weeklyChanges.length : 0;
 
   // Calculate acceleration (change in velocity)
   let acceleration = 0;
@@ -377,10 +341,7 @@ function calculateTrend(
   }
 
   // Predict 30-day score (4.3 weeks)
-  const predictedScoreIn30Days = Math.max(
-    0,
-    Math.min(100, currentScore + velocity * 4.3)
-  );
+  const predictedScoreIn30Days = Math.max(0, Math.min(100, currentScore + velocity * 4.3));
 
   return {
     direction,
@@ -404,9 +365,7 @@ function generateWarnings(
 
   // Contempt warning (HIGHEST PRIORITY)
   if (horsemen.contemptCount > 0) {
-    const contemptDetection = horsemen.recentDetections.find(
-      d => d.horseman === "contempt"
-    );
+    const contemptDetection = horsemen.recentDetections.find((d) => d.horseman === "contempt");
     warnings.push({
       id: "contempt-detected",
       severity: "critical",
@@ -497,7 +456,7 @@ function generateRecommendations(
   const recommendations: Recommendation[] = [];
 
   // Contempt requires immediate attention
-  const hasContempt = warnings.some(w => w.horseman === "contempt");
+  const hasContempt = warnings.some((w) => w.horseman === "contempt");
   if (hasContempt) {
     recommendations.push({
       id: "address-contempt",
@@ -535,8 +494,9 @@ function generateRecommendations(
 
   // Horsemen-specific antidotes
   for (const detection of horsemen.recentDetections.slice(0, 3)) {
-    const existing = recommendations.find(r => r.id === `antidote-${detection.horseman}`);
-    if (!existing && detection.horseman !== "contempt") { // Contempt already handled
+    const existing = recommendations.find((r) => r.id === `antidote-${detection.horseman}`);
+    if (!existing && detection.horseman !== "contempt") {
+      // Contempt already handled
       recommendations.push({
         id: `antidote-${detection.horseman}`,
         priority: "medium",
@@ -574,18 +534,11 @@ const make = Effect.gen(function* () {
         const now = new Date();
 
         // Determine analysis window
-        const sortedMessages = [...messages].sort(
-          (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-        );
-        const windowStart = sortedMessages.length > 0
-          ? sortedMessages[0].timestamp
-          : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        const windowEnd = sortedMessages.length > 0
-          ? sortedMessages[sortedMessages.length - 1].timestamp
-          : now;
-        const windowDays = Math.ceil(
-          (windowEnd.getTime() - windowStart.getTime()) / 1000 / 60 / 60 / 24
-        );
+        const sortedMessages = [...messages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        const windowStart =
+          sortedMessages.length > 0 ? sortedMessages[0].timestamp : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const windowEnd = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1].timestamp : now;
+        const windowDays = Math.ceil((windowEnd.getTime() - windowStart.getTime()) / 1000 / 60 / 60 / 24);
 
         // Run Four Horsemen analysis
         const horsemenScore = yield* horsemenDetector.analyzeMessages(messages);
@@ -600,12 +553,7 @@ const make = Effect.gen(function* () {
         const connectionScore = calculateConnection(messages);
 
         // Calculate overall health score
-        const healthScore = calculateHealthScore(
-          horsemenScore,
-          ratioScore,
-          engagementScore,
-          connectionScore
-        );
+        const healthScore = calculateHealthScore(horsemenScore, ratioScore, engagementScore, connectionScore);
 
         // Determine risk level
         const riskLevel = determineRiskLevel(healthScore);
@@ -614,20 +562,10 @@ const make = Effect.gen(function* () {
         const trend = calculateTrend(healthScore, historicalSnapshots);
 
         // Generate warnings
-        const warnings = generateWarnings(
-          horsemenScore,
-          ratioScore,
-          engagementScore,
-          connectionScore
-        );
+        const warnings = generateWarnings(horsemenScore, ratioScore, engagementScore, connectionScore);
 
         // Generate recommendations
-        const recommendations = generateRecommendations(
-          warnings,
-          horsemenScore,
-          ratioScore,
-          connectionScore
-        );
+        const recommendations = generateRecommendations(warnings, horsemenScore, ratioScore, connectionScore);
 
         // Calculate confidence based on message count
         const confidence = Math.min(0.95, 0.5 + messages.length * 0.005);
@@ -664,12 +602,9 @@ const make = Effect.gen(function* () {
 /**
  * Live layer with all dependencies
  */
-export const ForecastServiceLive = Layer.effect(
-  ForecastServiceTag,
-  make
-).pipe(
+export const ForecastServiceLive = Layer.effect(ForecastServiceTag, make).pipe(
   Layer.provide(FourHorsemenDetectorLive),
-  Layer.provide(RatioAnalyzerLive)
+  Layer.provide(RatioAnalyzerLive),
 );
 
 // =============================================================================

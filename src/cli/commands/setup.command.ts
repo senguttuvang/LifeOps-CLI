@@ -7,10 +7,10 @@
  * Usage: bun run cli setup
  */
 
-import { existsSync, mkdirSync, copyFileSync, writeFileSync } from "node:fs";
 import { exec } from "node:child_process";
-import { promisify } from "node:util";
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 import { Command } from "@effect/cli";
 import { Console, Effect } from "effect";
@@ -38,14 +38,12 @@ const isCliBuilt = (): Effect.Effect<boolean, never> =>
 /**
  * Check if data directory exists
  */
-const isDataDirReady = (): Effect.Effect<boolean, never> =>
-  Effect.sync(() => existsSync(join(process.cwd(), "data")));
+const isDataDirReady = (): Effect.Effect<boolean, never> => Effect.sync(() => existsSync(join(process.cwd(), "data")));
 
 /**
  * Check if .env exists
  */
-const isEnvConfigured = (): Effect.Effect<boolean, never> =>
-  Effect.sync(() => existsSync(join(process.cwd(), ".env")));
+const isEnvConfigured = (): Effect.Effect<boolean, never> => Effect.sync(() => existsSync(join(process.cwd(), ".env")));
 
 /**
  * Check if WhatsApp is authenticated

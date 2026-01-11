@@ -15,7 +15,17 @@
 import { Command } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Effect, Layer } from "effect";
-
+import { ForecastServiceLive } from "../domain/forecast";
+import { ForecastRepositoryLive } from "../domain/forecast/forecast.repository";
+import { AnalysisLive } from "../domain/relationship/analysis.service";
+import { SignalExtractionLive } from "../domain/signals/signal-extraction.service";
+import { SyncServiceLive } from "../domain/whatsapp/sync.service";
+import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
+import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
+import { DatabaseLive } from "../infrastructure/db/client";
+import { AILive } from "../infrastructure/llm/ai.service";
+import { VectorStoreLive } from "../infrastructure/rag/vector.store";
+import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
 // Domain layers
 // Infrastructure layers
 import { decodeCommand } from "./commands/decode.command.js";
@@ -33,17 +43,6 @@ import { setupCommand } from "./commands/setup.command";
 // Commands
 import { contactsCommand } from "./commands/contacts.command";
 import { syncCommand } from "./commands/sync.command";
-import { ForecastServiceLive } from "../domain/forecast";
-import { ForecastRepositoryLive } from "../domain/forecast/forecast.repository";
-import { AnalysisLive } from "../domain/relationship/analysis.service";
-import { SignalExtractionLive } from "../domain/signals/signal-extraction.service";
-import { SyncServiceLive } from "../domain/whatsapp/sync.service";
-import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
-import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
-import { DatabaseLive } from "../infrastructure/db/client";
-import { AILive } from "../infrastructure/llm/ai.service";
-import { VectorStoreLive } from "../infrastructure/rag/vector.store";
-import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
 
 /**
  * Assemble all service layers

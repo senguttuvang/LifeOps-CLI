@@ -65,18 +65,26 @@ export const extractEmojiPatterns = (messages: MessageForSignals[]): EmojiSignal
   for (const m of userMessages) {
     const text = m.text || "";
     const emojis = text.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu);
-    if (!emojis || emojis.length === 0) {continue;}
+    if (!emojis || emojis.length === 0) {
+      continue;
+    }
 
     const firstEmojiPos = text.indexOf(emojis[0]);
     const textLength = text.length;
 
-    if (textLength === 0) {continue;}
+    if (textLength === 0) {
+      continue;
+    }
 
     // Categorize position
     const relativePos = firstEmojiPos / textLength;
-    if (relativePos < 0.2) {positions.start++;}
-    else if (relativePos > 0.8) {positions.end++;}
-    else {positions.middle++;}
+    if (relativePos < 0.2) {
+      positions.start++;
+    } else if (relativePos > 0.8) {
+      positions.end++;
+    } else {
+      positions.middle++;
+    }
   }
 
   const totalWithEmojis = positions.start + positions.middle + positions.end;
@@ -101,7 +109,9 @@ export const extractEmojiPatterns = (messages: MessageForSignals[]): EmojiSignal
  * Calculate variance for a dataset
  */
 const calculateVariance = (values: number[], mean: number): number => {
-  if (values.length === 0) {return 0;}
+  if (values.length === 0) {
+    return 0;
+  }
 
   const squaredDiffs = values.map((v) => (v - mean) ** 2);
   return squaredDiffs.reduce((a, b) => a + b, 0) / values.length;

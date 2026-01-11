@@ -11,12 +11,7 @@
  */
 
 import { Context, Effect, Layer } from "effect";
-import type {
-  FourHorsemenScore,
-  Horseman,
-  HorsemanDetection,
-  HorsemanPattern,
-} from "./types";
+import type { FourHorsemenScore, Horseman, HorsemanDetection, HorsemanPattern } from "./types";
 
 // =============================================================================
 // DETECTION PATTERNS
@@ -189,10 +184,7 @@ interface FourHorsemenDetector {
   /**
    * Analyze a batch of messages and return aggregated score
    */
-  analyzeMessages(
-    messages: MessageInput[],
-    previousScore?: FourHorsemenScore,
-  ): Effect.Effect<FourHorsemenScore>;
+  analyzeMessages(messages: MessageInput[], previousScore?: FourHorsemenScore): Effect.Effect<FourHorsemenScore>;
 
   /**
    * Get antidote for a specific horseman
@@ -382,9 +374,7 @@ function calculateScore(
   }
 
   // Get most recent detections (last 5)
-  const recentDetections = detections
-    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-    .slice(0, 5);
+  const recentDetections = detections.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 5);
 
   return {
     criticismCount: counts.criticism,
@@ -422,13 +412,9 @@ function getAntidote(horseman: Horseman): string {
 export const FourHorsemenDetectorLive = Layer.succeed(
   FourHorsemenDetectorTag,
   FourHorsemenDetectorTag.of({
-    detectInMessage: (message: MessageInput) =>
-      Effect.sync(() => detectInMessage(message)),
+    detectInMessage: (message: MessageInput) => Effect.sync(() => detectInMessage(message)),
 
-    analyzeMessages: (
-      messages: MessageInput[],
-      previousScore?: FourHorsemenScore,
-    ) =>
+    analyzeMessages: (messages: MessageInput[], previousScore?: FourHorsemenScore) =>
       Effect.sync(() => {
         // Detect in all messages
         const allDetections: HorsemanDetection[] = [];

@@ -54,7 +54,9 @@ const enforceEmojiCount = (draft: string, signals: UserSignals): string => {
   const currentEmojis = (draft.match(/[\p{Emoji}\p{Emoji_Presentation}\uFE0F]/gu) || []).length;
   const targetEmojis = Math.round(signals.emojiPerMessage);
 
-  if (currentEmojis === targetEmojis) {return draft;}
+  if (currentEmojis === targetEmojis) {
+    return draft;
+  }
 
   // Too many emojis: remove excess
   if (currentEmojis > targetEmojis) {
@@ -111,22 +113,21 @@ const addMissingEmojis = (draft: string, count: number, signals: UserSignals): s
   if (position.end > 0.6) {
     // Add at end
     return `${draft} ${emojisToAdd}`;
-  } if (position.start > 0.6) {
+  }
+  if (position.start > 0.6) {
     // Add at start
     return `${emojisToAdd} ${draft}`;
-  } 
-    // Add in middle (after first sentence or at midpoint)
-    const firstSentenceEnd = draft.search(/[!.?]\s/);
-    if (firstSentenceEnd > 0) {
-      return `${draft.slice(0, firstSentenceEnd + 2)}${emojisToAdd} ${draft.slice(firstSentenceEnd + 2)}`;
-    } 
-      const mid = Math.floor(draft.length / 2);
-      const spaceAfterMid = draft.indexOf(" ", mid);
-      if (spaceAfterMid > 0) {
-        return `${draft.slice(0, spaceAfterMid)} ${emojisToAdd}${draft.slice(spaceAfterMid)}`;
-      }
-    
-  
+  }
+  // Add in middle (after first sentence or at midpoint)
+  const firstSentenceEnd = draft.search(/[!.?]\s/);
+  if (firstSentenceEnd > 0) {
+    return `${draft.slice(0, firstSentenceEnd + 2)}${emojisToAdd} ${draft.slice(firstSentenceEnd + 2)}`;
+  }
+  const mid = Math.floor(draft.length / 2);
+  const spaceAfterMid = draft.indexOf(" ", mid);
+  if (spaceAfterMid > 0) {
+    return `${draft.slice(0, spaceAfterMid)} ${emojisToAdd}${draft.slice(spaceAfterMid)}`;
+  }
 
   // Fallback: add at end
   return `${draft} ${emojisToAdd}`;
@@ -160,7 +161,9 @@ const enforceMessageLength = (draft: string, signals: UserSignals): string => {
 const truncateToLength = (draft: string, targetLength: number, tolerance: number): string => {
   const maxLength = Math.floor(targetLength + tolerance);
 
-  if (draft.length <= maxLength) {return draft;}
+  if (draft.length <= maxLength) {
+    return draft;
+  }
 
   // Try to keep complete sentences
   const sentences = draft.split(/([!.?]\s+)/);
@@ -188,7 +191,9 @@ const truncateToLength = (draft: string, targetLength: number, tolerance: number
  */
 const injectCommonPhrases = (draft: string, signals: UserSignals): string => {
   const topPhrase = signals.commonPhrases[0]?.phrase;
-  if (!topPhrase) {return draft;}
+  if (!topPhrase) {
+    return draft;
+  }
 
   // Check if draft already contains this phrase
   if (draft.toLowerCase().includes(topPhrase.toLowerCase())) {
@@ -199,7 +204,7 @@ const injectCommonPhrases = (draft: string, signals: UserSignals): string => {
   if (draft.match(/\b(here|support|help|sorry)\b/i)) {
     // Add phrase as a question at the end
     const capitalizedPhrase = topPhrase.charAt(0).toUpperCase() + topPhrase.slice(1);
-    return draft.replace(/([!\.\?])?\s*$/, `? ${capitalizedPhrase}?`);
+    return draft.replace(/([!.?])?\s*$/, `? ${capitalizedPhrase}?`);
   }
 
   return draft;

@@ -14,13 +14,13 @@
 
 import { eq, sql } from "drizzle-orm";
 import { Effect, Schedule } from "effect";
-
-import { SignalEnhancedDraftServiceTag } from "./signal-enhanced-draft.service";
+// Schema types are still needed for query construction
+// v3: sourceConversationId → externalId, contactId → partyId
+import { conversationParticipants, conversations } from "../../../infrastructure/db/schema/index";
 // Import from domain ports (not directly from infrastructure)
 import { DatabaseService, WhatsAppServiceTag } from "../../ports";
-// Schema types are still needed for query construction
-import { conversationParticipants, conversations } from "../../../infrastructure/db/schema";
 import { AnalysisServiceTag } from "../../relationship/analysis.service";
+import { SignalEnhancedDraftServiceTag } from "./signal-enhanced-draft.service";
 
 export interface AutoDraftConfig {
   /**
@@ -86,7 +86,8 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
     const signalDraft = yield* SignalEnhancedDraftServiceTag;
     const db = yield* DatabaseService;
 
-    // Get contact ID for signal loading (needed for signal-enhanced generation)
+    // Get party ID for signal loading (needed for signal-enhanced generation)
+    // v3: contactId → partyId, sourceConversationId → externalId
     let userId: string | undefined;
     try {
       const conversation = yield* Effect.tryPromise({
@@ -94,7 +95,7 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
           db
             .select()
             .from(conversations)
-            .where(eq(conversations.sourceConversationId, config.girlfriendChatId))
+            .where(eq(conversations.externalId, config.girlfriendChatId))
             .limit(1)
             .execute(),
         catch: () => new Error("Failed to fetch conversation"),
@@ -114,7 +115,7 @@ export const monitorAutoDraft = (config: AutoDraftConfig) => {
         });
 
         if (participants.length > 0) {
-          userId = participants[0].contactId;
+          userId = participants[0].partyId; // v3: contactId → partyId
         }
       }
     } catch {

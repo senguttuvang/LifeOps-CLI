@@ -38,7 +38,9 @@ class SignalCache {
   get(userId: string): UserSignals | undefined {
     const entry = this.cache.get(userId);
 
-    if (!entry) {return undefined;}
+    if (!entry) {
+      return undefined;
+    }
 
     // Check if expired
     const age = Date.now() - entry.timestamp;

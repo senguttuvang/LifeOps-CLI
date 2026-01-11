@@ -3,13 +3,22 @@
  *
  * Database access layer for breakup forecasting.
  * Provides methods to query contacts, messages, and relationships.
+ *
+ * v3 Schema Changes:
+ * - contacts → parties (with partyType instead of type)
+ * - interactions → communicationEvents (with eventType instead of interactionType)
+ * - relationships → partyRelationships (with bidirectional partyA/partyB)
+ * - messages.interactionId → messages.eventId
+ * - conversations.sourceConversationId → externalId
+ * - conversations.source → channelId FK to channels
+ * - conversationType "1:1" → "direct"
  */
 
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { DatabaseService } from "../../infrastructure/db/client";
-import * as schema from "../../infrastructure/db/schema";
-import { conversationParticipants, conversations } from "../../infrastructure/db/schema";
+// v3: Import from new schema location with updated table names
+import * as schema from "../../infrastructure/db/schema/index";
 
 // =============================================================================
 // TYPES
@@ -19,13 +28,13 @@ export interface ContactRecord {
   id: string;
   displayName: string;
   preferredName: string | null;
-  type: "person" | "business" | "group";
+  partyType: "individual" | "organization"; // v3: type → partyType
 }
 
 export interface RelationshipRecord {
-  contactId: string;
-  contactName: string;
-  relationshipType: string;
+  partyId: string; // v3: contactId → partyId
+  partyName: string; // v3: contactName → partyName
+  relationshipTypeId: string; // v3: relationshipType → relationshipTypeId
   strengthScore: number | null;
   lastInteractionAt: Date | null;
 }
@@ -41,14 +50,14 @@ export interface ContactWithJid {
   id: string;
   displayName: string;
   preferredName: string | null;
-  type: "person" | "business" | "group";
+  partyType: "individual" | "organization"; // v3: type → partyType
   whatsappJid: string | null;
   messageCount: number;
   relationshipType: "partner" | "family" | "friend" | "colleague" | "acquaintance" | null;
 }
 
 export interface SaveRelationshipInput {
-  contactId: string;
+  partyId: string; // v3: contactId → partyId
   displayName: string;
   preferredName: string | null;
   relationshipType: "partner" | "family" | "friend" | "colleague" | "acquaintance";
@@ -60,47 +69,51 @@ export interface SaveRelationshipInput {
 
 interface ForecastRepository {
   /**
-   * Find a contact by display name (partial match)
+   * Find a party by display name (partial match)
+   * v3: contacts → parties
    */
   findContactByName(name: string): Effect.Effect<ContactRecord | null>;
 
   /**
    * Resolve a human-readable name to a WhatsApp chat ID (JID)
    *
-   * Flow: displayName → contact_id → conversation_participants → conversations.sourceConversationId
+   * Flow: displayName → party_id → conversation_participants → conversations.externalId
    *
    * Returns null if name not found or no WhatsApp conversation exists
+   * v3: sourceConversationId → externalId, source → channelId
    */
   resolveChatIdByName(name: string): Effect.Effect<string | null>;
 
   /**
-   * Get messages for a contact within a time window
+   * Get messages for a party within a time window
+   * v3: contactId → partyId, interactions → communicationEvents
    */
-  getMessagesForContact(
-    contactId: string,
-    days: number,
-  ): Effect.Effect<MessageRecord[]>;
+  getMessagesForContact(partyId: string, days: number): Effect.Effect<MessageRecord[]>;
 
   /**
    * Get all relationships marked as 'partner' type
+   * v3: Uses relationshipTypes table with bidirectional partyRelationships
    */
   getPartnerRelationships(): Effect.Effect<RelationshipRecord[]>;
 
   /**
-   * Get all contacts with their WhatsApp JIDs and message counts
+   * Get all parties with their WhatsApp JIDs and message counts
    * Used for contact setup flow
+   * v3: contacts → parties
    */
   getContactsForSetup(): Effect.Effect<ContactWithJid[]>;
 
   /**
-   * Save or update a relationship for a contact
+   * Save or update a relationship for a party
+   * v3: relationships → partyRelationships
    */
   saveRelationship(input: SaveRelationshipInput): Effect.Effect<void>;
 
   /**
-   * Update contact's preferred name
+   * Update party's preferred name
+   * v3: contacts → parties
    */
-  updateContactName(contactId: string, preferredName: string | null): Effect.Effect<void>;
+  updateContactName(partyId: string, preferredName: string | null): Effect.Effect<void>;
 }
 
 // =============================================================================
@@ -113,6 +126,13 @@ export class ForecastRepositoryTag extends Context.Tag("ForecastRepository")<
 >() {}
 
 // =============================================================================
+// CONSTANTS
+// =============================================================================
+
+// WhatsApp channel ID (from seed data)
+const WHATSAPP_CHANNEL_ID = "whatsapp";
+
+// =============================================================================
 // IMPLEMENTATION
 // =============================================================================
 
@@ -122,17 +142,16 @@ const make = Effect.gen(function* () {
   return ForecastRepositoryTag.of({
     findContactByName: (name: string) =>
       Effect.sync(() => {
+        // v3: contacts → parties, type → partyType
         const results = db
           .select({
-            id: schema.contacts.id,
-            displayName: schema.contacts.displayName,
-            preferredName: schema.contacts.preferredName,
-            type: schema.contacts.type,
+            id: schema.parties.id,
+            displayName: schema.parties.displayName,
+            preferredName: schema.parties.preferredName,
+            partyType: schema.parties.partyType,
           })
-          .from(schema.contacts)
-          .where(
-            sql`lower(${schema.contacts.displayName}) LIKE lower(${"%" + name + "%"})`
-          )
+          .from(schema.parties)
+          .where(sql`lower(${schema.parties.displayName}) LIKE lower(${"%" + name + "%"})`)
           .limit(1)
           .all();
 
@@ -143,57 +162,60 @@ const make = Effect.gen(function* () {
 
     resolveChatIdByName: (name: string) =>
       Effect.sync(() => {
-        // Strategy 1: For 1:1 chats, the conversation title often matches the contact name
+        // Strategy 1: For direct (1:1) chats, the conversation title often matches the contact name
         // This is the most common case and works without conversation_participants
+        // v3: sourceConversationId → externalId, source → channelId, conversationType "1:1" → "direct"
         const directMatch = db
           .select({
-            sourceConversationId: conversations.sourceConversationId,
+            externalId: schema.conversations.externalId,
           })
-          .from(conversations)
+          .from(schema.conversations)
           .where(
             and(
-              sql`lower(${conversations.title}) LIKE lower(${"%" + name + "%"})`,
-              eq(conversations.source, "whatsapp"),
-              eq(conversations.conversationType, "1:1")
+              sql`lower(${schema.conversations.title}) LIKE lower(${"%" + name + "%"})`,
+              eq(schema.conversations.channelId, WHATSAPP_CHANNEL_ID),
+              eq(schema.conversations.conversationType, "direct")
             )
           )
           .limit(1)
           .all();
 
         if (directMatch.length > 0) {
-          return directMatch[0].sourceConversationId;
+          return directMatch[0].externalId;
         }
 
-        // Strategy 2: Fallback - search via contacts table + conversation_participants (for groups)
-        const contactResults = db
+        // Strategy 2: Fallback - search via parties table + conversation_participants (for groups)
+        // v3: contacts → parties
+        const partyResults = db
           .select({
-            id: schema.contacts.id,
+            id: schema.parties.id,
           })
-          .from(schema.contacts)
+          .from(schema.parties)
           .where(
-            sql`lower(${schema.contacts.displayName}) LIKE lower(${"%" + name + "%"})`
+            sql`lower(${schema.parties.displayName}) LIKE lower(${"%" + name + "%"})`
           )
           .limit(1)
           .all();
 
-        if (contactResults.length === 0) return null;
+        if (partyResults.length === 0) return null;
 
-        const contactId = contactResults[0].id;
+        const partyId = partyResults[0].id;
 
         // Find conversations via participant mapping
+        // v3: contactId → partyId, sourceConversationId → externalId
         const conversationResults = db
           .select({
-            sourceConversationId: conversations.sourceConversationId,
+            externalId: schema.conversations.externalId,
           })
-          .from(conversationParticipants)
+          .from(schema.conversationParticipants)
           .innerJoin(
-            conversations,
-            eq(conversationParticipants.conversationId, conversations.id)
+            schema.conversations,
+            eq(schema.conversationParticipants.conversationId, schema.conversations.id)
           )
           .where(
             and(
-              eq(conversationParticipants.contactId, contactId),
-              eq(conversations.source, "whatsapp")
+              eq(schema.conversationParticipants.partyId, partyId),
+              eq(schema.conversations.channelId, WHATSAPP_CHANNEL_ID)
             )
           )
           .limit(1)
@@ -201,66 +223,71 @@ const make = Effect.gen(function* () {
 
         if (conversationResults.length === 0) return null;
 
-        return conversationResults[0].sourceConversationId;
+        return conversationResults[0].externalId;
       }),
 
-    getMessagesForContact: (contactId: string, days: number) =>
+    getMessagesForContact: (partyId: string, days: number) =>
       Effect.sync(() => {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - days);
 
-        // First get conversations for this contact
-        const conversations = db
+        // First get conversations for this party
+        // v3: contactId → partyId
+        const convos = db
           .select({ id: schema.conversations.id })
           .from(schema.conversations)
           .innerJoin(
             schema.conversationParticipants,
-            eq(schema.conversations.id, schema.conversationParticipants.conversationId)
+            eq(schema.conversations.id, schema.conversationParticipants.conversationId),
           )
-          .where(eq(schema.conversationParticipants.contactId, contactId))
+          .where(eq(schema.conversationParticipants.partyId, partyId))
           .all();
 
-        if (conversations.length === 0) return [];
+        if (convos.length === 0) return [];
 
-        const conversationIds = conversations.map(c => c.id);
+        const conversationIds = convos.map((c) => c.id);
 
-        // Get messages from those conversations
-        const messages = db
+        // Get communication events from those conversations
+        // v3: interactions → communicationEvents, interactionType → eventType
+        const events = db
           .select({
-            id: schema.interactions.id,
-            occurredAt: schema.interactions.occurredAt,
-            direction: schema.interactions.direction,
-            // Join with messages table for text content
+            id: schema.communicationEvents.id,
+            occurredAt: schema.communicationEvents.occurredAt,
+            direction: schema.communicationEvents.direction,
           })
-          .from(schema.interactions)
+          .from(schema.communicationEvents)
           .where(
             and(
-              sql`${schema.interactions.conversationId} IN (${sql.join(conversationIds.map(id => sql`${id}`), sql`, `)})`,
-              gte(schema.interactions.occurredAt, cutoffDate),
-              eq(schema.interactions.interactionType, "message")
-            )
+              sql`${schema.communicationEvents.conversationId} IN (${sql.join(
+                conversationIds.map((id) => sql`${id}`),
+                sql`, `,
+              )})`,
+              gte(schema.communicationEvents.occurredAt, cutoffDate),
+              eq(schema.communicationEvents.eventType, "message"),
+            ),
           )
-          .orderBy(desc(schema.interactions.occurredAt))
+          .orderBy(desc(schema.communicationEvents.occurredAt))
           .limit(1000)
           .all();
 
         // Get actual message content from messages table
+        // v3: interactionId → eventId
         const messageRecords: MessageRecord[] = [];
-        for (const interaction of messages) {
+        for (const event of events) {
           const msgContent = db
             .select({
               content: schema.messages.content,
             })
             .from(schema.messages)
-            .where(eq(schema.messages.interactionId, interaction.id))
+            .where(eq(schema.messages.eventId, event.id))
             .limit(1)
             .all();
 
           messageRecords.push({
-            id: interaction.id,
+            id: event.id,
             text: msgContent[0]?.content || null,
-            timestamp: interaction.occurredAt as Date,
-            fromMe: interaction.direction === "outbound",
+            timestamp: event.occurredAt as Date,
+            fromMe: event.direction === "outbound",
           });
         }
 
@@ -269,21 +296,26 @@ const make = Effect.gen(function* () {
 
     getPartnerRelationships: () =>
       Effect.sync(() => {
+        // v3: relationships → partyRelationships with bidirectional structure
+        // Join with relationshipTypes to get the type name
+        // In v3, we look for relationship type "partner" in the relationshipTypes table
+        // Note: lastActivityAt is now tracked in engagementMetrics, using updatedAt as fallback
         const results = db
           .select({
-            contactId: schema.relationships.contactId,
-            contactName: schema.contacts.displayName,
-            relationshipType: schema.relationships.relationshipType,
-            strengthScore: schema.relationships.strengthScore,
-            lastInteractionAt: schema.relationships.lastInteractionAt,
+            partyId: schema.partyRelationships.partyBId, // The "other" party in relationship
+            partyName: schema.parties.displayName,
+            relationshipTypeId: schema.partyRelationships.relationshipTypeId,
+            strengthScore: schema.partyRelationships.strengthScore,
+            lastInteractionAt: schema.partyRelationships.updatedAt, // v3: using updatedAt as proxy
           })
-          .from(schema.relationships)
+          .from(schema.partyRelationships)
+          .innerJoin(schema.parties, eq(schema.partyRelationships.partyBId, schema.parties.id))
           .innerJoin(
-            schema.contacts,
-            eq(schema.relationships.contactId, schema.contacts.id)
+            schema.relationshipTypes,
+            eq(schema.partyRelationships.relationshipTypeId, schema.relationshipTypes.id),
           )
-          .where(eq(schema.relationships.relationshipType, "partner"))
-          .orderBy(desc(schema.relationships.lastInteractionAt))
+          .where(eq(schema.relationshipTypes.name, "partner"))
+          .orderBy(desc(schema.partyRelationships.updatedAt))
           .all();
 
         return results as RelationshipRecord[];
@@ -291,70 +323,78 @@ const make = Effect.gen(function* () {
 
     getContactsForSetup: () =>
       Effect.sync(() => {
-        // Get all contacts with their WhatsApp JIDs and message counts
-        // Exclude groups, only get individuals
+        // Get all parties with their WhatsApp JIDs and message counts
+        // v3: contacts → parties, type → partyType, filter for individuals
         const results = db
           .select({
-            id: schema.contacts.id,
-            displayName: schema.contacts.displayName,
-            preferredName: schema.contacts.preferredName,
-            type: schema.contacts.type,
+            id: schema.parties.id,
+            displayName: schema.parties.displayName,
+            preferredName: schema.parties.preferredName,
+            partyType: schema.parties.partyType,
           })
-          .from(schema.contacts)
-          .where(eq(schema.contacts.type, "person"))
+          .from(schema.parties)
+          .where(eq(schema.parties.partyType, "individual"))
           .all();
 
         // Enrich with WhatsApp JIDs and message counts
-        const enriched: ContactWithJid[] = results.map((contact) => {
+        const enriched: ContactWithJid[] = results.map((party) => {
           // Get WhatsApp JID from conversation
+          // v3: sourceConversationId → externalId, source → channelId, "1:1" → "direct"
           const convResult = db
             .select({
-              sourceConversationId: conversations.sourceConversationId,
+              externalId: schema.conversations.externalId,
             })
-            .from(conversations)
+            .from(schema.conversations)
             .where(
               and(
-                sql`lower(${conversations.title}) = lower(${contact.displayName})`,
-                eq(conversations.source, "whatsapp"),
-                eq(conversations.conversationType, "1:1")
+                sql`lower(${schema.conversations.title}) = lower(${party.displayName})`,
+                eq(schema.conversations.channelId, WHATSAPP_CHANNEL_ID),
+                eq(schema.conversations.conversationType, "direct")
               )
             )
             .limit(1)
             .all();
 
-          // Count messages for this contact's conversations
+          // Count messages for this party's conversations
+          // v3: interactions → communicationEvents
           let messageCount = 0;
           if (convResult.length > 0) {
             const countResult = db
               .select({ count: sql<number>`count(*)` })
-              .from(schema.interactions)
+              .from(schema.communicationEvents)
               .innerJoin(
-                conversations,
-                eq(schema.interactions.conversationId, conversations.id)
+                schema.conversations,
+                eq(schema.communicationEvents.conversationId, schema.conversations.id)
               )
               .where(
-                eq(conversations.sourceConversationId, convResult[0].sourceConversationId)
+                eq(schema.conversations.externalId, convResult[0].externalId)
               )
               .all();
             messageCount = countResult[0]?.count || 0;
           }
 
           // Get existing relationship type if any
+          // v3: relationships → partyRelationships, contactId → partyBId
+          // Need to join with relationshipTypes to get the name
           const relResult = db
-            .select({ relationshipType: schema.relationships.relationshipType })
-            .from(schema.relationships)
-            .where(eq(schema.relationships.contactId, contact.id))
+            .select({ typeName: schema.relationshipTypes.name })
+            .from(schema.partyRelationships)
+            .innerJoin(
+              schema.relationshipTypes,
+              eq(schema.partyRelationships.relationshipTypeId, schema.relationshipTypes.id)
+            )
+            .where(eq(schema.partyRelationships.partyBId, party.id))
             .limit(1)
             .all();
 
           return {
-            id: contact.id,
-            displayName: contact.displayName,
-            preferredName: contact.preferredName,
-            type: contact.type as "person" | "business" | "group",
-            whatsappJid: convResult[0]?.sourceConversationId || null,
+            id: party.id,
+            displayName: party.displayName,
+            preferredName: party.preferredName,
+            partyType: party.partyType as "individual" | "organization",
+            whatsappJid: convResult[0]?.externalId || null,
             messageCount,
-            relationshipType: (relResult[0]?.relationshipType as ContactWithJid["relationshipType"]) || null,
+            relationshipType: (relResult[0]?.typeName as ContactWithJid["relationshipType"]) || null,
           };
         });
 
@@ -366,31 +406,62 @@ const make = Effect.gen(function* () {
       Effect.sync(() => {
         const { randomUUID } = require("node:crypto");
 
-        // Check if relationship already exists
+        // v3: First, find or create the relationship type
+        let relationshipTypeId: string;
+        const existingType = db
+          .select({ id: schema.relationshipTypes.id })
+          .from(schema.relationshipTypes)
+          .where(eq(schema.relationshipTypes.name, input.relationshipType))
+          .limit(1)
+          .all();
+
+        if (existingType.length > 0) {
+          relationshipTypeId = existingType[0].id;
+        } else {
+          // Create the relationship type if it doesn't exist
+          relationshipTypeId = randomUUID();
+          db.insert(schema.relationshipTypes)
+            .values({
+              id: relationshipTypeId,
+              name: input.relationshipType,
+              isSymmetric: true,
+              isSystem: false,
+              createdAt: new Date(),
+            })
+            .run();
+        }
+
+        // v3: Check if relationship already exists
+        // partyAId is typically "me" (the user), partyBId is the contact
         const existing = db
-          .select({ id: schema.relationships.id })
-          .from(schema.relationships)
-          .where(eq(schema.relationships.contactId, input.contactId))
+          .select({ id: schema.partyRelationships.id })
+          .from(schema.partyRelationships)
+          .where(eq(schema.partyRelationships.partyBId, input.partyId))
           .limit(1)
           .all();
 
         if (existing.length > 0) {
           // Update existing
-          db.update(schema.relationships)
+          db.update(schema.partyRelationships)
             .set({
-              relationshipType: input.relationshipType,
+              relationshipTypeId,
               updatedAt: new Date(),
             })
-            .where(eq(schema.relationships.id, existing[0].id))
+            .where(eq(schema.partyRelationships.id, existing[0].id))
             .run();
         } else {
-          // Insert new
-          db.insert(schema.relationships)
+          // Insert new - need to get or create "me" party
+          // For now, use a placeholder "me" party ID - this should be configured
+          const mePartyId = "me"; // TODO: Get actual "me" party from config
+
+          db.insert(schema.partyRelationships)
             .values({
               id: randomUUID(),
-              contactId: input.contactId,
-              relationshipType: input.relationshipType,
+              relationshipTypeId,
+              partyAId: mePartyId,
+              partyBId: input.partyId,
               strengthScore: 50, // Default score
+              effectiveFrom: new Date(),
               createdAt: new Date(),
               updatedAt: new Date(),
             })
@@ -398,25 +469,27 @@ const make = Effect.gen(function* () {
         }
 
         // Also update preferred name if provided
+        // v3: contacts → parties
         if (input.preferredName) {
-          db.update(schema.contacts)
+          db.update(schema.parties)
             .set({
               preferredName: input.preferredName,
               updatedAt: new Date(),
             })
-            .where(eq(schema.contacts.id, input.contactId))
+            .where(eq(schema.parties.id, input.partyId))
             .run();
         }
       }),
 
-    updateContactName: (contactId: string, preferredName: string | null) =>
+    updateContactName: (partyId: string, preferredName: string | null) =>
       Effect.sync(() => {
-        db.update(schema.contacts)
+        // v3: contacts → parties
+        db.update(schema.parties)
           .set({
             preferredName,
             updatedAt: new Date(),
           })
-          .where(eq(schema.contacts.id, contactId))
+          .where(eq(schema.parties.id, partyId))
           .run();
       }),
   });
@@ -426,7 +499,4 @@ const make = Effect.gen(function* () {
 // LAYER
 // =============================================================================
 
-export const ForecastRepositoryLive = Layer.effect(
-  ForecastRepositoryTag,
-  make
-);
+export const ForecastRepositoryLive = Layer.effect(ForecastRepositoryTag, make);

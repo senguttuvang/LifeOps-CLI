@@ -7,10 +7,10 @@
  * Usage: bun run cli doctor
  */
 
-import { existsSync } from "node:fs";
 import { exec } from "node:child_process";
-import { promisify } from "node:util";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 import { Command } from "@effect/cli";
 import { Console, Effect } from "effect";
@@ -54,11 +54,7 @@ const checkCommand = (
 /**
  * Check if a file exists
  */
-const checkFile = (
-  name: string,
-  path: string,
-  fixMessage: string,
-): Effect.Effect<CheckResult, never> =>
+const checkFile = (name: string, path: string, fixMessage: string): Effect.Effect<CheckResult, never> =>
   Effect.sync(() => {
     const exists = existsSync(path);
     return {
@@ -149,8 +145,7 @@ const checkWhatsAppAuth = (): Effect.Effect<CheckResult, never> => {
  * Format check result for display
  */
 const formatResult = (result: CheckResult): string => {
-  const icon =
-    result.status === "pass" ? "✅" : result.status === "warn" ? "⚠️ " : "❌";
+  const icon = result.status === "pass" ? "✅" : result.status === "warn" ? "⚠️ " : "❌";
 
   let output = `${icon} ${result.name}: ${result.message}`;
 
@@ -189,15 +184,11 @@ export const doctorCommand = Command.make("doctor", {}, () =>
     results.push(goCheck);
 
     // 3. Check SQLite (usually bundled, but verify)
-    const sqliteCheck = yield* checkCommand(
-      "SQLite",
-      "sqlite3 --version",
-      {
-        macOS: "brew install sqlite3",
-        Ubuntu: "sudo apt install sqlite3",
-        Windows: "choco install sqlite",
-      },
-    );
+    const sqliteCheck = yield* checkCommand("SQLite", "sqlite3 --version", {
+      macOS: "brew install sqlite3",
+      Ubuntu: "sudo apt install sqlite3",
+      Windows: "choco install sqlite",
+    });
     results.push(sqliteCheck);
 
     // 4. Check WhatsApp CLI binary
@@ -210,11 +201,7 @@ export const doctorCommand = Command.make("doctor", {}, () =>
 
     // 6. Check data directories
     const dataDir = join(process.cwd(), "data");
-    const dataDirCheck = yield* checkFile(
-      "Data Directory",
-      dataDir,
-      "mkdir -p data",
-    );
+    const dataDirCheck = yield* checkFile("Data Directory", dataDir, "mkdir -p data");
     results.push(dataDirCheck);
 
     // 7. Check .env file

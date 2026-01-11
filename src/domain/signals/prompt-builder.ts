@@ -85,9 +85,15 @@ const getEmojiPreference = (signals: UserSignals): string => {
  * Get emoji position preference
  */
 const getEmojiPosition = (position: { start: number; middle: number; end: number }): string => {
-  if (position.end > 0.6) {return "end of message";}
-  if (position.start > 0.6) {return "start of message";}
-  if (position.middle > 0.4) {return "middle of message";}
+  if (position.end > 0.6) {
+    return "end of message";
+  }
+  if (position.start > 0.6) {
+    return "start of message";
+  }
+  if (position.middle > 0.4) {
+    return "middle of message";
+  }
   return "mixed positions";
 };
 
@@ -97,7 +103,8 @@ const getEmojiPosition = (position: { start: number; middle: number; end: number
 const getQuestionPreference = (signals: UserSignals): string => {
   if (signals.asksFollowupQuestions > 0.6) {
     return "User frequently asks follow-up questions. MUST include a question in response.";
-  } if (signals.asksFollowupQuestions > 0.3) {
+  }
+  if (signals.asksFollowupQuestions > 0.3) {
     return "User sometimes asks questions. Consider including a question if appropriate.";
   }
   return "User rarely asks questions. Question optional.";
@@ -185,8 +192,12 @@ const getCommonPatternsGuidance = (signals: UserSignals): string => {
 const getEmojiCountRule = (signals: UserSignals): string => {
   const count = Math.round(signals.emojiPerMessage);
 
-  if (count === 0) {return "Do not use emojis";}
-  if (count === 1) {return "Use exactly 1 emoji";}
+  if (count === 0) {
+    return "Do not use emojis";
+  }
+  if (count === 1) {
+    return "Use exactly 1 emoji";
+  }
   return `Use exactly ${count} emojis`;
 };
 

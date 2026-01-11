@@ -1,10 +1,10 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-
+// Schema types are still needed for query construction
+// v3: interactions → communicationEvents, interactionId → eventId, sourceConversationId → externalId
+import { communicationEvents, conversations, messages } from "../../infrastructure/db/schema/index";
 // Import from domain ports (not directly from infrastructure)
 import { AIServiceTag, DatabaseService, VectorStoreService } from "../ports";
-// Schema types are still needed for query construction
-import { conversations, interactions, messages } from "../../infrastructure/db/schema";
 
 // --- Interface ---
 
@@ -28,22 +28,22 @@ export const AnalysisLive = Layer.effect(
     const indexChat = (chatId: string) =>
       Effect.gen(function* (_) {
         // 1. Fetch unindexed messages
-        // We join interactions -> messages -> conversations to filter by sourceConversationId (chatId)
+        // We join communicationEvents -> messages -> conversations to filter by externalId (chatId)
         const unindexedMessages = yield* Effect.tryPromise({
           try: () =>
             db
               .select({
-                id: messages.interactionId,
+                id: messages.eventId,
                 content: messages.content,
-                interactionId: messages.interactionId,
-                timestamp: interactions.occurredAt,
-                direction: interactions.direction,
-                sourceConversationId: conversations.sourceConversationId,
+                eventId: messages.eventId,
+                timestamp: communicationEvents.occurredAt,
+                direction: communicationEvents.direction,
+                externalId: conversations.externalId,
               })
               .from(messages)
-              .innerJoin(interactions, eq(messages.interactionId, interactions.id))
-              .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
-              .where(and(eq(conversations.sourceConversationId, chatId), eq(interactions.isIndexed, false)))
+              .innerJoin(communicationEvents, eq(messages.eventId, communicationEvents.id))
+              .innerJoin(conversations, eq(communicationEvents.conversationId, conversations.id))
+              .where(and(eq(conversations.externalId, chatId), eq(communicationEvents.isIndexed, false)))
               .execute(),
           catch: (e) => new Error(`Failed to fetch unindexed messages: ${e}`),
         });
@@ -59,7 +59,7 @@ export const AnalysisLive = Layer.effect(
           metadata: {
             timestamp: msg.timestamp?.toISOString() || new Date().toISOString(),
             sender: msg.direction === "outbound" ? "me" : "them",
-            chatId: msg.sourceConversationId,
+            chatId: msg.externalId,
           },
         }));
 
@@ -67,10 +67,15 @@ export const AnalysisLive = Layer.effect(
         yield* vectorStore.addDocuments(docs);
 
         // 4. Mark as Indexed
-        const ids = unindexedMessages.map((m) => m.interactionId);
+        const ids = unindexedMessages.map((m) => m.eventId);
         yield* Effect.tryPromise({
-          try: () => db.update(interactions).set({ isIndexed: true }).where(inArray(interactions.id, ids)).execute(),
-          catch: (e) => new Error(`Failed to update interaction index status: ${e}`),
+          try: () =>
+            db
+              .update(communicationEvents)
+              .set({ isIndexed: true })
+              .where(inArray(communicationEvents.id, ids))
+              .execute(),
+          catch: (e) => new Error(`Failed to update communication event index status: ${e}`),
         });
       });
 
@@ -82,14 +87,14 @@ export const AnalysisLive = Layer.effect(
             const msgs = await db
               .select({
                 content: messages.content,
-                timestamp: interactions.occurredAt,
-                direction: interactions.direction,
+                timestamp: communicationEvents.occurredAt,
+                direction: communicationEvents.direction,
               })
               .from(messages)
-              .innerJoin(interactions, eq(messages.interactionId, interactions.id))
-              .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
-              .where(eq(conversations.sourceConversationId, chatId))
-              .orderBy(desc(interactions.occurredAt))
+              .innerJoin(communicationEvents, eq(messages.eventId, communicationEvents.id))
+              .innerJoin(conversations, eq(communicationEvents.conversationId, conversations.id))
+              .where(eq(conversations.externalId, chatId))
+              .orderBy(desc(communicationEvents.occurredAt))
               .limit(50)
               .execute();
             return msgs.reverse(); // Chronological order
@@ -150,13 +155,13 @@ Provide a "Relationship State" report including:
             const msgs = await db
               .select({
                 content: messages.content,
-                direction: interactions.direction,
+                direction: communicationEvents.direction,
               })
               .from(messages)
-              .innerJoin(interactions, eq(messages.interactionId, interactions.id))
-              .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
-              .where(eq(conversations.sourceConversationId, chatId))
-              .orderBy(desc(interactions.occurredAt))
+              .innerJoin(communicationEvents, eq(messages.eventId, communicationEvents.id))
+              .innerJoin(conversations, eq(communicationEvents.conversationId, conversations.id))
+              .where(eq(conversations.externalId, chatId))
+              .orderBy(desc(communicationEvents.occurredAt))
               .limit(10)
               .execute();
             return msgs.reverse();
