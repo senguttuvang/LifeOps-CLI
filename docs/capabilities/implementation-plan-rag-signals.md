@@ -6,6 +6,41 @@
 **Current**: Basic RAG (60-70%)
 **Target**: RAG + Signals (75-80%)
 **Status**: Ready to Start
+**Last Updated**: 2026-01-11
+
+> **Related Documentation**:
+> - [AI Data Pipeline Architecture](../architecture/ai-data-pipeline.md) - Sync integration & incremental processing
+> - [WhatsApp Sync Architecture](../architecture/whatsapp-sync.md) - Upstream data flow
+
+---
+
+## 📡 Sync Integration (Upstream Dependency)
+
+The RAG + Signals pipeline is **downstream** of WhatsApp sync. Understanding this integration is critical for incremental processing.
+
+### Data Flow Overview
+
+```
+WhatsApp ──► Sync Service ──► SQLite ──► AI Pipeline ──► LanceDB/Signals
+                │                              │
+                └── Sets isIndexed=FALSE ──────┴── Sets isIndexed=TRUE
+```
+
+### Incremental Processing Keys
+
+| Layer | Watermark | Purpose |
+|-------|-----------|---------|
+| **Sync** | `syncState.lastSyncAt` | Track last WhatsApp fetch |
+| **Vectors** | `communication_events.isIndexed` | Track embedding status |
+| **Signals** | `behavior_signals.validUntil` | Track signal freshness |
+
+### Avoiding Duplicate Processing
+
+1. **Sync Layer**: `ON CONFLICT (channelId, externalId) DO NOTHING`
+2. **Vector Layer**: Check `isIndexed = FALSE` before embedding
+3. **Signal Layer**: Check `validUntil > NOW()` before recomputing
+
+For full details, see [AI Data Pipeline Architecture](../architecture/ai-data-pipeline.md).
 
 ---
 

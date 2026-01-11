@@ -821,6 +821,13 @@ interface EnhancedSyncOptions {
 
 ## References
 
+### Internal Documentation
+
+- [AI Data Pipeline Architecture](./ai-data-pipeline.md) - Downstream AI processing (vectors, signals)
+- [Implementation Plan: RAG + Signals](../capabilities/implementation-plan-rag-signals.md) - AI personalization details
+
+### External Sources
+
 - [How WhatsApp enables multi-device capability - Meta Engineering](https://engineering.fb.com/2021/07/14/security/whatsapp-multi-device/)
 - [Understanding WhatsApp's Architecture & System Design - CometChat](https://www.cometchat.com/blog/whatsapps-architecture-and-system-design)
 - [How WhatsApp Works - GetStream](https://getstream.io/blog/whatsapp-works/)
