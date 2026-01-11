@@ -38,8 +38,8 @@ export interface SyncStats {
 export interface SyncOptions {
   readonly days?: number;
   readonly chatJid?: string;
-  readonly incremental?: boolean;  // Use watermark for incremental sync
-  readonly since?: number;         // Explicit timestamp override
+  readonly incremental?: boolean; // Use watermark for incremental sync
+  readonly since?: number; // Explicit timestamp override
 }
 
 /**
@@ -343,7 +343,7 @@ export const SyncServiceLive = Layer.effect(
 
         // 2. Fetch from WhatsApp via CLI (infrastructure layer)
         const whatsappData = yield* whatsapp.syncMessages({
-          days: sinceTimestamp ? undefined : (options.days || 30),
+          days: sinceTimestamp ? undefined : options.days || 30,
           since: sinceTimestamp,
           chatJid: options.chatJid,
         });
