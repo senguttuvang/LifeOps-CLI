@@ -81,6 +81,8 @@ func main() {
 		authenticate(config)
 	case "sync":
 		syncMessages(config)
+	case "dump":
+		dumpMessages(config)
 	case "chats":
 		listChats(config)
 	case "health":
@@ -101,7 +103,8 @@ func printUsage() {
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  auth               Authenticate with WhatsApp (QR code)")
-	fmt.Println("  sync               Sync messages from last N days")
+	fmt.Println("  sync               Sync messages from last N days (JSON to stdout)")
+	fmt.Println("  dump               Dump all messages to file (for full sync)")
 	fmt.Println("  chats              List all chats")
 	fmt.Println("  health             Check connection health")
 	fmt.Println("  send               Send a message to a chat")
@@ -402,6 +405,189 @@ func syncMessages(config Config) {
 	fmt.Println(string(jsonData))
 
 	fmt.Fprintf(os.Stderr, "Synced %d messages (highest timestamp: %d)\n", messageCount, highestTimestamp)
+}
+
+// DumpContact represents a contact with all their messages for the dump file
+type DumpContact struct {
+	JID          string          `json:"jid"`
+	PushName     string          `json:"pushName"`
+	IsGroup      bool            `json:"isGroup"`
+	MessageCount int             `json:"messageCount"`
+	Messages     []OutputMessage `json:"messages"`
+}
+
+// DumpResult is the structure written to the dump file
+type DumpResult struct {
+	Contacts      []DumpContact `json:"contacts"`
+	TotalMessages int           `json:"totalMessages"`
+	DumpedAt      int64         `json:"dumpedAt"`
+}
+
+// DumpCommandResult is the JSON output to stdout after dump completes
+type DumpCommandResult struct {
+	Success       bool   `json:"success"`
+	OutputPath    string `json:"outputPath"`
+	TotalMessages int    `json:"totalMessages"`
+	ContactCount  int    `json:"contactCount"`
+}
+
+// dumpMessages dumps all messages to a file for full sync
+func dumpMessages(config Config) {
+	client, _, err := getClient(config.SessionDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create client: %v\n", err)
+		os.Exit(1)
+	}
+
+	if client.Store.ID == nil {
+		fmt.Fprintf(os.Stderr, "Not authenticated. Run 'auth' command first.\n")
+		os.Exit(1)
+	}
+
+	err = client.Connect()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to connect: %v\n", err)
+		os.Exit(1)
+	}
+	defer client.Disconnect()
+
+	// Wait for connection
+	time.Sleep(2 * time.Second)
+
+	// Calculate time range
+	endTime := time.Now()
+	startTime := endTime.AddDate(0, 0, -config.Days)
+	fmt.Fprintf(os.Stderr, "Dumping messages from %s to %s (%d days)...\n",
+		startTime.Format("2006-01-02"),
+		endTime.Format("2006-01-02"),
+		config.Days)
+
+	// Collect messages grouped by chat
+	messagesByChat := make(map[string][]*OutputMessage)
+	chatNames := make(map[string]string)
+	chatIsGroup := make(map[string]bool)
+	done := make(chan bool)
+
+	client.AddEventHandler(func(evt interface{}) {
+		switch v := evt.(type) {
+		case *events.Message:
+			// Time filter
+			if v.Info.Timestamp.Before(startTime) || v.Info.Timestamp.After(endTime) {
+				return
+			}
+
+			msg := convertMessage(v)
+			if msg != nil {
+				messagesByChat[msg.ChatID] = append(messagesByChat[msg.ChatID], msg)
+			}
+		case *events.HistorySync:
+			// Process history sync
+			conversations := v.Data.GetConversations()
+			fmt.Fprintf(os.Stderr, "📥 History sync: %d conversations\n", len(conversations))
+
+			for _, conv := range conversations {
+				chatJID := conv.GetID()
+				chatNames[chatJID] = conv.GetDisplayName()
+				// Check if group (groups have @g.us suffix)
+				chatIsGroup[chatJID] = len(chatJID) > 0 && (chatJID[len(chatJID)-4:] == "g.us" ||
+					(len(chatJID) > 12 && chatJID[len(chatJID)-12:] == "@g.us"))
+
+				for _, histMsg := range conv.GetMessages() {
+					webMsg := histMsg.GetMessage()
+					if webMsg == nil || webMsg.GetMessage() == nil {
+						continue
+					}
+
+					msgTimestamp := time.Unix(int64(webMsg.GetMessageTimestamp()), 0)
+					if msgTimestamp.Before(startTime) || msgTimestamp.After(endTime) {
+						continue
+					}
+
+					msg := convertHistorySyncMessage(webMsg, chatJID)
+					if msg != nil {
+						messagesByChat[chatJID] = append(messagesByChat[chatJID], msg)
+					}
+				}
+			}
+		}
+	})
+
+	// Wait for history sync
+	fmt.Fprintf(os.Stderr, "Waiting for history sync (%d seconds)...\n", config.Timeout)
+	go func() {
+		time.Sleep(time.Duration(config.Timeout) * time.Second)
+		done <- true
+	}()
+	<-done
+
+	// Build dump result
+	var contacts []DumpContact
+	totalMessages := 0
+
+	for chatJID, msgs := range messagesByChat {
+		if len(msgs) == 0 {
+			continue
+		}
+
+		pushName := chatNames[chatJID]
+		if pushName == "" {
+			pushName = chatJID
+		}
+
+		contact := DumpContact{
+			JID:          chatJID,
+			PushName:     pushName,
+			IsGroup:      chatIsGroup[chatJID],
+			MessageCount: len(msgs),
+			Messages:     make([]OutputMessage, 0, len(msgs)),
+		}
+
+		for _, msg := range msgs {
+			contact.Messages = append(contact.Messages, *msg)
+			totalMessages++
+		}
+
+		contacts = append(contacts, contact)
+	}
+
+	dump := DumpResult{
+		Contacts:      contacts,
+		TotalMessages: totalMessages,
+		DumpedAt:      time.Now().Unix(),
+	}
+
+	// Ensure output directory exists
+	outputDir := "whatsapp-raw"
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create output directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Write dump to file
+	outputPath := outputDir + "/dump.json"
+	jsonData, err := json.MarshalIndent(dump, "", "  ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to marshal dump: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := os.WriteFile(outputPath, jsonData, 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write dump file: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Output result to stdout
+	result := DumpCommandResult{
+		Success:       true,
+		OutputPath:    outputPath,
+		TotalMessages: totalMessages,
+		ContactCount:  len(contacts),
+	}
+
+	resultJSON, _ := json.Marshal(result)
+	fmt.Println(string(resultJSON))
+
+	fmt.Fprintf(os.Stderr, "Dumped %d messages from %d contacts to %s\n", totalMessages, len(contacts), outputPath)
 }
 
 func listChats(config Config) {

@@ -139,6 +139,11 @@ const make = (): ContactDiscoveryService => ({
 
   getContactSummaries: (dump) =>
     Effect.sync(() => {
+      // Handle empty or invalid dump
+      if (!dump?.contacts || !Array.isArray(dump.contacts)) {
+        return [];
+      }
+
       // Sort by message count (most messages first)
       const sorted = [...dump.contacts].sort((a, b) => b.messageCount - a.messageCount);
 

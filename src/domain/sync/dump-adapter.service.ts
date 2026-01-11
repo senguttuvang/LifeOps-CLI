@@ -123,6 +123,16 @@ const make = (): DumpAdapterService => ({
 
   convertDump: (dump, selectedJids) =>
     Effect.gen(function* () {
+      // Handle empty or invalid dump
+      if (!dump?.contacts || !Array.isArray(dump.contacts)) {
+        return {
+          messages: [],
+          chats: [],
+          syncedAt: dump?.dumpedAt ?? Date.now(),
+          messageCount: 0,
+        };
+      }
+
       // Filter contacts to only selected JIDs
       const selectedContacts = dump.contacts.filter((c) => selectedJids.includes(c.jid));
 

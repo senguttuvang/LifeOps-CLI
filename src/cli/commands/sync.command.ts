@@ -50,10 +50,12 @@ const runDumpCommand = (): Effect.Effect<DumpCommandResult, Error> =>
         throw new Error(`WhatsApp CLI not found at ${binPath}. Run 'bun run cli setup' first.`);
       }
 
-      console.log("\n📥 Running WhatsApp dump (this may take up to 60 seconds)...\n");
+      console.log("\n📥 Running WhatsApp dump (this may take up to 90 seconds)...\n");
 
-      const { stdout, stderr } = await execAsync(`"${binPath}" dump`, {
-        timeout: 120000, // 2 minute timeout
+      // Pass explicit timeout (60s for history sync) and days (30 days default)
+      // The Go CLI needs time to receive all history sync batches
+      const { stdout, stderr } = await execAsync(`"${binPath}" dump --timeout 60 --days 30`, {
+        timeout: 120000, // 2 minute timeout for execAsync
         maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large histories
       });
 
