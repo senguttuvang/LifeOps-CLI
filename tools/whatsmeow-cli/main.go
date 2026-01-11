@@ -25,7 +25,6 @@ type Config struct {
 	Days       int
 	To         string // For send command: recipient JID
 	Message    string // For send command: message text
-	ASCII      bool   // For auth command: use ASCII-compatible QR rendering
 	Passive    bool   // For sync command: don't mark messages as read (default: true)
 	MarkRead   bool   // For sync command: explicitly mark messages as read
 	Since      int64  // For sync command: Unix timestamp for incremental sync
@@ -117,14 +116,12 @@ func printUsage() {
 	fmt.Println("  --timeout N        Timeout in seconds (default: 30)")
 	fmt.Println("  --to JID           Recipient JID for send command")
 	fmt.Println("  --message TEXT     Message text for send command")
-	fmt.Println("  --ascii            Use ASCII-compatible QR rendering (for Claude Code)")
 }
 
 func parseConfig() Config {
 	config := Config{
 		SessionDir: "./data/whatsapp",
 		Days:       30,
-		ASCII:      false,
 		Passive:    true,  // Default: don't mark messages as read
 		MarkRead:   false,
 		Since:      0,
@@ -163,8 +160,6 @@ func parseConfig() Config {
 				config.Message = os.Args[i+1]
 				i++
 			}
-		case "--ascii":
-			config.ASCII = true
 		case "--passive":
 			config.Passive = true
 		case "--mark-read":
@@ -219,35 +214,33 @@ func authenticate(config Config) {
 		}
 
 		fmt.Println("Scan the QR code below with your WhatsApp mobile app:")
-		if config.ASCII {
-			fmt.Println("(Using ASCII mode for compatibility)")
-		}
 		for evt := range qrChan {
 			if evt.Event == "code" {
-				if config.ASCII {
-					// ASCII mode: uses simple characters that render well in Claude Code
-					qrConfig := qrterminal.Config{
-						Level:          qrterminal.L,
-						Writer:         os.Stdout,
-						BlackChar:      "██",
-						WhiteChar:      "  ",
-						QuietZone:      2,
-						HalfBlocks:     false,
-						BlackWhiteChar: "▀",
-						WhiteBlackChar: "▄",
-					}
-					qrterminal.GenerateWithConfig(evt.Code, qrConfig)
-				} else {
-					// Default: half-block mode (best quality in proper terminals)
-					qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
-				}
+				// Half-block mode for best quality QR rendering
+				qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
 			} else {
 				fmt.Println("Login event:", evt.Event)
 				if evt.Event == "success" {
-					fmt.Println("Authentication successful!")
+					fmt.Println("QR code scanned! Completing device registration...")
+					// IMPORTANT: Don't break immediately!
+					// The device handshake is still in progress.
+					// Wait for the handshake to complete before disconnecting.
 					break
 				}
 			}
+		}
+
+		// Wait for device registration handshake to complete
+		// The "success" event only means QR was scanned - key exchange
+		// and device registration happen after that
+		fmt.Println("Waiting for device registration to complete...")
+		time.Sleep(5 * time.Second)
+
+		// Verify registration succeeded
+		if client.Store.ID != nil {
+			fmt.Println("Authentication successful! Device registered.")
+		} else {
+			fmt.Fprintf(os.Stderr, "Warning: Device registration may not have completed.\n")
 		}
 	} else {
 		// Already authenticated
