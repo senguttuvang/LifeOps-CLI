@@ -133,10 +133,7 @@ export const relationshipSnapshots = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   },
   (table) => ({
-    relationshipDateIdx: index("idx_relationship_snapshots_date").on(
-      table.relationshipId,
-      table.snapshotDate,
-    ),
+    relationshipDateIdx: index("idx_relationship_snapshots_date").on(table.relationshipId, table.snapshotDate),
   }),
 );
 

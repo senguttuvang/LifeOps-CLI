@@ -5,11 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-  detectInMessage,
-  calculateScore,
-  getAntidote,
-} from "./four-horsemen.detector";
+import { calculateScore, detectInMessage, getAntidote } from "./four-horsemen.detector";
 import type { HorsemanDetection } from "./types";
 
 describe("Four Horsemen Detector", () => {

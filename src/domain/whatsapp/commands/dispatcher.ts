@@ -5,18 +5,16 @@
  */
 
 import { Effect } from "effect";
-
+// Import from domain ports (not directly from infrastructure)
+import type { AIServiceTag, DatabaseService, VectorStoreService } from "../../ports";
+import type { AnalysisServiceTag } from "../../relationship/analysis.service";
 import { handleAnalyze } from "./handlers/analyze";
 import { handleDashboard } from "./handlers/dashboard";
 import { handleDraft } from "./handlers/draft";
 import { handleHelp } from "./handlers/help";
 import { handleMemory } from "./handlers/memory";
 import { handleSuggest } from "./handlers/suggest";
-
 import type { ParsedCommand } from "./parser";
-// Import from domain ports (not directly from infrastructure)
-import type { AIServiceTag, DatabaseService, VectorStoreService } from "../../ports";
-import type { AnalysisServiceTag } from "../../relationship/analysis.service";
 
 /**
  * Dispatch command to appropriate handler

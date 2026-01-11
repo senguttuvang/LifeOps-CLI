@@ -137,9 +137,7 @@ export const auditLog = sqliteTable(
     newValues: text("new_values"), // JSON: new state
     changedFields: text("changed_fields"), // JSON array of field names
     changedBy: text("changed_by"), // User or system identifier
-    changedAt: integer("changed_at", { mode: "timestamp" })
-      .notNull()
-      .default(sql`(unixepoch())`),
+    changedAt: integer("changed_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
     metadata: text("metadata"), // JSON for additional context
   },
   (table) => ({

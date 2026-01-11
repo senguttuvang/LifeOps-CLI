@@ -12,11 +12,7 @@
 
 import type { Database } from "bun:sqlite";
 
-import {
-  defaultChannels,
-  defaultRelationshipCategories,
-  defaultRelationshipTypes,
-} from "../schema/seed";
+import { defaultChannels, defaultRelationshipCategories, defaultRelationshipTypes } from "../schema/seed";
 
 // =============================================================================
 // SQL STATEMENTS
@@ -688,12 +684,7 @@ export function runMigration(db: Database): MigrationResult[] {
     `);
 
     for (const category of defaultRelationshipCategories) {
-      insertCategory.run(
-        category.id,
-        category.name,
-        category.description ?? null,
-        category.displayOrder ?? 0,
-      );
+      insertCategory.run(category.id, category.name, category.description ?? null, category.displayOrder ?? 0);
     }
 
     const insertType = db.prepare(`

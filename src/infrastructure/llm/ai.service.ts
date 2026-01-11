@@ -112,7 +112,9 @@ export const AILive = Layer.sync(AIServiceTag, () => {
 
             for await (const chunk of stream) {
               const content = chunk.choices[0]?.delta?.content;
-              if (content) {yield content;}
+              if (content) {
+                yield content;
+              }
             }
           }
         })(),

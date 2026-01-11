@@ -79,7 +79,9 @@ export const extractTemporalPatterns = (messages: MessageForSignals[]): Temporal
  * Count number of weekdays in the message date range
  */
 const countWeekdaysInRange = (messages: MessageForSignals[]): number => {
-  if (messages.length === 0) {return 0;}
+  if (messages.length === 0) {
+    return 0;
+  }
 
   const firstDate = messages[0].timestamp;
   const lastDate = messages[messages.length - 1].timestamp;
@@ -95,7 +97,9 @@ const countWeekdaysInRange = (messages: MessageForSignals[]): number => {
  * Count number of weekend days in the message date range
  */
 const countWeekendsInRange = (messages: MessageForSignals[]): number => {
-  if (messages.length === 0) {return 0;}
+  if (messages.length === 0) {
+    return 0;
+  }
 
   const firstDate = messages[0].timestamp;
   const lastDate = messages[messages.length - 1].timestamp;

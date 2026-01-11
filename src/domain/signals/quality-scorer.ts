@@ -63,18 +63,33 @@ export const scoreDraftQuality = (draft: string, signals: UserSignals): DraftQua
 
   // Identify deviations
   const deviations: string[] = [];
-  if (scores.lengthMatch < 0.8) {deviations.push("Length mismatch");}
-  if (scores.emojiMatch < 0.8) {deviations.push("Emoji count/position off");}
-  if (scores.phraseMatch < 0.5) {deviations.push("Missing common phrases");}
-  if (scores.punctuationMatch < 0.7) {deviations.push("Punctuation style mismatch");}
-  if (scores.questionMatch < 0.8) {deviations.push("Question pattern mismatch");}
+  if (scores.lengthMatch < 0.8) {
+    deviations.push("Length mismatch");
+  }
+  if (scores.emojiMatch < 0.8) {
+    deviations.push("Emoji count/position off");
+  }
+  if (scores.phraseMatch < 0.5) {
+    deviations.push("Missing common phrases");
+  }
+  if (scores.punctuationMatch < 0.7) {
+    deviations.push("Punctuation style mismatch");
+  }
+  if (scores.questionMatch < 0.8) {
+    deviations.push("Question pattern mismatch");
+  }
 
   // Determine tier
   let tier: "excellent" | "good" | "fair" | "poor";
-  if (overallScorePercent >= 90) {tier = "excellent";}
-  else if (overallScorePercent >= 75) {tier = "good";}
-  else if (overallScorePercent >= 60) {tier = "fair";}
-  else {tier = "poor";}
+  if (overallScorePercent >= 90) {
+    tier = "excellent";
+  } else if (overallScorePercent >= 75) {
+    tier = "good";
+  } else if (overallScorePercent >= 60) {
+    tier = "fair";
+  } else {
+    tier = "poor";
+  }
 
   return {
     overallScore: overallScorePercent,
@@ -94,9 +109,15 @@ const scoreLengthMatch = (draft: string, signals: UserSignals): number => {
 
   const diff = Math.abs(draftLength - targetLength);
 
-  if (diff === 0) {return 1.0;}
-  if (diff <= tolerance) {return 1.0 - (diff / tolerance) * 0.2;} // 0.8-1.0
-  if (diff <= tolerance * 2) {return 0.6 - ((diff - tolerance) / tolerance) * 0.3;} // 0.3-0.6
+  if (diff === 0) {
+    return 1.0;
+  }
+  if (diff <= tolerance) {
+    return 1.0 - (diff / tolerance) * 0.2;
+  } // 0.8-1.0
+  if (diff <= tolerance * 2) {
+    return 0.6 - ((diff - tolerance) / tolerance) * 0.3;
+  } // 0.3-0.6
   return Math.max(0, 0.3 - ((diff - tolerance * 2) / tolerance) * 0.3); // 0-0.3
 };
 
@@ -111,10 +132,15 @@ const scoreEmojiMatch = (draft: string, signals: UserSignals): number => {
   // Count match score
   const countDiff = Math.abs(draftEmojiCount - targetEmojiCount);
   let countScore: number;
-  if (countDiff === 0) {countScore = 1.0;}
-  else if (countDiff === 1) {countScore = 0.7;}
-  else if (countDiff === 2) {countScore = 0.4;}
-  else {countScore = 0.1;}
+  if (countDiff === 0) {
+    countScore = 1.0;
+  } else if (countDiff === 1) {
+    countScore = 0.7;
+  } else if (countDiff === 2) {
+    countScore = 0.4;
+  } else {
+    countScore = 0.1;
+  }
 
   // Type match score (using top emojis)
   const topEmojiSet = new Set(signals.topEmojis.slice(0, 3).map((e) => e.emoji));
@@ -136,19 +162,29 @@ const scoreEmojiPosition = (
   emojis: string[],
   targetPosition: { start: number; middle: number; end: number },
 ): number => {
-  if (emojis.length === 0) {return 1.0;}
+  if (emojis.length === 0) {
+    return 1.0;
+  }
 
   const firstEmojiPos = draft.indexOf(emojis[0]);
   const draftLength = draft.length;
 
-  if (draftLength === 0) {return 0;}
+  if (draftLength === 0) {
+    return 0;
+  }
 
   const relativePos = firstEmojiPos / draftLength;
 
   // Check which position this matches
-  if (relativePos < 0.2 && targetPosition.start > 0.5) {return 1.0;}
-  if (relativePos > 0.8 && targetPosition.end > 0.5) {return 1.0;}
-  if (relativePos >= 0.3 && relativePos <= 0.7 && targetPosition.middle > 0.4) {return 1.0;}
+  if (relativePos < 0.2 && targetPosition.start > 0.5) {
+    return 1.0;
+  }
+  if (relativePos > 0.8 && targetPosition.end > 0.5) {
+    return 1.0;
+  }
+  if (relativePos >= 0.3 && relativePos <= 0.7 && targetPosition.middle > 0.4) {
+    return 1.0;
+  }
 
   // Partial match
   return 0.5;
@@ -158,7 +194,9 @@ const scoreEmojiPosition = (
  * Score phrase match (0-1)
  */
 const scorePhraseMatch = (draft: string, signals: UserSignals): number => {
-  if (signals.commonPhrases.length === 0) {return 1.0;}
+  if (signals.commonPhrases.length === 0) {
+    return 1.0;
+  }
 
   const draftLower = draft.toLowerCase();
   let matchCount = 0;
@@ -172,9 +210,15 @@ const scorePhraseMatch = (draft: string, signals: UserSignals): number => {
   }
 
   // Score based on matches
-  if (matchCount === 0) {return 0.3;} // No matches, but not completely wrong
-  if (matchCount === 1) {return 0.7;}
-  if (matchCount >= 2) {return 1.0;}
+  if (matchCount === 0) {
+    return 0.3;
+  } // No matches, but not completely wrong
+  if (matchCount === 1) {
+    return 0.7;
+  }
+  if (matchCount >= 2) {
+    return 1.0;
+  }
 
   return 0.5;
 };
@@ -189,25 +233,33 @@ const scorePunctuationMatch = (draft: string, signals: UserSignals): number => {
   // Exclamation marks
   const hasExclamation = draft.includes("!");
   const shouldHaveExclamation = signals.exclamationRate > 0.3;
-  if (hasExclamation === shouldHaveExclamation) {score++;}
+  if (hasExclamation === shouldHaveExclamation) {
+    score++;
+  }
   checks++;
 
   // Question marks
   const hasQuestion = draft.includes("?");
   const shouldHaveQuestion = signals.questionRate > 0.5;
-  if (hasQuestion === shouldHaveQuestion) {score++;}
+  if (hasQuestion === shouldHaveQuestion) {
+    score++;
+  }
   checks++;
 
   // Ellipsis
   const hasEllipsis = draft.includes("...") || draft.includes("…");
   const shouldHaveEllipsis = signals.ellipsisRate > 0.2;
-  if (hasEllipsis === shouldHaveEllipsis) {score++;}
+  if (hasEllipsis === shouldHaveEllipsis) {
+    score++;
+  }
   checks++;
 
   // Period usage
   const periodCount = (draft.match(/\./g) || []).length;
   const expectedPeriodCount = signals.periodRate > 0.5 ? 1 : 0;
-  if (periodCount >= expectedPeriodCount) {score++;}
+  if (periodCount >= expectedPeriodCount) {
+    score++;
+  }
   checks++;
 
   return score / checks;
@@ -220,8 +272,12 @@ const scoreQuestionMatch = (draft: string, signals: UserSignals): number => {
   const hasQuestion = draft.includes("?");
   const shouldHaveQuestion = signals.asksFollowupQuestions > 0.6;
 
-  if (hasQuestion === shouldHaveQuestion) {return 1.0;}
-  if (signals.asksFollowupQuestions > 0.3 && signals.asksFollowupQuestions <= 0.6) {return 0.7;} // Optional, so not critical
+  if (hasQuestion === shouldHaveQuestion) {
+    return 1.0;
+  }
+  if (signals.asksFollowupQuestions > 0.3 && signals.asksFollowupQuestions <= 0.6) {
+    return 0.7;
+  } // Optional, so not critical
   return 0.3;
 };
 
@@ -253,9 +309,13 @@ export const compareDrafts = (draftA: string, draftB: string, signals: UserSigna
   const improvement = scoreB.overallScore - scoreA.overallScore;
 
   let winner: "A" | "B" | "tie";
-  if (Math.abs(improvement) < 5) {winner = "tie";}
-  else if (improvement > 0) {winner = "B";}
-  else {winner = "A";}
+  if (Math.abs(improvement) < 5) {
+    winner = "tie";
+  } else if (improvement > 0) {
+    winner = "B";
+  } else {
+    winner = "A";
+  }
 
   return {
     draftA: { text: draftA, score: scoreA },

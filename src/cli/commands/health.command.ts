@@ -38,7 +38,9 @@ export const healthCommand = Command.make("health", {}, () =>
 
     // Sync state
     const syncState = yield* sync.getSyncState();
-    yield* (syncState?.lastSyncAt ? Console.log(`Last sync: ${syncState.lastSyncAt.toISOString()}`) : Console.log("Last sync: Never"));
+    yield* syncState?.lastSyncAt
+      ? Console.log(`Last sync: ${syncState.lastSyncAt.toISOString()}`)
+      : Console.log("Last sync: Never");
 
     yield* Console.log("\n✅ System operational");
   }),

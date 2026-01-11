@@ -41,10 +41,18 @@ export const extractPunctuationPatterns = (messages: MessageForSignals[]): Punct
   for (const m of userMessages) {
     const text = m.text || "";
 
-    if (text.includes("!")) {exclamationCount++;}
-    if (text.includes("?")) {questionCount++;}
-    if (text.includes(".") && !text.includes("...")) {periodCount++;} // Period but not ellipsis
-    if (text.includes("...") || text.includes("…")) {ellipsisCount++;} // Ellipsis (3 dots or unicode)
+    if (text.includes("!")) {
+      exclamationCount++;
+    }
+    if (text.includes("?")) {
+      questionCount++;
+    }
+    if (text.includes(".") && !text.includes("...")) {
+      periodCount++;
+    } // Period but not ellipsis
+    if (text.includes("...") || text.includes("…")) {
+      ellipsisCount++;
+    } // Ellipsis (3 dots or unicode)
   }
 
   const total = userMessages.length;

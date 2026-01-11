@@ -13,14 +13,13 @@
 
 import { randomUUID } from "node:crypto";
 
-import { Effect, Context, Layer  } from "effect";
+import { Context, Effect, Layer } from "effect";
 
 import type { WhatsAppChatData, WhatsAppMessageData, WhatsAppSyncResult } from "../../whatsapp/whatsapp.types";
 
 // =============================================================================
 // EFFECT-TS SERVICE LAYER
 // =============================================================================
-
 
 // =============================================================================
 // WHATSAPP TYPES (External Protocol) - Imported from whatsapp.types.ts
@@ -434,7 +433,7 @@ export class WhatsAppAdapter {
       .replace("@c.us", "")
       .replace("@g.us", "")
       .replace("@wa.2024", "") // Future-proof for potential format changes
-      .replaceAll('+', ""); // Remove + prefix from phone numbers
+      .replaceAll("+", ""); // Remove + prefix from phone numbers
   }
 
   /**

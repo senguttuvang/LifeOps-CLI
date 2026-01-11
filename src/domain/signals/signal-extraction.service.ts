@@ -14,7 +14,12 @@
 
 import { and, desc, eq } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-
+// Schema types are still needed for query construction
+// v3: interactions → communicationEvents, interactionId → eventId, source → channelId
+// behaviorSignals is backward-compatible alias for behaviorSignals
+import { behaviorSignals, communicationEvents, conversations, messages } from "../../infrastructure/db/schema/index";
+// Import from domain ports (not directly from infrastructure)
+import { DatabaseService } from "../ports";
 import {
   extractBehavioralPatterns,
   extractEmojiPatterns,
@@ -25,11 +30,6 @@ import {
   extractTemporalPatterns,
 } from "./extractors";
 import { signalCache } from "./signal-cache";
-// Import from domain ports (not directly from infrastructure)
-import { DatabaseService } from "../ports";
-// Schema types are still needed for query construction
-import { conversations, interactions, messages } from "../../infrastructure/db/schema";
-import { userSignals } from "../../infrastructure/db/signal-schema";
 
 import type { MessageForSignals, UserSignals } from "./types";
 
@@ -94,23 +94,23 @@ export const SignalExtractionLive = Layer.effect(
           try: () =>
             db
               .select({
-                id: messages.interactionId,
+                id: messages.eventId,
                 text: messages.content,
-                fromMe: interactions.direction,
-                timestamp: interactions.occurredAt,
+                fromMe: communicationEvents.direction,
+                timestamp: communicationEvents.occurredAt,
                 contentType: messages.contentType,
               })
               .from(messages)
-              .innerJoin(interactions, eq(messages.interactionId, interactions.id))
-              .innerJoin(conversations, eq(interactions.conversationId, conversations.id))
+              .innerJoin(communicationEvents, eq(messages.eventId, communicationEvents.id))
+              .innerJoin(conversations, eq(communicationEvents.conversationId, conversations.id))
               .where(
                 and(
-                  eq(conversations.source, "whatsapp"),
+                  eq(conversations.channelId, "whatsapp"),
                   // Filter messages where user is participant (either sender or recipient)
                   // This is a simplification - in reality we'd join with conversation_participants
                 ),
               )
-              .orderBy(desc(interactions.occurredAt))
+              .orderBy(desc(communicationEvents.occurredAt))
               .limit(1000)
               .execute(),
           catch: (e) => new Error(`Failed to fetch user messages: ${e}`),
@@ -131,80 +131,88 @@ export const SignalExtractionLive = Layer.effect(
      * Calculate confidence score based on sample size and quality
      */
     const calculateConfidence = (messageCount: number): number => {
-      if (messageCount < MIN_MESSAGE_COUNT) {return 0;}
-      if (messageCount < 100) {return 0.5;}
-      if (messageCount < 200) {return 0.7;}
-      if (messageCount < 500) {return 0.85;}
+      if (messageCount < MIN_MESSAGE_COUNT) {
+        return 0;
+      }
+      if (messageCount < 100) {
+        return 0.5;
+      }
+      if (messageCount < 200) {
+        return 0.7;
+      }
+      if (messageCount < 500) {
+        return 0.85;
+      }
       return 0.95;
     };
 
     /**
      * Store signals in database
+     * v3: Uses single signalData JSON column instead of individual columns
      */
     const storeSignals = (signals: UserSignals): Effect.Effect<void, Error> =>
       Effect.gen(function* () {
         yield* Effect.tryPromise({
           try: async () => {
-            // Prepare database record
-            const record = {
-              id: crypto.randomUUID(),
-              userId: signals.userId,
-
+            // v3 schema uses signalData JSON column for all patterns
+            const signalData = {
               // Response patterns
               avgResponseTimeMinutes: signals.avgResponseTimeMinutes,
               responseTimeP50: signals.responseTimeP50,
               responseTimeP95: signals.responseTimeP95,
               initiationRate: signals.initiationRate,
-
               // Message structure
               avgMessageLength: signals.avgMessageLength,
               messageLengthStd: signals.messageLengthStd,
               medianMessageLength: signals.medianMessageLength,
               avgWordsPerMessage: signals.avgWordsPerMessage,
-
               // Expression style
               emojiPerMessage: signals.emojiPerMessage,
               emojiVariance: signals.emojiVariance,
-              topEmojis: JSON.stringify(signals.topEmojis),
-              emojiPosition: JSON.stringify(signals.emojiPosition),
-
+              topEmojis: signals.topEmojis,
+              emojiPosition: signals.emojiPosition,
               // Punctuation
               exclamationRate: signals.exclamationRate,
               questionRate: signals.questionRate,
               periodRate: signals.periodRate,
               ellipsisRate: signals.ellipsisRate,
-
               // Common patterns
-              commonGreetings: JSON.stringify(signals.commonGreetings),
-              commonEndings: JSON.stringify(signals.commonEndings),
-              commonPhrases: JSON.stringify(signals.commonPhrases),
-              fillerWords: JSON.stringify(signals.fillerWords),
-
+              commonGreetings: signals.commonGreetings,
+              commonEndings: signals.commonEndings,
+              commonPhrases: signals.commonPhrases,
+              fillerWords: signals.fillerWords,
               // Behavioral
               asksFollowupQuestions: signals.asksFollowupQuestions,
               usesVoiceNotes: signals.usesVoiceNotes,
               sendsMultipleMessages: signals.sendsMultipleMessages,
               editsMessages: signals.editsMessages,
-
               // Temporal
-              activeHours: JSON.stringify(signals.activeHours),
+              activeHours: signals.activeHours,
               weekendVsWeekdayDiff: signals.weekendVsWeekdayDiff,
+            };
 
-              // Metadata
-              messageCount: signals.messageCount,
+            // Prepare database record for v3 schema
+            const record = {
+              id: crypto.randomUUID(),
+              partyId: signals.userId, // v3: userId → partyId
+              signalData: JSON.stringify(signalData),
+              sampleSize: signals.messageCount, // v3: messageCount → sampleSize
               confidence: signals.confidence,
-              lastComputedAt: new Date(signals.lastComputedAt),
+              computedAt: new Date(signals.lastComputedAt), // v3: lastComputedAt → computedAt
+              validUntil: null,
               updatedAt: new Date(),
             };
 
             // Upsert (insert or update if exists)
             const existing = await db
               .select()
-              .from(userSignals)
-              .where(eq(userSignals.userId, signals.userId))
+              .from(behaviorSignals)
+              .where(eq(behaviorSignals.partyId, signals.userId))
               .execute();
 
-            await (existing.length > 0 ? db.update(userSignals).set(record).where(eq(userSignals.userId, signals.userId)).execute() : db.insert(userSignals).values(record).execute());
+            await (existing.length > 0
+              ? db.update(behaviorSignals).set(record).where(eq(behaviorSignals.partyId, signals.userId)).execute()
+              : db.insert(behaviorSignals).values(record).execute());
           },
           catch: (e) => new Error(`Failed to store signals: ${e}`),
         });
@@ -312,71 +320,78 @@ export const SignalExtractionLive = Layer.effect(
 
     /**
      * Get stored signals from database (with caching)
+     * v3: Parses from signalData JSON column
      */
     const getSignals = (userId: string): Effect.Effect<UserSignals | undefined, Error> =>
       Effect.gen(function* () {
         // Check cache first
         const cached = signalCache.get(userId);
-        if (cached) {return cached;}
+        if (cached) {
+          return cached;
+        }
 
-        // Fetch from database
+        // Fetch from database using v3 schema (partyId instead of userId)
         const result = yield* Effect.tryPromise({
-          try: () => db.select().from(userSignals).where(eq(userSignals.userId, userId)).execute(),
+          try: () => db.select().from(behaviorSignals).where(eq(behaviorSignals.partyId, userId)).execute(),
           catch: (e) => new Error(`Failed to retrieve signals: ${e}`),
         });
 
-        if (result.length === 0) {return;}
+        if (result.length === 0) {
+          return;
+        }
 
         const record = result[0];
 
-        // Parse JSON fields
+        // v3: Parse signalData JSON column
+        const signalData = record.signalData ? JSON.parse(record.signalData) : {};
+
         const signals: UserSignals = {
-          userId: record.userId,
+          userId: record.partyId, // v3: partyId → userId for domain compatibility
 
           // Response patterns
-          avgResponseTimeMinutes: record.avgResponseTimeMinutes || 0,
-          responseTimeP50: record.responseTimeP50 || 0,
-          responseTimeP95: record.responseTimeP95 || 0,
-          initiationRate: record.initiationRate || 0,
+          avgResponseTimeMinutes: signalData.avgResponseTimeMinutes || 0,
+          responseTimeP50: signalData.responseTimeP50 || 0,
+          responseTimeP95: signalData.responseTimeP95 || 0,
+          initiationRate: signalData.initiationRate || 0,
 
           // Message structure
-          avgMessageLength: record.avgMessageLength || 0,
-          messageLengthStd: record.messageLengthStd || 0,
-          medianMessageLength: record.medianMessageLength || 0,
-          avgWordsPerMessage: record.avgWordsPerMessage || 0,
+          avgMessageLength: signalData.avgMessageLength || 0,
+          messageLengthStd: signalData.messageLengthStd || 0,
+          medianMessageLength: signalData.medianMessageLength || 0,
+          avgWordsPerMessage: signalData.avgWordsPerMessage || 0,
 
           // Expression style
-          emojiPerMessage: record.emojiPerMessage || 0,
-          emojiVariance: record.emojiVariance || 0,
-          topEmojis: record.topEmojis ? JSON.parse(record.topEmojis) : [],
-          emojiPosition: record.emojiPosition ? JSON.parse(record.emojiPosition) : { start: 0, middle: 0, end: 0 },
+          emojiPerMessage: signalData.emojiPerMessage || 0,
+          emojiVariance: signalData.emojiVariance || 0,
+          topEmojis: signalData.topEmojis || [],
+          emojiPosition: signalData.emojiPosition || { start: 0, middle: 0, end: 0 },
 
           // Punctuation
-          exclamationRate: record.exclamationRate || 0,
-          questionRate: record.questionRate || 0,
-          periodRate: record.periodRate || 0,
-          ellipsisRate: record.ellipsisRate || 0,
+          exclamationRate: signalData.exclamationRate || 0,
+          questionRate: signalData.questionRate || 0,
+          periodRate: signalData.periodRate || 0,
+          ellipsisRate: signalData.ellipsisRate || 0,
 
           // Common patterns
-          commonGreetings: record.commonGreetings ? JSON.parse(record.commonGreetings) : [],
-          commonEndings: record.commonEndings ? JSON.parse(record.commonEndings) : [],
-          commonPhrases: record.commonPhrases ? JSON.parse(record.commonPhrases) : [],
-          fillerWords: record.fillerWords ? JSON.parse(record.fillerWords) : [],
+          commonGreetings: signalData.commonGreetings || [],
+          commonEndings: signalData.commonEndings || [],
+          commonPhrases: signalData.commonPhrases || [],
+          fillerWords: signalData.fillerWords || [],
 
           // Behavioral
-          asksFollowupQuestions: record.asksFollowupQuestions || 0,
-          usesVoiceNotes: record.usesVoiceNotes || 0,
-          sendsMultipleMessages: record.sendsMultipleMessages || 0,
-          editsMessages: record.editsMessages || 0,
+          asksFollowupQuestions: signalData.asksFollowupQuestions || 0,
+          usesVoiceNotes: signalData.usesVoiceNotes || 0,
+          sendsMultipleMessages: signalData.sendsMultipleMessages || 0,
+          editsMessages: signalData.editsMessages || 0,
 
           // Temporal
-          activeHours: record.activeHours ? JSON.parse(record.activeHours) : { peak: [], low: [] },
-          weekendVsWeekdayDiff: record.weekendVsWeekdayDiff || 0,
+          activeHours: signalData.activeHours || { peak: [], low: [] },
+          weekendVsWeekdayDiff: signalData.weekendVsWeekdayDiff || 0,
 
-          // Metadata
-          messageCount: record.messageCount,
+          // Metadata (from v3 record columns)
+          messageCount: record.sampleSize, // v3: sampleSize → messageCount
           confidence: record.confidence,
-          lastComputedAt: record.lastComputedAt || new Date(),
+          lastComputedAt: record.computedAt || new Date(), // v3: computedAt → lastComputedAt
         };
 
         // Cache the signals

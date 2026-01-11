@@ -105,10 +105,7 @@ export const communicationPreferences = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   },
   (table) => ({
-    partyChannelIdx: index("idx_communication_preferences_party_channel").on(
-      table.partyId,
-      table.channelId,
-    ),
+    partyChannelIdx: index("idx_communication_preferences_party_channel").on(table.partyId, table.channelId),
   }),
 );
 

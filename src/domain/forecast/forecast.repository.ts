@@ -3,12 +3,19 @@
  *
  * Database access layer for breakup forecasting.
  * Provides methods to query contacts, messages, and relationships.
+ *
+ * v3 Schema Changes:
+ * - contacts → parties (with partyType instead of type)
+ * - interactions → communicationEvents (with eventType instead of interactionType)
+ * - relationships → partyRelationships (with bidirectional partyA/partyB)
+ * - messages.interactionId → messages.eventId
  */
 
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { DatabaseService } from "../../infrastructure/db/client";
-import * as schema from "../../infrastructure/db/schema";
+// v3: Import from new schema location with updated table names
+import * as schema from "../../infrastructure/db/schema/index";
 
 // =============================================================================
 // TYPES
@@ -18,13 +25,13 @@ export interface ContactRecord {
   id: string;
   displayName: string;
   preferredName: string | null;
-  type: "person" | "business" | "group";
+  partyType: "individual" | "organization"; // v3: type → partyType
 }
 
 export interface RelationshipRecord {
-  contactId: string;
-  contactName: string;
-  relationshipType: string;
+  partyId: string; // v3: contactId → partyId
+  partyName: string; // v3: contactName → partyName
+  relationshipTypeId: string; // v3: relationshipType → relationshipTypeId
   strengthScore: number | null;
   lastInteractionAt: Date | null;
 }
@@ -42,20 +49,20 @@ export interface MessageRecord {
 
 interface ForecastRepository {
   /**
-   * Find a contact by display name (partial match)
+   * Find a party by display name (partial match)
+   * v3: contacts → parties
    */
   findContactByName(name: string): Effect.Effect<ContactRecord | null>;
 
   /**
-   * Get messages for a contact within a time window
+   * Get messages for a party within a time window
+   * v3: contactId → partyId
    */
-  getMessagesForContact(
-    contactId: string,
-    days: number,
-  ): Effect.Effect<MessageRecord[]>;
+  getMessagesForContact(partyId: string, days: number): Effect.Effect<MessageRecord[]>;
 
   /**
    * Get all relationships marked as 'partner' type
+   * v3: Uses relationshipTypes table with bidirectional partyRelationships
    */
   getPartnerRelationships(): Effect.Effect<RelationshipRecord[]>;
 }
@@ -79,17 +86,16 @@ const make = Effect.gen(function* () {
   return ForecastRepositoryTag.of({
     findContactByName: (name: string) =>
       Effect.sync(() => {
+        // v3: contacts → parties, type → partyType
         const results = db
           .select({
-            id: schema.contacts.id,
-            displayName: schema.contacts.displayName,
-            preferredName: schema.contacts.preferredName,
-            type: schema.contacts.type,
+            id: schema.parties.id,
+            displayName: schema.parties.displayName,
+            preferredName: schema.parties.preferredName,
+            partyType: schema.parties.partyType,
           })
-          .from(schema.contacts)
-          .where(
-            sql`lower(${schema.contacts.displayName}) LIKE lower(${"%" + name + "%"})`
-          )
+          .from(schema.parties)
+          .where(sql`lower(${schema.parties.displayName}) LIKE lower(${"%" + name + "%"})`)
           .limit(1)
           .all();
 
@@ -98,63 +104,68 @@ const make = Effect.gen(function* () {
         return results[0] as ContactRecord;
       }),
 
-    getMessagesForContact: (contactId: string, days: number) =>
+    getMessagesForContact: (partyId: string, days: number) =>
       Effect.sync(() => {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - days);
 
-        // First get conversations for this contact
+        // First get conversations for this party
+        // v3: contactId → partyId
         const conversations = db
           .select({ id: schema.conversations.id })
           .from(schema.conversations)
           .innerJoin(
             schema.conversationParticipants,
-            eq(schema.conversations.id, schema.conversationParticipants.conversationId)
+            eq(schema.conversations.id, schema.conversationParticipants.conversationId),
           )
-          .where(eq(schema.conversationParticipants.contactId, contactId))
+          .where(eq(schema.conversationParticipants.partyId, partyId))
           .all();
 
         if (conversations.length === 0) return [];
 
-        const conversationIds = conversations.map(c => c.id);
+        const conversationIds = conversations.map((c) => c.id);
 
-        // Get messages from those conversations
-        const messages = db
+        // Get communication events from those conversations
+        // v3: interactions → communicationEvents, interactionType → eventType
+        const events = db
           .select({
-            id: schema.interactions.id,
-            occurredAt: schema.interactions.occurredAt,
-            direction: schema.interactions.direction,
-            // Join with messages table for text content
+            id: schema.communicationEvents.id,
+            occurredAt: schema.communicationEvents.occurredAt,
+            direction: schema.communicationEvents.direction,
           })
-          .from(schema.interactions)
+          .from(schema.communicationEvents)
           .where(
             and(
-              sql`${schema.interactions.conversationId} IN (${sql.join(conversationIds.map(id => sql`${id}`), sql`, `)})`,
-              gte(schema.interactions.occurredAt, cutoffDate),
-              eq(schema.interactions.interactionType, "message")
-            )
+              sql`${schema.communicationEvents.conversationId} IN (${sql.join(
+                conversationIds.map((id) => sql`${id}`),
+                sql`, `,
+              )})`,
+              gte(schema.communicationEvents.occurredAt, cutoffDate),
+              eq(schema.communicationEvents.eventType, "message"),
+            ),
           )
-          .orderBy(desc(schema.interactions.occurredAt))
+          .orderBy(desc(schema.communicationEvents.occurredAt))
           .limit(1000)
           .all();
 
         // Get actual message content from messages table
+        // v3: interactionId → eventId
         const messageRecords: MessageRecord[] = [];
-        for (const interaction of messages) {
+        for (const event of events) {
           const msgContent = db
             .select({
               content: schema.messages.content,
             })
             .from(schema.messages)
-            .where(eq(schema.messages.interactionId, interaction.id))
+            .where(eq(schema.messages.eventId, event.id))
             .limit(1)
             .all();
 
           messageRecords.push({
-            id: interaction.id,
+            id: event.id,
             text: msgContent[0]?.content || null,
-            timestamp: interaction.occurredAt as Date,
-            fromMe: interaction.direction === "outbound",
+            timestamp: event.occurredAt as Date,
+            fromMe: event.direction === "outbound",
           });
         }
 
@@ -163,21 +174,26 @@ const make = Effect.gen(function* () {
 
     getPartnerRelationships: () =>
       Effect.sync(() => {
+        // v3: relationships → partyRelationships with bidirectional structure
+        // Join with relationshipTypes to get the type name
+        // In v3, we look for relationship type "partner" in the relationshipTypes table
+        // Note: lastActivityAt is now tracked in engagementMetrics, using updatedAt as fallback
         const results = db
           .select({
-            contactId: schema.relationships.contactId,
-            contactName: schema.contacts.displayName,
-            relationshipType: schema.relationships.relationshipType,
-            strengthScore: schema.relationships.strengthScore,
-            lastInteractionAt: schema.relationships.lastInteractionAt,
+            partyId: schema.partyRelationships.partyBId, // The "other" party in relationship
+            partyName: schema.parties.displayName,
+            relationshipTypeId: schema.partyRelationships.relationshipTypeId,
+            strengthScore: schema.partyRelationships.strengthScore,
+            lastInteractionAt: schema.partyRelationships.updatedAt, // v3: using updatedAt as proxy
           })
-          .from(schema.relationships)
+          .from(schema.partyRelationships)
+          .innerJoin(schema.parties, eq(schema.partyRelationships.partyBId, schema.parties.id))
           .innerJoin(
-            schema.contacts,
-            eq(schema.relationships.contactId, schema.contacts.id)
+            schema.relationshipTypes,
+            eq(schema.partyRelationships.relationshipTypeId, schema.relationshipTypes.id),
           )
-          .where(eq(schema.relationships.relationshipType, "partner"))
-          .orderBy(desc(schema.relationships.lastInteractionAt))
+          .where(eq(schema.relationshipTypes.name, "partner"))
+          .orderBy(desc(schema.partyRelationships.updatedAt))
           .all();
 
         return results as RelationshipRecord[];
@@ -189,7 +205,4 @@ const make = Effect.gen(function* () {
 // LAYER
 // =============================================================================
 
-export const ForecastRepositoryLive = Layer.effect(
-  ForecastRepositoryTag,
-  make
-);
+export const ForecastRepositoryLive = Layer.effect(ForecastRepositoryTag, make);

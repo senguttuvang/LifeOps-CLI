@@ -43,10 +43,7 @@ export const conversations = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp" }).default(sql`(unixepoch())`),
   },
   (table) => ({
-    channelExternalIdx: index("idx_conversations_channel_external").on(
-      table.channelId,
-      table.externalId,
-    ),
+    channelExternalIdx: index("idx_conversations_channel_external").on(table.channelId, table.externalId),
     lastActivityIdx: index("idx_conversations_last_activity").on(table.lastActivityAt),
     typeIdx: index("idx_conversations_type").on(table.conversationType),
   }),
@@ -115,10 +112,7 @@ export const communicationEvents = sqliteTable(
     conversationIdx: index("idx_communication_events_conversation").on(table.conversationId),
     occurredAtIdx: index("idx_communication_events_occurred_at").on(table.occurredAt),
     fromPartyIdx: index("idx_communication_events_from_party").on(table.fromPartyId),
-    channelExternalIdx: index("idx_communication_events_channel_external").on(
-      table.channelId,
-      table.externalId,
-    ),
+    channelExternalIdx: index("idx_communication_events_channel_external").on(table.channelId, table.externalId),
     typeIdx: index("idx_communication_events_type").on(table.eventType),
     indexedIdx: index("idx_communication_events_indexed").on(table.isIndexed),
   }),

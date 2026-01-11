@@ -13,9 +13,6 @@
 
 import { and, eq } from "drizzle-orm";
 import { Context, Effect, Layer } from "effect";
-
-// Import from domain ports (not directly from infrastructure)
-import { DatabaseService, WhatsAppAdapterTag, WhatsAppServiceTag } from "../ports";
 // Schema imports - using new v3 schema
 import {
   calls,
@@ -27,6 +24,8 @@ import {
   parties,
   syncState,
 } from "../../infrastructure/db/schema/index";
+// Import from domain ports (not directly from infrastructure)
+import { DatabaseService, WhatsAppAdapterTag, WhatsAppServiceTag } from "../ports";
 
 /**
  * Sync statistics returned after sync operation
