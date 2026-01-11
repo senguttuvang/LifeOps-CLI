@@ -1,0 +1,26 @@
+{
+  "contacts": [
+    {
+      "jid": "919876543210@s.whatsapp.net",
+      "pushName": "Mom",
+      "isGroup": false,
+      "messageCount": 3,
+      "messages": [
+        {"id": "MSG001", "chatId": "919876543210@s.whatsapp.net", "fromJid": "919876543210@s.whatsapp.net", "messageType": "conversation", "content": "Beta, dinner kar liya?", "timestamp": 1704931200, "isFromMe": false},
+        {"id": "MSG002", "chatId": "919876543210@s.whatsapp.net", "fromJid": "", "messageType": "conversation", "content": "Haan Mom, abhi kha raha hoon", "timestamp": 1704931500, "isFromMe": true}
+      ]
+    },
+    {
+      "jid": "919123456789@s.whatsapp.net",
+      "pushName": "Priya",
+      "isGroup": false,
+      "messageCount": 2,
+      "messages": [
+        {"id": "MSG003", "chatId": "919123456789@s.whatsapp.net", "fromJid": "919123456789@s.whatsapp.net", "messageType": "conversation", "content": "I'm fine", "timestamp": 1704844800, "isFromMe": false},
+        {"id": "MSG004", "chatId": "919123456789@s.whatsapp.net", "fromJid": "", "messageType": "conversation", "content": "What's wrong?", "timestamp": 1704845100, "isFromMe": true}
+      ]
+    }
+  ],
+  "totalMessages": 4,
+  "dumpedAt": 1704931200
+}

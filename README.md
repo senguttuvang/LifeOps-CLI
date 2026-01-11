@@ -250,7 +250,76 @@ This checks all prerequisites and provides specific fix instructions.
 ```bash
 bun run cli remember "She wants the blue Zara bag from Phoenix Mall"
 bun run cli decode "Sure, whatever you want"
-bun run cli search "wants" --contact="Girlfriend"
+bun run cli relationship analyze "919876543210@s.whatsapp.net"
+```
+
+---
+
+## CLI Reference
+
+### Core Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `doctor` | System diagnostics | `bun run cli doctor` |
+| `health` | Quick system health check | `bun run cli health` |
+| `sync` | Sync WhatsApp messages to local DB | `bun run cli sync --all` |
+
+### Sync Options
+
+```bash
+# Full sync with interactive contact selection
+bun run cli sync
+
+# Import all contacts without selection
+bun run cli sync --all
+
+# Use existing dump (skip WhatsApp API)
+bun run cli sync --skip-dump --all
+
+# Keep dump file after import
+bun run cli sync --all --keep-dump
+```
+
+### Relationship Analysis (Requires API Key)
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `relationship analyze <contact>` | AI analysis of relationship state | `bun run cli relationship analyze "Priya"` |
+| `relationship draft <contact> <intent>` | Generate contextual message draft | `bun run cli relationship draft "Mom" "apologize for being distant"` |
+| `relationship health` | Overview of relationship health | `bun run cli relationship health --list` |
+
+> **Human Names Supported**: You can use contact names (e.g., "Priya", "Mom") instead of WhatsApp JIDs. The CLI automatically resolves names to their corresponding chat IDs.
+
+### Memory & Decode (No API Key Needed)
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `decode <message>` | Decode what "I'm fine" really means | `bun run cli decode "I'm fine"` |
+| `remember <content>` | Store important context for later | `bun run cli remember "Priya wants the blue Zara bag"` |
+
+### Signal Extraction (50+ Messages Required)
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `extract-signals <userId>` | Extract behavioral patterns | `bun run cli extract-signals "919876543210@s.whatsapp.net"` |
+| `extract-signals --refresh <userId>` | Force re-extraction | `bun run cli extract-signals --refresh "919876543210@s.whatsapp.net"` |
+
+### Data Import
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `import-android --db <path>` | Import from Android WhatsApp backup | `bun run cli import-android --db ./msgstore.db` |
+
+### Chat IDs
+
+Chat IDs use WhatsApp JID format:
+- **Individual:** `<country><phone>@s.whatsapp.net` (e.g., `919876543210@s.whatsapp.net`)
+- **Group:** `<id>@g.us` (e.g., `120363123456789012@g.us`)
+
+Find chat IDs by checking your database after sync:
+```bash
+sqlite3 lifeops.db "SELECT title, source_conversation_id FROM conversations;"
 ```
 
 ---

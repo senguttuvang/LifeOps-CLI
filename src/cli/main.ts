@@ -31,6 +31,7 @@ import { relationshipCommand } from "./commands/relationship.command";
 import { rememberCommand } from "./commands/remember.command.js";
 import { setupCommand } from "./commands/setup.command";
 // Commands
+import { contactsCommand } from "./commands/contacts.command";
 import { syncCommand } from "./commands/sync.command";
 import { ForecastServiceLive } from "../domain/forecast";
 import { ForecastRepositoryLive } from "../domain/forecast/forecast.repository";
@@ -83,6 +84,7 @@ const lifeopsCommand = Command.make("lifeops").pipe(
 
     // Core commands
     syncCommand,
+    contactsCommand,
     healthCommand,
 
     // Relationship Intelligence (Fun + Function)
@@ -121,4 +123,17 @@ const run = Command.run(lifeopsCommand, {
 });
 
 // Execute with NodeRuntime
-run(process.argv).pipe(Effect.provide(MainLive), Effect.provide(NodeContext.layer), NodeRuntime.runMain);
+// Wrap in Effect.scoped to ensure scoped resources (like DatabaseLive) are properly released
+// Use Effect.ensuring to force process exit after completion
+run(process.argv).pipe(
+  Effect.scoped,
+  Effect.provide(MainLive),
+  Effect.provide(NodeContext.layer),
+  Effect.ensuring(
+    Effect.sync(() => {
+      // Force exit after CLI completes - prevents hanging from open handles
+      setImmediate(() => process.exit(0));
+    }),
+  ),
+  NodeRuntime.runMain,
+);
