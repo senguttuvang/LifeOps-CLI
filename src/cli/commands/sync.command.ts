@@ -9,28 +9,28 @@
  * Usage: bun run cli sync [--all] [--keep-dump]
  */
 
+import { exec } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { exec } from "node:child_process";
 import { promisify } from "node:util";
 
 import { Command, Options } from "@effect/cli";
-import { Console, Effect } from "effect";
-import React from "react";
+import { Console, Effect, Option } from "effect";
 import { render } from "ink";
+import React from "react";
 
 import {
-  ContactDiscoveryServiceLive,
   ContactDiscoveryService,
+  ContactDiscoveryServiceLive,
+  type ContactSummary,
   DumpAdapterService,
   DumpAdapterServiceLive,
-  SYNC_PATHS,
-  type ContactSummary,
   type DumpCommandResult,
+  SYNC_PATHS,
 } from "../../domain/sync";
+import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
 import { ContactSelector } from "../components/ContactSelector";
 import { ImportProgress } from "../components/ImportProgress";
-import { SyncServiceTag } from "../../domain/whatsapp/sync.service";
 
 const execAsync = promisify(exec);
 
@@ -47,9 +47,7 @@ const runDumpCommand = (): Effect.Effect<DumpCommandResult, Error> =>
       const binPath = join(process.cwd(), SYNC_PATHS.cliBinary);
 
       if (!existsSync(binPath)) {
-        throw new Error(
-          `WhatsApp CLI not found at ${binPath}. Run 'bun run cli setup' first.`
-        );
+        throw new Error(`WhatsApp CLI not found at ${binPath}. Run 'bun run cli setup' first.`);
       }
 
       console.log("\n📥 Running WhatsApp dump (this may take up to 60 seconds)...\n");
@@ -67,18 +65,13 @@ const runDumpCommand = (): Effect.Effect<DumpCommandResult, Error> =>
       const result = JSON.parse(stdout) as DumpCommandResult;
       return result;
     },
-    catch: (error) =>
-      new Error(
-        `Dump failed: ${error instanceof Error ? error.message : String(error)}`
-      ),
+    catch: (error) => new Error(`Dump failed: ${error instanceof Error ? error.message : String(error)}`),
   });
 
 /**
  * Run Ink contact selector UI
  */
-const runContactSelector = (
-  contacts: ContactSummary[]
-): Effect.Effect<string[], Error> =>
+const runContactSelector = (contacts: ContactSummary[]): Effect.Effect<string[], Error> =>
   Effect.async((resume) => {
     let instance: ReturnType<typeof render> | null = null;
 
@@ -101,7 +94,7 @@ const runContactSelector = (
         contacts,
         onSelect: handleSelect,
         onCancel: handleCancel,
-      })
+      }),
     );
 
     // Cleanup function
@@ -136,7 +129,7 @@ const runImportWithProgress = (
         totalContacts,
         totalMessages,
         phase: "importing",
-      })
+      }),
     );
 
     // Run the actual import
@@ -154,7 +147,7 @@ const runImportWithProgress = (
                 messagesImported: stats.messagesAdded,
                 conversationsImported: stats.conversationsAdded,
               },
-            })
+            }),
           );
           // Keep visible for a moment, then unmount
           setTimeout(() => {
@@ -174,7 +167,7 @@ const runImportWithProgress = (
               totalMessages,
               phase: "error",
               error: error instanceof Error ? error.message : String(error),
-            })
+            }),
           );
           setTimeout(() => {
             if (instance) {
@@ -212,11 +205,36 @@ export const syncCommand = Command.make(
       Options.withDescription("Skip dump phase and use existing dump file"),
       Options.withDefault(false),
     ),
+    incremental: Options.boolean("incremental").pipe(
+      Options.withDescription("Use watermark-based incremental sync (only new messages since last sync)"),
+      Options.withDefault(false),
+    ),
+    days: Options.integer("days").pipe(
+      Options.withDescription("Number of days to sync (default: 30)"),
+      Options.optional,
+    ),
   },
-  ({ all, keepDump, skipDump }) =>
+  ({ all, keepDump, skipDump, incremental, days }) =>
     Effect.gen(function* () {
       const discovery = yield* ContactDiscoveryService;
       const adapter = yield* DumpAdapterService;
+      const syncService = yield* SyncServiceTag;
+
+      // Incremental sync mode: use watermark-based sync directly
+      if (incremental) {
+        yield* Console.log("🔄 Running incremental sync (watermark-based)...\n");
+
+        const stats = yield* syncService.syncMessages({
+          incremental: true,
+          days: Option.getOrUndefined(days),
+        });
+
+        yield* Console.log(`\n✅ Incremental sync complete!`);
+        yield* Console.log(`   • Messages: ${stats.messagesAdded}`);
+        yield* Console.log(`   • Calls: ${stats.callsAdded}`);
+        yield* Console.log(`   • Synced at: ${stats.syncedAt.toISOString()}`);
+        return;
+      }
 
       // Phase 1: Check for existing dump or run dump command
       const hasDump = yield* discovery.hasDump();
@@ -240,9 +258,7 @@ export const syncCommand = Command.make(
           return;
         }
 
-        yield* Console.log(
-          `\n✅ Dumped ${dumpResult.totalMessages} messages from ${dumpResult.contactCount} contacts`
-        );
+        yield* Console.log(`\n✅ Dumped ${dumpResult.totalMessages} messages from ${dumpResult.contactCount} contacts`);
       } else {
         yield* Console.log("📂 Using existing dump file...");
       }
@@ -279,14 +295,9 @@ export const syncCommand = Command.make(
       // Convert dump to WhatsAppSyncResult format
       const whatsappData = yield* adapter.convertDump(dump, selectedJids);
 
-      // Get syncService outside the closure to avoid Effect context issues
-      const syncService = yield* SyncServiceTag;
-
       // Run import with animated progress UI
-      const stats = yield* runImportWithProgress(
-        whatsappData.chats.length,
-        whatsappData.messages.length,
-        () => syncService.syncFromData(whatsappData),
+      const stats = yield* runImportWithProgress(whatsappData.chats.length, whatsappData.messages.length, () =>
+        syncService.syncFromData(whatsappData),
       );
 
       yield* Console.log(`   • Synced at: ${stats.syncedAt.toISOString()}`);
@@ -300,8 +311,6 @@ export const syncCommand = Command.make(
     }).pipe(
       Effect.provide(ContactDiscoveryServiceLive),
       Effect.provide(DumpAdapterServiceLive),
-      Effect.catchAll((error) =>
-        Console.log(`\n❌ Error: ${error instanceof Error ? error.message : String(error)}`)
-      ),
+      Effect.catchAll((error) => Console.log(`\n❌ Error: ${error instanceof Error ? error.message : String(error)}`)),
     ),
 );

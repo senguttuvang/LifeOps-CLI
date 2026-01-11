@@ -113,9 +113,12 @@ export const WhatsAppServiceLive = Layer.sync(WhatsAppServiceTag, () => {
   const syncMessages = (options: WhatsAppSyncOptions = {}) =>
     Effect.tryPromise({
       try: async () => {
-        const args: string[] = ["sync", "--json"];
+        const args: string[] = ["sync"];
 
-        if (options.days) {
+        // Time range: --since takes precedence over --days
+        if (options.since) {
+          args.push("--since", options.since.toString());
+        } else if (options.days) {
           args.push("--days", options.days.toString());
         }
 
@@ -125,6 +128,18 @@ export const WhatsAppServiceLive = Layer.sync(WhatsAppServiceTag, () => {
 
         if (options.includeMedia) {
           args.push("--media");
+        }
+
+        // Passive mode (default in Go CLI, but explicit here for clarity)
+        if (options.markRead) {
+          args.push("--mark-read");
+        } else if (options.passive !== false) {
+          args.push("--passive");
+        }
+
+        // Timeout
+        if (options.timeout) {
+          args.push("--timeout", options.timeout.toString());
         }
 
         const { stdout } = await execAsync(`${cliBinPath} ${args.join(" ")}`);

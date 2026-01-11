@@ -46,6 +46,9 @@ export interface WhatsAppSyncResult {
   messages: WhatsAppMessageData[];
   chats: WhatsAppChatData[];
   syncedAt: number;
+  highestTimestamp?: number;  // For watermark tracking - highest message timestamp seen
+  messageCount?: number;      // Total messages in this sync
+  sinceTimestamp?: number;    // Input --since value (if used)
   error?: string;
 }
 
@@ -76,9 +79,13 @@ export interface WhatsAppHealth {
  * Sync options
  */
 export interface WhatsAppSyncOptions {
-  days?: number; // History window (default: 30)
-  chatJid?: string; // Sync specific chat only
-  includeMedia?: boolean; // Download media files
+  days?: number;           // History window (default: 30)
+  since?: number;          // Unix timestamp for incremental sync (overrides days)
+  chatJid?: string;        // Sync specific chat only
+  includeMedia?: boolean;  // Download media files
+  passive?: boolean;       // Don't mark messages as read (default: true)
+  markRead?: boolean;      // Explicitly mark messages as read
+  timeout?: number;        // Timeout in seconds (default: 30)
 }
 
 /**

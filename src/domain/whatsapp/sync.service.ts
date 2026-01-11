@@ -38,6 +38,8 @@ export interface SyncStats {
 export interface SyncOptions {
   readonly days?: number;
   readonly chatJid?: string;
+  readonly incremental?: boolean;  // Use watermark for incremental sync
+  readonly since?: number;         // Explicit timestamp override
 }
 
 /**
@@ -323,20 +325,42 @@ export const SyncServiceLive = Layer.effect(
 
     /**
      * Sync from WhatsApp CLI (original flow)
+     * Supports incremental sync via watermarks
      */
     const syncMessages = (options: SyncOptions = {}) =>
       Effect.gen(function* () {
-        // 1. Fetch from WhatsApp via CLI (infrastructure layer)
+        // 1. Determine sync range
+        let sinceTimestamp: number | undefined = options.since;
+
+        // If incremental mode, get watermark
+        if (options.incremental && !sinceTimestamp) {
+          const watermark = yield* syncStateRepo.getWatermark("whatsapp");
+          if (watermark?.metadata?.highestMessageTimestamp) {
+            // Add 1 second to avoid re-fetching the last message
+            sinceTimestamp = watermark.metadata.highestMessageTimestamp + 1;
+          }
+        }
+
+        // 2. Fetch from WhatsApp via CLI (infrastructure layer)
         const whatsappData = yield* whatsapp.syncMessages({
-          days: options.days || 30,
+          days: sinceTimestamp ? undefined : (options.days || 30),
+          since: sinceTimestamp,
           chatJid: options.chatJid,
         });
 
-        // 2. Translate WhatsApp → Domain entities (anti-corruption layer)
+        // 3. Translate WhatsApp → Domain entities (anti-corruption layer)
         const domainData = yield* adapter.translateSyncResult(whatsappData);
 
-        // 3. Persist domain entities
+        // 4. Persist domain entities
         const stats = yield* persistDomainData(domainData);
+
+        // 5. Update metadata with highest timestamp for next incremental sync
+        if (whatsappData.highestTimestamp) {
+          yield* syncStateRepo.updateMetadata("whatsapp", {
+            highestMessageTimestamp: whatsappData.highestTimestamp,
+            syncMode: sinceTimestamp ? "incremental" : "full",
+          });
+        }
 
         return stats;
       });
