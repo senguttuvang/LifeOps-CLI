@@ -371,7 +371,7 @@ Using a calendar to remember her birthday isn't cheating—forgetting it is. Lif
 
 **On WhatsApp:** This tool uses unofficial WhatsApp Web protocols. It's designed for personal use—analyzing your own conversations. While the risk is low for normal usage, please be aware this operates in a gray area with WhatsApp's terms.
 
-**On ethics:** LifeOps is a memory aid, not a manipulation tool. If you're using this to fake care you don't feel, the relationship has bigger issues than software can solve.
+**On philosophy:** LifeOps is a memory aid that helps your genuine care show up more consistently. It bridges the gap between loving someone and remembering the little things that matter to them.
 
 ---
 

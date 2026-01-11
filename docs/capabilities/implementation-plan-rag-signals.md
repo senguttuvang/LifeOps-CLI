@@ -50,10 +50,10 @@ For full details, see [AI Data Pipeline Architecture](../architecture/ai-data-pi
 ```
 Girlfriend: "I had the worst day 😩"
 
-Draft: "Oh no, that sounds tough jaan! What happened? I'm here if you need to talk ❤️"
+Draft: "Oh no, that sounds tough! What happened? I'm here if you need to talk ❤️"
 
 Matches:
-✅ Vocabulary ("sucks", "jaan")
+✅ Vocabulary ("sounds tough", "jaan")
 ✅ Casual tone
 ✅ Generic pattern
 
@@ -67,10 +67,10 @@ Misses:
 ```
 Girlfriend: "I had the worst day 😩"
 
-Draft: "Oh no, that sounds tough jaan! What happened? Want to talk? ❤️"
+Draft: "Oh no, that sounds tough! What happened? Want to talk? ❤️"
 
 Matches:
-✅ Vocabulary ("sucks", "jaan")
+✅ Vocabulary ("sounds tough", "jaan")
 ✅ Casual tone
 ✅ Exactly 1 emoji (enforced)
 ✅ ~45 characters (enforced to match avg)

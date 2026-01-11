@@ -104,7 +104,7 @@ export const mockMessagesForSignals: MessageForSignals[] = [
   },
   {
     id: "msg_003",
-    text: "Oh no, that sounds tough babe. Want to talk about it? ❤️",
+    text: "Oh no, that sounds tough. Want to talk about it? ❤️",
     fromMe: true,
     timestamp: new Date("2024-01-01T10:07:00Z"),
   },

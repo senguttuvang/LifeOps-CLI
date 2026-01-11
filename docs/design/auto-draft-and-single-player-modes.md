@@ -175,7 +175,7 @@ Partner just sent:
 "Ugh, this project deadline is killing me 😩"
 
 Suggested response:
-"That sounds really tough. Want to vent about it tonight over dinner? I can order your favorite Thai food 🍜"
+"That sounds really tough. Want to talk about it over dinner tonight? I can order your favorite Thai food 🍜"
 
 Context: Partner seems stressed. Detected work-related pressure.
 Historical pattern: You usually respond with emotional support + practical gesture.

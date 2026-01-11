@@ -45,7 +45,7 @@ const mockMessages: MessageForSignals[] = [
   },
   {
     id: "3",
-    text: "Oh no, that sounds tough babe. Want to talk? ❤️",
+    text: "Oh no, that sounds tough. Want to talk? ❤️",
     fromMe: true,
     timestamp: new Date("2024-01-01T10:07:00Z"),
   },
@@ -214,7 +214,7 @@ describe("Prompt Builder", () => {
   it("should build signal-enhanced prompt", () => {
     const prompt = buildSignalEnhancedPrompt(
       "I had a terrible day",
-      ["That sounds tough babe", "Want to talk?"],
+      ["That sounds tough", "Want to talk?"],
       mockSignals
     );
 
@@ -225,16 +225,16 @@ describe("Prompt Builder", () => {
   });
 
   it("should build basic prompt without signals", () => {
-    const prompt = buildBasicPrompt("I had a terrible day", ["That sounds tough babe"]);
+    const prompt = buildBasicPrompt("I had a terrible day", ["That sounds tough"]);
 
     expect(prompt).toContain("I had a terrible day");
-    expect(prompt).toContain("That sounds tough babe");
+    expect(prompt).toContain("That sounds tough");
   });
 });
 
 describe("Signal Enforcer", () => {
   it("should enforce emoji count", () => {
-    const draft = "Oh no, that sounds tough babe"; // 0 emojis
+    const draft = "Oh no, that sounds tough"; // 0 emojis
     const enforced = enforceSignals(draft, mockSignals);
 
     // Should have emojis added (at least 1, allowing for encoding variations)
@@ -245,14 +245,14 @@ describe("Signal Enforcer", () => {
 
   it("should add follow-up question when required", () => {
     const signalsWithQuestions = { ...mockSignals, asksFollowupQuestions: 0.8 };
-    const draft = "That sounds tough babe"; // No question
+    const draft = "That sounds tough"; // No question
 
     const enforced = enforceSignals(draft, signalsWithQuestions);
     expect(enforced).toContain("?");
   });
 
   it("should validate draft against signals", () => {
-    const goodDraft = "That sounds tough jaan! Want to talk? ❤️"; // Matches signals well
+    const goodDraft = "That sounds tough! Want to talk? ❤️"; // Matches signals well
     const result = validateDraftAgainstSignals(goodDraft, mockSignals);
 
     expect(result.issues.length).toBeLessThan(3); // Should have minimal issues
@@ -261,7 +261,7 @@ describe("Signal Enforcer", () => {
 
 describe("Quality Scorer", () => {
   it("should score draft quality", () => {
-    const draft = "That sounds tough jaan! Want to talk? ❤️";
+    const draft = "That sounds tough! Want to talk? ❤️";
     const score = scoreDraftQuality(draft, mockSignals);
 
     expect(score.overallScore).toBeGreaterThan(0);
@@ -271,7 +271,7 @@ describe("Quality Scorer", () => {
   });
 
   it("should assign higher scores to better-matching drafts", () => {
-    const goodDraft = "That sounds tough jaan! Want to talk? ❤️"; // Matches signals
+    const goodDraft = "That sounds tough! Want to talk? ❤️"; // Matches signals
     const badDraft = "I'm sorry to hear that. Would you like to discuss this matter further with me at your earliest convenience?"; // Too formal, too long
 
     const goodScore = scoreDraftQuality(goodDraft, mockSignals);
@@ -282,7 +282,7 @@ describe("Quality Scorer", () => {
 
   it("should compare drafts and identify winner", () => {
     const basicDraft = "That's tough. How can I help?";
-    const signalDraft = "That sounds tough jaan! Want to talk? ❤️";
+    const signalDraft = "That sounds tough! Want to talk? ❤️";
 
     const comparison = compareDrafts(basicDraft, signalDraft, mockSignals);
 

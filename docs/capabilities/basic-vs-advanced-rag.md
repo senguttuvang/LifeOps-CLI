@@ -89,9 +89,9 @@ const similarMessages = await vectorStore.search(
 
 // Returns:
 // [
-//   "That sounds rough babe. Want to talk?",
-//   "Aw no! What happened?",
-//   "Sorry to hear that. I'm here ❤️"
+//   "That sounds really tough. Want to talk?",
+//   "Oh no! What happened?",
+//   "I'm here for you ❤️"
 // ]
 
 // Step 2: Build prompt with examples
@@ -99,9 +99,9 @@ const prompt = `
 Girlfriend said: "I had the worst day 😩"
 
 Here's how I usually respond to similar situations:
-- "That sounds rough babe. Want to talk?"
-- "Aw no! What happened?"
-- "Sorry to hear that. I'm here ❤️"
+- "That sounds really tough. Want to talk?"
+- "Oh no! What happened?"
+- "I'm here for you ❤️"
 
 Draft a response that matches my style.
 `;
@@ -109,25 +109,25 @@ Draft a response that matches my style.
 // Step 3: AI mimics style
 const draft = await ai.generateText(prompt);
 
-// Output: "Oh no, that sounds tough jaan! What happened? I'm here if you need to talk ❤️"
+// Output: "Oh no, that sounds tough! What happened? I'm here if you need to talk ❤️"
 ```
 
 ### What It Learns ✅
 
 1. **Vocabulary**:
-   - User says "jaan" not "honey"
-   - User says "sucks" not "unfortunate"
+   - User's preferred terms of endearment
+   - User's expressions ("sounds tough" vs "unfortunate")
    - User ends with ❤️ not 😘
 
 2. **Message Structure**:
    - Short messages (not paragraphs)
    - Usually 1-2 sentences
-   - Casual tone
+   - Casual, warm tone
 
 3. **Response Patterns**:
    - Acknowledges emotion ("that sounds tough")
    - Asks what happened
-   - Offers support ("I'm here")
+   - Offers support ("I'm here for you")
 
 ### What It Misses ❌
 
@@ -185,7 +185,7 @@ My communication style:
 - Message length: ~45 characters
 - Greeting: "hey jaan" or "hey love"
 - Common phrases: "that sounds tough", "want to talk about it"
-- Tone: Casual, supportive, asks questions
+- Tone: Warm, supportive, asks questions
 
 Past examples:
 ${similarMessages.join('\n')}
@@ -336,9 +336,9 @@ Draft a response that:
 
 const draft = await ai.generateText(prompt);
 
-// Output: "That sounds really tough babe. How'd the presentation go?
+// Output: "That sounds really tough jaan. How'd the presentation go?
 // Want me to bring your favorite Thai food home so you don't have to
-// cook? We can debrief or just chill - whatever you need ❤️"
+// cook? We can debrief or just relax - whatever you need ❤️"
 ```
 
 ### What It Adds ✅
@@ -388,11 +388,11 @@ I can do to help? I hope things get better soon."
 
 ### Basic RAG (60-70% personalized)
 ```
-"Oh no, that sounds tough jaan! What happened at work? I'm here if you need
+"Oh no, that sounds tough! What happened at work? I'm here if you need
 to talk ❤️"
 
-✅ Matches vocabulary ("sucks", "jaan")
-✅ Casual tone
+✅ Matches vocabulary and warm tone
+✅ Casual, caring tone
 ✅ Ends with ❤️
 ❌ Doesn't reference presentation
 ❌ Generic support ("I'm here")
@@ -411,9 +411,9 @@ to talk ❤️"
 
 ### RAG + Profiles (95%+ personalized)
 ```
-"That sounds really tough babe. How'd the presentation go? Want me
+"That sounds really tough jaan. How'd the presentation go? Want me
 to bring your favorite Thai food home so you don't have to cook? We
-can debrief or just chill - whatever you need ❤️"
+can debrief or just relax - whatever you need ❤️"
 
 ✅ References presentation (context awareness)
 ✅ Offers specific action (Thai food - user's love language)
@@ -513,7 +513,7 @@ const draft = await ai.generateText(prompt);
 User experience:
 Girlfriend: "I had the worst day"
 [30 seconds]
-Self-DM: "Oh no, that sounds tough jaan! What happened? I'm here ❤️"
+Self-DM: "Oh no, that sounds tough! What happened? I'm here ❤️"
 
 User: ✅ "Good enough, I'll use this"
 ```
@@ -544,8 +544,8 @@ User: ✅ "This feels like me"
 User experience:
 Girlfriend: "I had the worst day"
 [30 seconds]
-Self-DM: "That sounds tough babe. How'd the presentation go? Want me
-to bring Thai food home? We can debrief or just chill ❤️"
+Self-DM: "That sounds tough jaan. How'd the presentation go? Want me
+to bring Thai food home? We can debrief or just relax ❤️"
 (Context-aware, references shared history, matches values)
 
 User: ✅ "How did it know about the presentation?!"
