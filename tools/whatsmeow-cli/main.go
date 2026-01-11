@@ -64,6 +64,25 @@ type SyncResult struct {
 	Error             string          `json:"error,omitempty"`
 }
 
+// HistoryCache stores the initial history sync data locally
+// This decouples auth from data retrieval - history is captured once and persisted
+type HistoryCache struct {
+	CapturedAt    int64                       `json:"capturedAt"`
+	MessageCount  int                         `json:"messageCount"`
+	ContactCount  int                         `json:"contactCount"`
+	Contacts      map[string]*CachedContact   `json:"contacts"`
+}
+
+// CachedContact stores messages for a single contact/chat
+type CachedContact struct {
+	JID       string          `json:"jid"`
+	PushName  string          `json:"pushName"`
+	IsGroup   bool            `json:"isGroup"`
+	Messages  []OutputMessage `json:"messages"`
+}
+
+const historyCacheFile = "history-cache.json"
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -76,13 +95,15 @@ func main() {
 
 	switch command {
 	case "version":
-		fmt.Println("whatsmeow-cli version 1.1.0")
+		fmt.Println("whatsmeow-cli version 1.2.0")
 	case "auth":
 		authenticate(config)
 	case "sync":
 		syncMessages(config)
 	case "dump":
 		dumpMessages(config)
+	case "cache":
+		manageCacheCommand(config)
 	case "chats":
 		listChats(config)
 	case "health":
@@ -102,9 +123,10 @@ func printUsage() {
 	fmt.Println("Usage: whatsmeow-cli <command> [options]")
 	fmt.Println()
 	fmt.Println("Commands:")
-	fmt.Println("  auth               Authenticate with WhatsApp (QR code)")
+	fmt.Println("  auth               Authenticate and capture initial history")
 	fmt.Println("  sync               Sync messages from last N days (JSON to stdout)")
-	fmt.Println("  dump               Dump all messages to file (for full sync)")
+	fmt.Println("  dump               Dump messages to file (from cache or WhatsApp)")
+	fmt.Println("  cache              Manage history cache (status, clear, refresh)")
 	fmt.Println("  chats              List all chats")
 	fmt.Println("  health             Check connection health")
 	fmt.Println("  send               Send a message to a chat")
@@ -119,6 +141,11 @@ func printUsage() {
 	fmt.Println("  --timeout N        Timeout in seconds (default: 30)")
 	fmt.Println("  --to JID           Recipient JID for send command")
 	fmt.Println("  --message TEXT     Message text for send command")
+	fmt.Println()
+	fmt.Println("Cache subcommands:")
+	fmt.Println("  cache status       Show cache status")
+	fmt.Println("  cache clear        Clear the history cache")
+	fmt.Println("  cache refresh      Re-fetch history from WhatsApp")
 }
 
 func parseConfig() Config {
@@ -242,6 +269,19 @@ func authenticate(config Config) {
 		// Verify registration succeeded
 		if client.Store.ID != nil {
 			fmt.Println("Authentication successful! Device registered.")
+
+			// Capture initial history sync - this is the ONE time we get the full history
+			fmt.Println("\n📥 Capturing initial history (this happens only once)...")
+			fmt.Fprintf(os.Stderr, "Waiting %d seconds for history sync...\n", config.Timeout)
+
+			cache := captureHistorySync(client, config)
+
+			// Save to cache
+			if err := saveHistoryCache(config.SessionDir, cache); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to save history cache: %v\n", err)
+			} else {
+				fmt.Printf("✅ Cached %d messages from %d contacts\n", cache.MessageCount, cache.ContactCount)
+			}
 		} else {
 			fmt.Fprintf(os.Stderr, "Warning: Device registration may not have completed.\n")
 		}
@@ -432,124 +472,100 @@ type DumpCommandResult struct {
 }
 
 // dumpMessages dumps all messages to a file for full sync
+// It first checks for cached history; if available, uses that instead of waiting for WhatsApp
 func dumpMessages(config Config) {
-	client, _, err := getClient(config.SessionDir)
+	// First, try to use cached history
+	cache, err := loadHistoryCache(config.SessionDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create client: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(os.Stderr, "Warning: Error loading cache: %v\n", err)
 	}
 
-	if client.Store.ID == nil {
-		fmt.Fprintf(os.Stderr, "Not authenticated. Run 'auth' command first.\n")
-		os.Exit(1)
-	}
+	var contacts []DumpContact
+	var totalMessages int
 
-	err = client.Connect()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to connect: %v\n", err)
-		os.Exit(1)
-	}
-	defer client.Disconnect()
+	if cache != nil && cache.MessageCount > 0 {
+		// Use cached history - no need to connect to WhatsApp!
+		fmt.Fprintf(os.Stderr, "📦 Using cached history (%d messages from %d contacts)\n",
+			cache.MessageCount, cache.ContactCount)
 
-	// Wait for connection
-	time.Sleep(2 * time.Second)
+		// Apply day filter to cached data
+		endTime := time.Now()
+		startTime := endTime.AddDate(0, 0, -config.Days)
 
-	// Calculate time range
-	endTime := time.Now()
-	startTime := endTime.AddDate(0, 0, -config.Days)
-	fmt.Fprintf(os.Stderr, "Dumping messages from %s to %s (%d days)...\n",
-		startTime.Format("2006-01-02"),
-		endTime.Format("2006-01-02"),
-		config.Days)
-
-	// Collect messages grouped by chat
-	messagesByChat := make(map[string][]*OutputMessage)
-	chatNames := make(map[string]string)
-	chatIsGroup := make(map[string]bool)
-	done := make(chan bool)
-
-	client.AddEventHandler(func(evt interface{}) {
-		switch v := evt.(type) {
-		case *events.Message:
-			// Time filter
-			if v.Info.Timestamp.Before(startTime) || v.Info.Timestamp.After(endTime) {
-				return
-			}
-
-			msg := convertMessage(v)
-			if msg != nil {
-				messagesByChat[msg.ChatID] = append(messagesByChat[msg.ChatID], msg)
-			}
-		case *events.HistorySync:
-			// Process history sync
-			conversations := v.Data.GetConversations()
-			fmt.Fprintf(os.Stderr, "📥 History sync: %d conversations\n", len(conversations))
-
-			for _, conv := range conversations {
-				chatJID := conv.GetID()
-				chatNames[chatJID] = conv.GetDisplayName()
-				// Check if group (groups have @g.us suffix)
-				chatIsGroup[chatJID] = len(chatJID) > 0 && (chatJID[len(chatJID)-4:] == "g.us" ||
-					(len(chatJID) > 12 && chatJID[len(chatJID)-12:] == "@g.us"))
-
-				for _, histMsg := range conv.GetMessages() {
-					webMsg := histMsg.GetMessage()
-					if webMsg == nil || webMsg.GetMessage() == nil {
-						continue
-					}
-
-					msgTimestamp := time.Unix(int64(webMsg.GetMessageTimestamp()), 0)
-					if msgTimestamp.Before(startTime) || msgTimestamp.After(endTime) {
-						continue
-					}
-
-					msg := convertHistorySyncMessage(webMsg, chatJID)
-					if msg != nil {
-						messagesByChat[chatJID] = append(messagesByChat[chatJID], msg)
-					}
+		for _, cachedContact := range cache.Contacts {
+			var filteredMsgs []OutputMessage
+			for _, msg := range cachedContact.Messages {
+				msgTime := time.Unix(msg.Timestamp, 0)
+				if !msgTime.Before(startTime) && !msgTime.After(endTime) {
+					filteredMsgs = append(filteredMsgs, msg)
 				}
 			}
-		}
-	})
 
-	// Wait for history sync
-	fmt.Fprintf(os.Stderr, "Waiting for history sync (%d seconds)...\n", config.Timeout)
-	go func() {
-		time.Sleep(time.Duration(config.Timeout) * time.Second)
-		done <- true
-	}()
-	<-done
-
-	// Build dump result
-	var contacts []DumpContact
-	totalMessages := 0
-
-	for chatJID, msgs := range messagesByChat {
-		if len(msgs) == 0 {
-			continue
+			if len(filteredMsgs) > 0 {
+				contacts = append(contacts, DumpContact{
+					JID:          cachedContact.JID,
+					PushName:     cachedContact.PushName,
+					IsGroup:      cachedContact.IsGroup,
+					MessageCount: len(filteredMsgs),
+					Messages:     filteredMsgs,
+				})
+				totalMessages += len(filteredMsgs)
+			}
 		}
 
-		pushName := chatNames[chatJID]
-		if pushName == "" {
-			pushName = chatJID
+		fmt.Fprintf(os.Stderr, "📅 Filtered to %d days: %d messages from %d contacts\n",
+			config.Days, totalMessages, len(contacts))
+	} else {
+		// No cache - need to connect and wait for history (fallback)
+		fmt.Fprintf(os.Stderr, "⚠️  No cache found. Connecting to WhatsApp...\n")
+		fmt.Fprintf(os.Stderr, "   (Run 'auth' after fresh login to capture history automatically)\n")
+
+		client, _, err := getClient(config.SessionDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to create client: %v\n", err)
+			os.Exit(1)
 		}
 
-		contact := DumpContact{
-			JID:          chatJID,
-			PushName:     pushName,
-			IsGroup:      chatIsGroup[chatJID],
-			MessageCount: len(msgs),
-			Messages:     make([]OutputMessage, 0, len(msgs)),
+		if client.Store.ID == nil {
+			fmt.Fprintf(os.Stderr, "Not authenticated. Run 'auth' command first.\n")
+			os.Exit(1)
 		}
 
-		for _, msg := range msgs {
-			contact.Messages = append(contact.Messages, *msg)
-			totalMessages++
+		err = client.Connect()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to connect: %v\n", err)
+			os.Exit(1)
+		}
+		defer client.Disconnect()
+
+		time.Sleep(2 * time.Second)
+
+		// Use the capture function to get history
+		newCache := captureHistorySync(client, config)
+
+		// Save to cache for future use
+		if newCache.MessageCount > 0 {
+			if err := saveHistoryCache(config.SessionDir, newCache); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: Failed to save cache: %v\n", err)
+			}
 		}
 
-		contacts = append(contacts, contact)
+		// Convert cache to dump contacts
+		for _, cachedContact := range newCache.Contacts {
+			if len(cachedContact.Messages) > 0 {
+				contacts = append(contacts, DumpContact{
+					JID:          cachedContact.JID,
+					PushName:     cachedContact.PushName,
+					IsGroup:      cachedContact.IsGroup,
+					MessageCount: len(cachedContact.Messages),
+					Messages:     cachedContact.Messages,
+				})
+				totalMessages += len(cachedContact.Messages)
+			}
+		}
 	}
 
+	// Build dump result
 	dump := DumpResult{
 		Contacts:      contacts,
 		TotalMessages: totalMessages,
@@ -898,4 +914,247 @@ func monitorMessages(config Config) {
 
 	// Otherwise, run forever until interrupted
 	select {}
+}
+
+// ============================================================================
+// HISTORY CACHE MANAGEMENT
+// ============================================================================
+
+// getCachePath returns the full path to the history cache file
+func getCachePath(sessionDir string) string {
+	return sessionDir + "/" + historyCacheFile
+}
+
+// loadHistoryCache loads the history cache from disk
+func loadHistoryCache(sessionDir string) (*HistoryCache, error) {
+	cachePath := getCachePath(sessionDir)
+	data, err := os.ReadFile(cachePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // Cache doesn't exist yet
+		}
+		return nil, err
+	}
+
+	var cache HistoryCache
+	if err := json.Unmarshal(data, &cache); err != nil {
+		return nil, err
+	}
+
+	return &cache, nil
+}
+
+// saveHistoryCache saves the history cache to disk
+func saveHistoryCache(sessionDir string, cache *HistoryCache) error {
+	cachePath := getCachePath(sessionDir)
+	data, err := json.MarshalIndent(cache, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(cachePath, data, 0644)
+}
+
+// clearHistoryCache removes the history cache file
+func clearHistoryCache(sessionDir string) error {
+	cachePath := getCachePath(sessionDir)
+	err := os.Remove(cachePath)
+	if os.IsNotExist(err) {
+		return nil // Already cleared
+	}
+	return err
+}
+
+// captureHistorySync captures history sync data into a cache
+func captureHistorySync(client *whatsmeow.Client, config Config) *HistoryCache {
+	cache := &HistoryCache{
+		CapturedAt: time.Now().Unix(),
+		Contacts:   make(map[string]*CachedContact),
+	}
+
+	// Calculate time range (all history by default)
+	endTime := time.Now()
+	startTime := endTime.AddDate(0, 0, -config.Days)
+
+	done := make(chan bool)
+	historyReceived := false
+
+	client.AddEventHandler(func(evt interface{}) {
+		switch v := evt.(type) {
+		case *events.HistorySync:
+			historyReceived = true
+			conversations := v.Data.GetConversations()
+			fmt.Fprintf(os.Stderr, "📥 Caching history: %d conversations\n", len(conversations))
+
+			for _, conv := range conversations {
+				chatJID := conv.GetID()
+
+				// Get or create contact entry
+				contact, exists := cache.Contacts[chatJID]
+				if !exists {
+					contact = &CachedContact{
+						JID:      chatJID,
+						PushName: conv.GetDisplayName(),
+						IsGroup:  len(chatJID) > 5 && chatJID[len(chatJID)-5:] == "@g.us",
+						Messages: make([]OutputMessage, 0),
+					}
+					cache.Contacts[chatJID] = contact
+				}
+
+				// Process messages
+				for _, histMsg := range conv.GetMessages() {
+					webMsg := histMsg.GetMessage()
+					if webMsg == nil || webMsg.GetMessage() == nil {
+						continue
+					}
+
+					msgTimestamp := time.Unix(int64(webMsg.GetMessageTimestamp()), 0)
+					if msgTimestamp.Before(startTime) || msgTimestamp.After(endTime) {
+						continue
+					}
+
+					msg := convertHistorySyncMessage(webMsg, chatJID)
+					if msg != nil {
+						contact.Messages = append(contact.Messages, *msg)
+						cache.MessageCount++
+					}
+				}
+			}
+		}
+	})
+
+	// Wait for history sync
+	fmt.Fprintf(os.Stderr, "Waiting for history sync (%d seconds)...\n", config.Timeout)
+	go func() {
+		time.Sleep(time.Duration(config.Timeout) * time.Second)
+		done <- true
+	}()
+	<-done
+
+	// Calculate contact count (contacts with messages)
+	for _, contact := range cache.Contacts {
+		if len(contact.Messages) > 0 {
+			cache.ContactCount++
+		}
+	}
+
+	if !historyReceived {
+		fmt.Fprintf(os.Stderr, "⚠️  No history sync received. This may be a re-connection (history already delivered).\n")
+	}
+
+	return cache
+}
+
+// manageCacheCommand handles the cache subcommands
+func manageCacheCommand(config Config) {
+	// Parse subcommand
+	subcommand := "status" // default
+	for i := 2; i < len(os.Args); i++ {
+		arg := os.Args[i]
+		if arg == "status" || arg == "clear" || arg == "refresh" {
+			subcommand = arg
+			break
+		}
+	}
+
+	switch subcommand {
+	case "status":
+		cacheStatus(config)
+	case "clear":
+		cacheClear(config)
+	case "refresh":
+		cacheRefresh(config)
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown cache subcommand: %s\n", subcommand)
+		fmt.Fprintf(os.Stderr, "Use: cache status, cache clear, or cache refresh\n")
+		os.Exit(1)
+	}
+}
+
+func cacheStatus(config Config) {
+	cache, err := loadHistoryCache(config.SessionDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading cache: %v\n", err)
+		os.Exit(1)
+	}
+
+	if cache == nil {
+		result := map[string]interface{}{
+			"exists":       false,
+			"messageCount": 0,
+			"contactCount": 0,
+		}
+		jsonData, _ := json.Marshal(result)
+		fmt.Println(string(jsonData))
+		fmt.Fprintf(os.Stderr, "No history cache found. Run 'auth' or 'cache refresh' to capture history.\n")
+		return
+	}
+
+	result := map[string]interface{}{
+		"exists":       true,
+		"capturedAt":   cache.CapturedAt,
+		"messageCount": cache.MessageCount,
+		"contactCount": cache.ContactCount,
+		"ageSeconds":   time.Now().Unix() - cache.CapturedAt,
+	}
+	jsonData, _ := json.Marshal(result)
+	fmt.Println(string(jsonData))
+
+	capturedTime := time.Unix(cache.CapturedAt, 0)
+	fmt.Fprintf(os.Stderr, "Cache: %d messages, %d contacts (captured %s)\n",
+		cache.MessageCount, cache.ContactCount, capturedTime.Format("2006-01-02 15:04:05"))
+}
+
+func cacheClear(config Config) {
+	err := clearHistoryCache(config.SessionDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error clearing cache: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(`{"success":true,"action":"cleared"}`)
+	fmt.Fprintf(os.Stderr, "History cache cleared.\n")
+}
+
+func cacheRefresh(config Config) {
+	client, _, err := getClient(config.SessionDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create client: %v\n", err)
+		os.Exit(1)
+	}
+
+	if client.Store.ID == nil {
+		fmt.Fprintf(os.Stderr, "Not authenticated. Run 'auth' command first.\n")
+		os.Exit(1)
+	}
+
+	err = client.Connect()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to connect: %v\n", err)
+		os.Exit(1)
+	}
+	defer client.Disconnect()
+
+	// Wait for connection
+	time.Sleep(2 * time.Second)
+
+	fmt.Fprintf(os.Stderr, "Refreshing history cache (capturing %d days)...\n", config.Days)
+
+	cache := captureHistorySync(client, config)
+
+	// Save cache
+	err = saveHistoryCache(config.SessionDir, cache)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving cache: %v\n", err)
+		os.Exit(1)
+	}
+
+	result := map[string]interface{}{
+		"success":      true,
+		"action":       "refreshed",
+		"messageCount": cache.MessageCount,
+		"contactCount": cache.ContactCount,
+	}
+	jsonData, _ := json.Marshal(result)
+	fmt.Println(string(jsonData))
+
+	fmt.Fprintf(os.Stderr, "Cache refreshed: %d messages, %d contacts\n", cache.MessageCount, cache.ContactCount)
 }
