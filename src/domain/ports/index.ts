@@ -14,7 +14,16 @@
 export { type WhatsAppAdapter, WhatsAppAdapterTag } from "../../infrastructure/adapters/whatsapp/whatsapp.adapter";
 // Database port - domain services use this for persistence
 export { DatabaseService } from "../../infrastructure/db/client";
-
+// Sync state repository - for watermark-based incremental sync
+export {
+  type SyncMetadata,
+  type SyncStateRecord,
+  type SyncStateRepository,
+  SyncStateRepositoryLive,
+  SyncStateRepositoryTag,
+  type SyncStats,
+  type SyncWatermark,
+} from "../../infrastructure/db/sync-state.repository";
 // AI service port - domain services use this for LLM operations
 export { type AIMessage, type AIProvider, type AIService, AIServiceTag } from "../../infrastructure/llm/ai.service";
 // Vector store port - domain services use this for RAG operations

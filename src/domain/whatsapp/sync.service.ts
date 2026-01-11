@@ -16,10 +16,9 @@ import {
   conversations,
   messages,
   parties,
-  syncState,
 } from "../../infrastructure/db/schema/index";
 // Import from domain ports (not directly from infrastructure)
-import { DatabaseService, WhatsAppAdapterTag, WhatsAppServiceTag } from "../ports";
+import { DatabaseService, SyncStateRepositoryTag, WhatsAppAdapterTag, WhatsAppServiceTag } from "../ports";
 
 /**
  * Sync statistics returned after sync operation
@@ -78,6 +77,7 @@ export const SyncServiceLive = Layer.effect(
     const db = yield* DatabaseService;
     const whatsapp = yield* WhatsAppServiceTag;
     const adapter = yield* WhatsAppAdapterTag;
+    const syncStateRepo = yield* SyncStateRepositoryTag;
 
     /**
      * Shared persistence logic - stores domain entities in database
@@ -310,30 +310,12 @@ export const SyncServiceLive = Layer.effect(
           });
         }
 
-        // Update sync state
+        // Update sync state via repository
         const syncedAt = new Date();
-        yield* Effect.tryPromise({
-          try: async () => {
-            await db
-              .insert(syncState)
-              .values({
-                id: "whatsapp",
-                channelId: "whatsapp",
-                lastSyncAt: syncedAt,
-                lastSyncStatus: "success",
-                cursor: null,
-                errorMessage: null,
-              })
-              .onConflictDoUpdate({
-                target: syncState.id,
-                set: {
-                  lastSyncAt: syncedAt,
-                  lastSyncStatus: "success",
-                  errorMessage: null,
-                },
-              });
-          },
-          catch: (e) => new Error(`Failed to update sync state: ${e}`),
+        yield* syncStateRepo.recordSuccess("whatsapp", {
+          syncedCount: messagesAdded + callsAdded,
+          totalCount: messagesAdded + callsAdded,
+          syncedAt,
         });
 
         return { partiesAdded, conversationsAdded, participantsAdded, messagesAdded, callsAdded, syncedAt };
@@ -374,20 +356,15 @@ export const SyncServiceLive = Layer.effect(
       });
 
     const getSyncState = () =>
-      Effect.tryPromise({
-        try: async () => {
-          const result = await db.select().from(syncState).where(eq(syncState.id, "whatsapp"));
-
-          if (result.length === 0) {
-            return null;
-          }
-
-          return {
-            lastSyncAt: result[0]?.lastSyncAt || null,
-            cursor: result[0]?.cursor || null,
-          };
-        },
-        catch: (e) => new Error(`Failed to get sync state: ${e}`),
+      Effect.gen(function* () {
+        const state = yield* syncStateRepo.getState("whatsapp");
+        if (!state) {
+          return null;
+        }
+        return {
+          lastSyncAt: state.lastSyncAt,
+          cursor: state.cursor,
+        };
       });
 
     return {

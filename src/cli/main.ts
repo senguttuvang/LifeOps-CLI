@@ -23,9 +23,12 @@ import { SyncServiceLive } from "../domain/whatsapp/sync.service";
 import { WhatsAppAdapterLive } from "../infrastructure/adapters/whatsapp/whatsapp.adapter";
 import { AndroidImportServiceLive } from "../infrastructure/android/android-import.service";
 import { DatabaseLive } from "../infrastructure/db/client";
+import { SyncStateRepositoryLive } from "../infrastructure/db/sync-state.repository";
 import { AILive } from "../infrastructure/llm/ai.service";
 import { VectorStoreLive } from "../infrastructure/rag/vector.store";
 import { WhatsAppServiceLive } from "../infrastructure/whatsapp/whatsapp.client";
+// Commands
+import { contactsCommand } from "./commands/contacts.command";
 // Domain layers
 // Infrastructure layers
 import { decodeCommand } from "./commands/decode.command.js";
@@ -40,8 +43,6 @@ import { importAndroidCommand } from "./commands/import-android.command";
 import { relationshipCommand } from "./commands/relationship.command";
 import { rememberCommand } from "./commands/remember.command.js";
 import { setupCommand } from "./commands/setup.command";
-// Commands
-import { contactsCommand } from "./commands/contacts.command";
 import { syncCommand } from "./commands/sync.command";
 
 /**
@@ -50,8 +51,12 @@ import { syncCommand } from "./commands/sync.command";
  * Layer composition follows the hexagonal architecture:
  * Infrastructure (DB, WhatsApp, AI) → Domain (Sync, Analysis, Signals)
  */
+// SyncStateRepositoryLive depends on DatabaseLive, so we provide it
+const SyncStateRepoWithDeps = SyncStateRepositoryLive.pipe(Layer.provide(DatabaseLive));
+
 const InfrastructureLive = Layer.mergeAll(
   DatabaseLive,
+  SyncStateRepoWithDeps,
   WhatsAppServiceLive,
   WhatsAppAdapterLive,
   AndroidImportServiceLive,

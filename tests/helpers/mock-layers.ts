@@ -393,3 +393,198 @@ export const createInfrastructureTestLayer = (
     createWhatsAppAdapterLayer(),
   );
 };
+
+// =============================================================================
+// SYNC STATE REPOSITORY
+// =============================================================================
+
+/**
+ * SyncMetadata - matches src/infrastructure/db/sync-state.repository.ts
+ */
+export interface SyncMetadata {
+  readonly highestMessageTimestamp?: number;
+  readonly lastEventId?: string;
+  readonly syncMode?: "full" | "incremental" | "realtime";
+  readonly deviceId?: string;
+  readonly sessionStart?: number;
+  readonly gaps?: Array<{
+    from: number;
+    to: number;
+    reason: string;
+  }>;
+}
+
+/**
+ * SyncWatermark - matches src/infrastructure/db/sync-state.repository.ts
+ */
+export interface SyncWatermark {
+  readonly lastSyncAt: Date;
+  readonly cursor: string | null;
+  readonly metadata: SyncMetadata | null;
+}
+
+/**
+ * SyncStateRecord - matches src/infrastructure/db/sync-state.repository.ts
+ */
+export interface SyncStateRecord {
+  readonly id: string;
+  readonly channelId: string;
+  readonly cursor: string | null;
+  readonly lastSyncAt: Date | null;
+  readonly lastSyncStatus: "success" | "partial" | "failed" | null;
+  readonly errorMessage: string | null;
+  readonly syncedCount: number;
+  readonly totalCount: number;
+  readonly metadata: SyncMetadata | null;
+}
+
+/**
+ * SyncStateRepository interface - matches src/infrastructure/db/sync-state.repository.ts
+ */
+export interface SyncStateRepository {
+  readonly getState: (channelId: string) => Effect.Effect<SyncStateRecord | null, Error>;
+  readonly getWatermark: (channelId: string) => Effect.Effect<SyncWatermark | null, Error>;
+  readonly recordSuccess: (channelId: string, stats: { syncedCount: number; totalCount?: number; syncedAt: Date }) => Effect.Effect<void, Error>;
+  readonly recordFailure: (channelId: string, error: string) => Effect.Effect<void, Error>;
+  readonly updateMetadata: (channelId: string, metadata: Partial<SyncMetadata>) => Effect.Effect<void, Error>;
+  readonly updateCursor: (channelId: string, cursor: string) => Effect.Effect<void, Error>;
+}
+
+/**
+ * SyncStateRepositoryTag - must match the tag string in source
+ */
+export class SyncStateRepositoryTag extends Context.Tag("SyncStateRepository")<
+  SyncStateRepositoryTag,
+  SyncStateRepository
+>() {}
+
+export interface MockSyncStateRepositoryOptions {
+  state?: SyncStateRecord | null;
+  watermark?: SyncWatermark | null;
+  shouldFail?: boolean;
+  failureMessage?: string;
+}
+
+/**
+ * Create a mock SyncStateRepository layer for testing
+ */
+export const createMockSyncStateRepositoryLayer = (
+  options: MockSyncStateRepositoryOptions = {},
+): Layer.Layer<SyncStateRepositoryTag> => {
+  // In-memory state for mock
+  let currentState: SyncStateRecord | null = options.state ?? null;
+
+  const mockService: SyncStateRepository = {
+    getState: (channelId) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Get state failed"));
+      }
+      if (currentState?.channelId === channelId) {
+        return Effect.succeed(currentState);
+      }
+      return Effect.succeed(null);
+    },
+
+    getWatermark: (channelId) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Get watermark failed"));
+      }
+      if (options.watermark) {
+        return Effect.succeed(options.watermark);
+      }
+      if (currentState?.channelId === channelId && currentState.lastSyncAt) {
+        return Effect.succeed({
+          lastSyncAt: currentState.lastSyncAt,
+          cursor: currentState.cursor,
+          metadata: currentState.metadata,
+        });
+      }
+      return Effect.succeed(null);
+    },
+
+    recordSuccess: (channelId, stats) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Record success failed"));
+      }
+      currentState = {
+        id: channelId,
+        channelId,
+        cursor: currentState?.cursor ?? null,
+        lastSyncAt: stats.syncedAt,
+        lastSyncStatus: "success",
+        errorMessage: null,
+        syncedCount: stats.syncedCount,
+        totalCount: stats.totalCount ?? 0,
+        metadata: currentState?.metadata ?? null,
+      };
+      return Effect.succeed(undefined);
+    },
+
+    recordFailure: (channelId, error) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Record failure failed"));
+      }
+      currentState = {
+        id: channelId,
+        channelId,
+        cursor: currentState?.cursor ?? null,
+        lastSyncAt: currentState?.lastSyncAt ?? null,
+        lastSyncStatus: "failed",
+        errorMessage: error,
+        syncedCount: currentState?.syncedCount ?? 0,
+        totalCount: currentState?.totalCount ?? 0,
+        metadata: currentState?.metadata ?? null,
+      };
+      return Effect.succeed(undefined);
+    },
+
+    updateMetadata: (channelId, metadata) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Update metadata failed"));
+      }
+      if (currentState?.channelId === channelId) {
+        currentState = {
+          ...currentState,
+          metadata: { ...(currentState.metadata ?? {}), ...metadata },
+        };
+      } else {
+        currentState = {
+          id: channelId,
+          channelId,
+          cursor: null,
+          lastSyncAt: null,
+          lastSyncStatus: null,
+          errorMessage: null,
+          syncedCount: 0,
+          totalCount: 0,
+          metadata: metadata as SyncMetadata,
+        };
+      }
+      return Effect.succeed(undefined);
+    },
+
+    updateCursor: (channelId, cursor) => {
+      if (options.shouldFail) {
+        return Effect.fail(new Error(options.failureMessage || "Update cursor failed"));
+      }
+      if (currentState?.channelId === channelId) {
+        currentState = { ...currentState, cursor };
+      } else {
+        currentState = {
+          id: channelId,
+          channelId,
+          cursor,
+          lastSyncAt: null,
+          lastSyncStatus: null,
+          errorMessage: null,
+          syncedCount: 0,
+          totalCount: 0,
+          metadata: null,
+        };
+      }
+      return Effect.succeed(undefined);
+    },
+  };
+
+  return Layer.succeed(SyncStateRepositoryTag, mockService);
+};

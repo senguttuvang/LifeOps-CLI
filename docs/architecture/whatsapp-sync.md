@@ -841,6 +841,56 @@ The schema supports multiple sync patterns:
 }
 ```
 
+### SyncStateRepository Abstraction
+
+To properly support watermark-based sync, we introduce a `SyncStateRepository` that encapsulates all sync state operations. This follows the Repository pattern from DDD.
+
+**Interface** (`src/domain/ports/sync-state.repository.ts`):
+
+```typescript
+interface SyncStateRepository {
+  // Get current sync state for a channel
+  getState(channelId: string): Effect<SyncState | null, Error>;
+
+  // Update sync state after successful sync
+  recordSuccess(channelId: string, stats: SyncStats): Effect<void, Error>;
+
+  // Update sync state after failed sync
+  recordFailure(channelId: string, error: string): Effect<void, Error>;
+
+  // Get watermark for incremental sync
+  getWatermark(channelId: string): Effect<{ lastSyncAt: Date; cursor: string | null } | null, Error>;
+
+  // Update metadata (for enhanced tracking)
+  updateMetadata(channelId: string, metadata: SyncMetadata): Effect<void, Error>;
+}
+```
+
+**Benefits**:
+1. **Single Responsibility**: Sync state logic isolated from SyncService
+2. **Testability**: Easy to mock for unit tests
+3. **Extensibility**: Can add caching, metrics, or different storage backends
+4. **Consistency**: All sync state mutations go through one place
+
+**Usage Pattern**:
+```typescript
+// In SyncService
+const syncMessages = (options: SyncOptions) =>
+  Effect.gen(function* () {
+    const watermark = yield* syncStateRepo.getWatermark("whatsapp");
+
+    // Use watermark for incremental sync
+    const whatsappData = yield* whatsapp.syncMessages({
+      since: watermark?.lastSyncAt,
+      ...options,
+    });
+
+    // ... persist data ...
+
+    yield* syncStateRepo.recordSuccess("whatsapp", stats);
+  });
+```
+
 ---
 
 ## Gap Analysis & Future Improvements
