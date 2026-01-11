@@ -12,11 +12,7 @@ import { join } from "node:path";
 
 import { Context, Effect, Layer } from "effect";
 
-import type {
-  ContactSummary,
-  RawContact,
-  RawDump,
-} from "./types";
+import type { ContactSummary, RawContact, RawDump } from "./types";
 import { SYNC_PATHS } from "./types";
 
 // =============================================================================
@@ -37,37 +33,25 @@ export interface ContactDiscoveryService {
   /**
    * Get contact summaries from the dump (sorted by message count)
    */
-  readonly getContactSummaries: (
-    dump: RawDump
-  ) => Effect.Effect<ContactSummary[]>;
+  readonly getContactSummaries: (dump: RawDump) => Effect.Effect<ContactSummary[]>;
 
   /**
    * Filter contacts by search term (fuzzy match on name or phone)
    */
-  readonly filterContacts: (
-    summaries: ContactSummary[],
-    searchTerm: string
-  ) => Effect.Effect<ContactSummary[]>;
+  readonly filterContacts: (summaries: ContactSummary[], searchTerm: string) => Effect.Effect<ContactSummary[]>;
 
   /**
    * Get contact by index (1-based, for user selection)
    */
-  readonly getContactByIndex: (
-    summaries: ContactSummary[],
-    index: number
-  ) => Effect.Effect<ContactSummary | undefined>;
+  readonly getContactByIndex: (summaries: ContactSummary[], index: number) => Effect.Effect<ContactSummary | undefined>;
 
   /**
    * Parse selection string (e.g., "1,2,5" or "1-5" or "all")
    */
-  readonly parseSelection: (
-    input: string,
-    summaries: ContactSummary[]
-  ) => Effect.Effect<string[], Error>;
+  readonly parseSelection: (input: string, summaries: ContactSummary[]) => Effect.Effect<string[], Error>;
 }
 
-export const ContactDiscoveryService =
-  Context.GenericTag<ContactDiscoveryService>("ContactDiscoveryService");
+export const ContactDiscoveryService = Context.GenericTag<ContactDiscoveryService>("ContactDiscoveryService");
 
 // =============================================================================
 // IMPLEMENTATION
@@ -97,14 +81,9 @@ const extractPhoneNumber = (jid: string): string | undefined => {
 /**
  * Convert RawContact to ContactSummary
  */
-const toContactSummary = (
-  contact: RawContact,
-  index: number
-): ContactSummary => {
+const toContactSummary = (contact: RawContact, index: number): ContactSummary => {
   // Sort messages by timestamp descending to get most recent
-  const sortedMessages = [...contact.messages].sort(
-    (a, b) => b.timestamp - a.timestamp
-  );
+  const sortedMessages = [...contact.messages].sort((a, b) => b.timestamp - a.timestamp);
 
   const lastMessage = sortedMessages[0];
 
@@ -141,8 +120,7 @@ const fuzzyMatch = (text: string, searchTerm: string): boolean => {
  * Live implementation of ContactDiscoveryService
  */
 const make = (): ContactDiscoveryService => ({
-  hasDump: () =>
-    Effect.sync(() => existsSync(join(process.cwd(), SYNC_PATHS.dumpFile))),
+  hasDump: () => Effect.sync(() => existsSync(join(process.cwd(), SYNC_PATHS.dumpFile))),
 
   loadDump: () =>
     Effect.try({
@@ -150,26 +128,19 @@ const make = (): ContactDiscoveryService => ({
         const path = join(process.cwd(), SYNC_PATHS.dumpFile);
 
         if (!existsSync(path)) {
-          throw new Error(
-            `No dump file found at ${path}. Run 'bun run cli sync' first.`
-          );
+          throw new Error(`No dump file found at ${path}. Run 'bun run cli sync' first.`);
         }
 
         const content = readFileSync(path, "utf-8");
         return JSON.parse(content) as RawDump;
       },
-      catch: (error) =>
-        new Error(
-          `Failed to load dump: ${error instanceof Error ? error.message : String(error)}`
-        ),
+      catch: (error) => new Error(`Failed to load dump: ${error instanceof Error ? error.message : String(error)}`),
     }),
 
   getContactSummaries: (dump) =>
     Effect.sync(() => {
       // Sort by message count (most messages first)
-      const sorted = [...dump.contacts].sort(
-        (a, b) => b.messageCount - a.messageCount
-      );
+      const sorted = [...dump.contacts].sort((a, b) => b.messageCount - a.messageCount);
 
       return sorted.map(toContactSummary);
     }),
@@ -184,12 +155,11 @@ const make = (): ContactDiscoveryService => ({
         (s) =>
           fuzzyMatch(s.displayName, searchTerm) ||
           (s.phoneNumber && fuzzyMatch(s.phoneNumber, searchTerm)) ||
-          fuzzyMatch(s.jid, searchTerm)
+          fuzzyMatch(s.jid, searchTerm),
       );
     }),
 
-  getContactByIndex: (summaries, index) =>
-    Effect.sync(() => summaries.find((s) => s.index === index)),
+  getContactByIndex: (summaries, index) => Effect.sync(() => summaries.find((s) => s.index === index)),
 
   parseSelection: (input, summaries) =>
     Effect.try({
@@ -233,17 +203,12 @@ const make = (): ContactDiscoveryService => ({
         }
 
         if (selectedJids.length === 0) {
-          throw new Error(
-            `No valid contacts selected. Use numbers (1,2,3), ranges (1-5), or 'all'.`
-          );
+          throw new Error(`No valid contacts selected. Use numbers (1,2,3), ranges (1-5), or 'all'.`);
         }
 
         return selectedJids;
       },
-      catch: (error) =>
-        new Error(
-          error instanceof Error ? error.message : "Invalid selection format"
-        ),
+      catch: (error) => new Error(error instanceof Error ? error.message : "Invalid selection format"),
     }),
 });
 
@@ -251,9 +216,6 @@ const make = (): ContactDiscoveryService => ({
 // LAYER
 // =============================================================================
 
-export const ContactDiscoveryServiceLive = Layer.succeed(
-  ContactDiscoveryService,
-  make()
-);
+export const ContactDiscoveryServiceLive = Layer.succeed(ContactDiscoveryService, make());
 
 export const ContactDiscoveryServiceTag = ContactDiscoveryService;

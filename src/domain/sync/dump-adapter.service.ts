@@ -8,13 +8,12 @@
  */
 
 import { Context, Effect, Layer } from "effect";
-
-import type { RawContact, RawDump, RawMessage } from "./types";
 import type {
   WhatsAppChatData,
   WhatsAppMessageData,
   WhatsAppSyncResult,
 } from "../../infrastructure/whatsapp/whatsapp.types";
+import type { RawContact, RawDump, RawMessage } from "./types";
 
 // =============================================================================
 // SERVICE INTERFACE
@@ -24,29 +23,20 @@ export interface DumpAdapterService {
   /**
    * Convert raw dump to WhatsAppSyncResult format
    */
-  readonly convertDump: (
-    dump: RawDump,
-    selectedJids: string[]
-  ) => Effect.Effect<WhatsAppSyncResult>;
+  readonly convertDump: (dump: RawDump, selectedJids: string[]) => Effect.Effect<WhatsAppSyncResult>;
 
   /**
    * Convert a single raw message to WhatsAppMessageData
    */
-  readonly convertMessage: (
-    message: RawMessage,
-    contact: RawContact
-  ) => Effect.Effect<WhatsAppMessageData>;
+  readonly convertMessage: (message: RawMessage, contact: RawContact) => Effect.Effect<WhatsAppMessageData>;
 
   /**
    * Convert a raw contact to WhatsAppChatData
    */
-  readonly convertContact: (
-    contact: RawContact
-  ) => Effect.Effect<WhatsAppChatData>;
+  readonly convertContact: (contact: RawContact) => Effect.Effect<WhatsAppChatData>;
 }
 
-export const DumpAdapterService =
-  Context.GenericTag<DumpAdapterService>("DumpAdapterService");
+export const DumpAdapterService = Context.GenericTag<DumpAdapterService>("DumpAdapterService");
 
 // =============================================================================
 // IMPLEMENTATION
@@ -55,9 +45,7 @@ export const DumpAdapterService =
 /**
  * Map raw message type to WhatsApp message type
  */
-const mapMessageType = (
-  rawType: string
-): WhatsAppMessageData["messageType"] => {
+const mapMessageType = (rawType: string): WhatsAppMessageData["messageType"] => {
   switch (rawType) {
     case "conversation":
     case "extendedTextMessage":
@@ -120,9 +108,7 @@ const make = (): DumpAdapterService => ({
   convertContact: (contact) =>
     Effect.sync(() => {
       // Find the most recent message timestamp
-      const sortedMessages = [...contact.messages].sort(
-        (a, b) => b.timestamp - a.timestamp
-      );
+      const sortedMessages = [...contact.messages].sort((a, b) => b.timestamp - a.timestamp);
       const lastMessageTime = sortedMessages[0]?.timestamp;
 
       const whatsappChat: WhatsAppChatData = {
@@ -138,9 +124,7 @@ const make = (): DumpAdapterService => ({
   convertDump: (dump, selectedJids) =>
     Effect.gen(function* () {
       // Filter contacts to only selected JIDs
-      const selectedContacts = dump.contacts.filter((c) =>
-        selectedJids.includes(c.jid)
-      );
+      const selectedContacts = dump.contacts.filter((c) => selectedJids.includes(c.jid));
 
       // Convert all messages from selected contacts
       const allMessages: WhatsAppMessageData[] = [];
@@ -183,9 +167,7 @@ const make = (): DumpAdapterService => ({
       const chats: WhatsAppChatData[] = [];
 
       for (const contact of selectedContacts) {
-        const sortedMessages = [...contact.messages].sort(
-          (a, b) => b.timestamp - a.timestamp
-        );
+        const sortedMessages = [...contact.messages].sort((a, b) => b.timestamp - a.timestamp);
 
         chats.push({
           jid: contact.jid,
@@ -209,9 +191,6 @@ const make = (): DumpAdapterService => ({
 // LAYER
 // =============================================================================
 
-export const DumpAdapterServiceLive = Layer.succeed(
-  DumpAdapterService,
-  make()
-);
+export const DumpAdapterServiceLive = Layer.succeed(DumpAdapterService, make());
 
 export const DumpAdapterServiceTag = DumpAdapterService;

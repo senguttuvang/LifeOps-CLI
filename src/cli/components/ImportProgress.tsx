@@ -4,9 +4,10 @@
  * Shows animated spinner during import with live stats.
  */
 
-import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import Spinner from "ink-spinner";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 interface ImportProgressProps {
   totalContacts: number;
@@ -56,12 +57,20 @@ export const ImportProgress: React.FC<ImportProgressProps> = ({
     return (
       <Box flexDirection="column" padding={1}>
         <Box marginBottom={1}>
-          <Text color="green" bold>✅ Import complete!</Text>
+          <Text color="green" bold>
+            ✅ Import complete!
+          </Text>
         </Box>
         <Box flexDirection="column" marginLeft={2}>
-          <Text>• Contacts: <Text color="cyan">{stats.contactsImported}</Text></Text>
-          <Text>• Conversations: <Text color="cyan">{stats.conversationsImported}</Text></Text>
-          <Text>• Messages: <Text color="cyan">{stats.messagesImported}</Text></Text>
+          <Text>
+            • Contacts: <Text color="cyan">{stats.contactsImported}</Text>
+          </Text>
+          <Text>
+            • Conversations: <Text color="cyan">{stats.conversationsImported}</Text>
+          </Text>
+          <Text>
+            • Messages: <Text color="cyan">{stats.messagesImported}</Text>
+          </Text>
         </Box>
       </Box>
     );

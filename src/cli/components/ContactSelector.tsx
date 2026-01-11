@@ -5,9 +5,10 @@
  * Custom implementation for Bun/ESM compatibility.
  */
 
-import React, { useState, useMemo } from "react";
-import { Box, Text, useInput, useApp } from "ink";
+import { Box, Text, useApp, useInput } from "ink";
 import TextInput from "ink-text-input";
+import type React from "react";
+import { useMemo, useState } from "react";
 
 import type { ContactSummary } from "../../domain/sync";
 
@@ -38,11 +39,7 @@ interface SelectItem {
  * - a: Select all visible
  * - n: Select none
  */
-export const ContactSelector: React.FC<ContactSelectorProps> = ({
-  contacts,
-  onSelect,
-  onCancel,
-}) => {
+export const ContactSelector: React.FC<ContactSelectorProps> = ({ contacts, onSelect, onCancel }) => {
   const { exit } = useApp();
   const [filterText, setFilterText] = useState("");
   const [isFiltering, setIsFiltering] = useState(false);
@@ -60,7 +57,7 @@ export const ContactSelector: React.FC<ContactSelectorProps> = ({
       (c) =>
         c.displayName.toLowerCase().includes(searchTerm) ||
         (c.phoneNumber && c.phoneNumber.includes(searchTerm)) ||
-        c.jid.toLowerCase().includes(searchTerm)
+        c.jid.toLowerCase().includes(searchTerm),
     );
   }, [contacts, filterText]);
 
@@ -196,11 +193,8 @@ export const ContactSelector: React.FC<ContactSelectorProps> = ({
           </Box>
         ) : (
           <Text dimColor>
-            <Text color="yellow">/</Text> Filter{" "}
-            <Text color="green">Space</Text> Toggle{" "}
-            <Text color="green">Enter</Text> Confirm{" "}
-            <Text color="blue">a</Text> All{" "}
-            <Text color="blue">n</Text> None{" "}
+            <Text color="yellow">/</Text> Filter <Text color="green">Space</Text> Toggle{" "}
+            <Text color="green">Enter</Text> Confirm <Text color="blue">a</Text> All <Text color="blue">n</Text> None{" "}
             <Text color="red">Esc</Text> Cancel
           </Text>
         )}
@@ -222,13 +216,9 @@ export const ContactSelector: React.FC<ContactSelectorProps> = ({
 
             return (
               <Box key={item.jid}>
-                <Text
-                  color={isHighlighted ? "cyan" : item.selected ? "green" : undefined}
-                  bold={isHighlighted}
-                >
+                <Text color={isHighlighted ? "cyan" : item.selected ? "green" : undefined} bold={isHighlighted}>
                   {isHighlighted ? "❯ " : "  "}
-                  <Text color={item.selected ? "green" : "gray"}>{checkbox}</Text>
-                  {" "}{item.label}
+                  <Text color={item.selected ? "green" : "gray"}>{checkbox}</Text> {item.label}
                 </Text>
               </Box>
             );

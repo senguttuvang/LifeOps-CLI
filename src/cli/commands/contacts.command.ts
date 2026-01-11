@@ -10,13 +10,10 @@
 
 import { Command, Options } from "@effect/cli";
 import { Console, Effect } from "effect";
-import React from "react";
 import { render } from "ink";
+import React from "react";
 
-import {
-  ForecastRepositoryTag,
-  type ContactWithJid,
-} from "../../domain/forecast/forecast.repository";
+import { type ContactWithJid, ForecastRepositoryTag } from "../../domain/forecast/forecast.repository";
 import { ContactSetup, type ContactSetupResult } from "../components/ContactSetup";
 
 // =============================================================================
@@ -26,9 +23,7 @@ import { ContactSetup, type ContactSetupResult } from "../components/ContactSetu
 /**
  * Run the interactive Ink contact setup UI
  */
-const runContactSetup = (
-  contacts: ContactWithJid[]
-): Effect.Effect<ContactSetupResult[], Error> =>
+const runContactSetup = (contacts: ContactWithJid[]): Effect.Effect<ContactSetupResult[], Error> =>
   Effect.async((resume) => {
     let instance: ReturnType<typeof render> | null = null;
 
@@ -61,7 +56,7 @@ const runContactSetup = (
         contacts: contactInfos,
         onComplete: handleComplete,
         onCancel: handleCancel,
-      })
+      }),
     );
 
     // Cleanup function
@@ -84,7 +79,7 @@ const SetupCommand = Command.make(
   {
     unconfigured: Options.boolean("unconfigured").pipe(
       Options.withDescription("Only show contacts without relationships"),
-      Options.withDefault(false)
+      Options.withDefault(false),
     ),
   },
   ({ unconfigured }) =>
@@ -138,19 +133,24 @@ const SetupCommand = Command.make(
           acc[r.relationshipType] = (acc[r.relationshipType] || 0) + 1;
           return acc;
         },
-        {} as Record<string, number>
+        {} as Record<string, number>,
       );
 
       yield* Console.log("Summary:");
       for (const [type, count] of Object.entries(summary)) {
         const emoji =
-          type === "partner" ? "💕" :
-          type === "family" ? "👨‍👩‍👧" :
-          type === "friend" ? "🤝" :
-          type === "colleague" ? "💼" : "👋";
+          type === "partner"
+            ? "💕"
+            : type === "family"
+              ? "👨‍👩‍👧"
+              : type === "friend"
+                ? "🤝"
+                : type === "colleague"
+                  ? "💼"
+                  : "👋";
         yield* Console.log(`  ${emoji} ${type}: ${count}`);
       }
-    })
+    }),
 );
 
 /**
@@ -161,7 +161,7 @@ const ListCommand = Command.make(
   {
     all: Options.boolean("all").pipe(
       Options.withDescription("Show all contacts, not just configured ones"),
-      Options.withDefault(false)
+      Options.withDefault(false),
     ),
   },
   ({ all }) =>
@@ -180,12 +180,7 @@ const ListCommand = Command.make(
 
       yield* Console.log("\n📇 Contacts\n");
       yield* Console.log("─".repeat(70));
-      yield* Console.log(
-        "Name".padEnd(25) +
-        "Relationship".padEnd(15) +
-        "WhatsApp".padEnd(25) +
-        "Msgs"
-      );
+      yield* Console.log("Name".padEnd(25) + "Relationship".padEnd(15) + "WhatsApp".padEnd(25) + "Msgs");
       yield* Console.log("─".repeat(70));
 
       for (const contact of toShow) {
@@ -194,22 +189,17 @@ const ListCommand = Command.make(
         const jid = contact.whatsappJid?.replace("@s.whatsapp.net", "") || "-";
 
         yield* Console.log(
-          name.padEnd(25) +
-          rel.padEnd(15) +
-          jid.substring(0, 24).padEnd(25) +
-          String(contact.messageCount)
+          name.padEnd(25) + rel.padEnd(15) + jid.substring(0, 24).padEnd(25) + String(contact.messageCount),
         );
       }
 
       yield* Console.log("─".repeat(70));
       yield* Console.log(`Total: ${toShow.length} contacts\n`);
-    })
+    }),
 );
 
 // =============================================================================
 // PARENT COMMAND
 // =============================================================================
 
-export const contactsCommand = Command.make("contacts").pipe(
-  Command.withSubcommands([SetupCommand, ListCommand])
-);
+export const contactsCommand = Command.make("contacts").pipe(Command.withSubcommands([SetupCommand, ListCommand]));

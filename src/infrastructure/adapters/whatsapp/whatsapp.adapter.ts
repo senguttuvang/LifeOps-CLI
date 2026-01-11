@@ -347,9 +347,7 @@ export class WhatsAppAdapter {
           contentType: msg.messageType,
           mediaUrl: msg.mediaUrl || null,
           mediaMimeType: msg.mediaMimeType || null,
-          quotedEventId: msg.quotedMessageId
-            ? this.messageIdToEventUuid.get(msg.quotedMessageId) || null
-            : null,
+          quotedEventId: msg.quotedMessageId ? this.messageIdToEventUuid.get(msg.quotedMessageId) || null : null,
           reactionEmoji: null, // Future: extract from rawJson
           isStarred: false, // Future: extract from rawJson
           rawMetadata: null, // Future: store full message JSON

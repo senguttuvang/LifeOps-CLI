@@ -155,8 +155,8 @@ const make = Effect.gen(function* () {
             and(
               sql`lower(${schema.conversations.title}) LIKE lower(${"%" + name + "%"})`,
               eq(schema.conversations.channelId, WHATSAPP_CHANNEL_ID),
-              eq(schema.conversations.conversationType, "direct")
-            )
+              eq(schema.conversations.conversationType, "direct"),
+            ),
           )
           .limit(1)
           .all();
@@ -171,9 +171,7 @@ const make = Effect.gen(function* () {
             id: schema.parties.id,
           })
           .from(schema.parties)
-          .where(
-            sql`lower(${schema.parties.displayName}) LIKE lower(${"%" + name + "%"})`
-          )
+          .where(sql`lower(${schema.parties.displayName}) LIKE lower(${"%" + name + "%"})`)
           .limit(1)
           .all();
 
@@ -187,15 +185,12 @@ const make = Effect.gen(function* () {
             externalId: schema.conversations.externalId,
           })
           .from(schema.conversationParticipants)
-          .innerJoin(
-            schema.conversations,
-            eq(schema.conversationParticipants.conversationId, schema.conversations.id)
-          )
+          .innerJoin(schema.conversations, eq(schema.conversationParticipants.conversationId, schema.conversations.id))
           .where(
             and(
               eq(schema.conversationParticipants.partyId, partyId),
-              eq(schema.conversations.channelId, WHATSAPP_CHANNEL_ID)
-            )
+              eq(schema.conversations.channelId, WHATSAPP_CHANNEL_ID),
+            ),
           )
           .limit(1)
           .all();
@@ -321,8 +316,8 @@ const make = Effect.gen(function* () {
               and(
                 sql`lower(${schema.conversations.title}) = lower(${party.displayName})`,
                 eq(schema.conversations.channelId, WHATSAPP_CHANNEL_ID),
-                eq(schema.conversations.conversationType, "direct")
-              )
+                eq(schema.conversations.conversationType, "direct"),
+              ),
             )
             .limit(1)
             .all();
@@ -333,13 +328,8 @@ const make = Effect.gen(function* () {
             const countResult = db
               .select({ count: sql<number>`count(*)` })
               .from(schema.communicationEvents)
-              .innerJoin(
-                schema.conversations,
-                eq(schema.communicationEvents.conversationId, schema.conversations.id)
-              )
-              .where(
-                eq(schema.conversations.externalId, convResult[0].externalId)
-              )
+              .innerJoin(schema.conversations, eq(schema.communicationEvents.conversationId, schema.conversations.id))
+              .where(eq(schema.conversations.externalId, convResult[0].externalId))
               .all();
             messageCount = countResult[0]?.count || 0;
           }
@@ -351,7 +341,7 @@ const make = Effect.gen(function* () {
             .from(schema.partyRelationships)
             .innerJoin(
               schema.relationshipTypes,
-              eq(schema.partyRelationships.relationshipTypeId, schema.relationshipTypes.id)
+              eq(schema.partyRelationships.relationshipTypeId, schema.relationshipTypes.id),
             )
             .where(eq(schema.partyRelationships.partyBId, party.id))
             .limit(1)

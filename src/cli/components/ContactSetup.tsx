@@ -8,10 +8,11 @@
  * 4. Saves to database
  */
 
-import React, { useState, useEffect } from "react";
 import { Box, Text, useInput } from "ink";
-import TextInput from "ink-text-input";
 import Spinner from "ink-spinner";
+import TextInput from "ink-text-input";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 // =============================================================================
 // TYPES
@@ -57,12 +58,7 @@ const RELATIONSHIP_TYPES = [
 
 type Phase = "list" | "edit-name" | "select-relationship" | "saving" | "complete";
 
-export const ContactSetup: React.FC<ContactSetupProps> = ({
-  contacts,
-  onComplete,
-  onCancel,
-}) => {
-
+export const ContactSetup: React.FC<ContactSetupProps> = ({ contacts, onComplete, onCancel }) => {
   // State
   const [phase, setPhase] = useState<Phase>("list");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -156,7 +152,9 @@ export const ContactSetup: React.FC<ContactSetupProps> = ({
     return (
       <Box flexDirection="column" padding={1}>
         <Box marginBottom={1}>
-          <Text bold color="cyan">📇 Contact Setup</Text>
+          <Text bold color="cyan">
+            📇 Contact Setup
+          </Text>
         </Box>
 
         <Box marginBottom={1}>
@@ -169,21 +167,17 @@ export const ContactSetup: React.FC<ContactSetupProps> = ({
               <Text color="gray">{i + 1}. </Text>
               <Text>{contact.displayName}</Text>
               <Text color="gray"> ({contact.messageCount} msgs)</Text>
-              {contact.relationshipType && (
-                <Text color="green"> ✓ {contact.relationshipType}</Text>
-              )}
+              {contact.relationshipType && <Text color="green"> ✓ {contact.relationshipType}</Text>}
             </Box>
           ))}
-          {contacts.length > 8 && (
-            <Text color="gray">  ... and {contacts.length - 8} more</Text>
-          )}
+          {contacts.length > 8 && <Text color="gray"> ... and {contacts.length - 8} more</Text>}
         </Box>
 
         <Box flexDirection="column" marginTop={1}>
           <Text color="gray">Controls:</Text>
-          <Text color="gray">  Enter - Start configuring</Text>
-          <Text color="gray">  s     - Skip and save</Text>
-          <Text color="gray">  q     - Cancel</Text>
+          <Text color="gray"> Enter - Start configuring</Text>
+          <Text color="gray"> s - Skip and save</Text>
+          <Text color="gray"> q - Cancel</Text>
         </Box>
       </Box>
     );
@@ -193,7 +187,9 @@ export const ContactSetup: React.FC<ContactSetupProps> = ({
     return (
       <Box flexDirection="column" padding={1}>
         <Box marginBottom={1}>
-          <Text bold color="cyan">📇 Contact {currentIndex + 1}/{contacts.length}</Text>
+          <Text bold color="cyan">
+            📇 Contact {currentIndex + 1}/{contacts.length}
+          </Text>
           <Text color="gray"> ({remaining} remaining)</Text>
         </Box>
 
@@ -228,7 +224,9 @@ export const ContactSetup: React.FC<ContactSetupProps> = ({
     return (
       <Box flexDirection="column" padding={1}>
         <Box marginBottom={1}>
-          <Text bold color="cyan">📇 Contact {currentIndex + 1}/{contacts.length}</Text>
+          <Text bold color="cyan">
+            📇 Contact {currentIndex + 1}/{contacts.length}
+          </Text>
           <Text color="gray"> - </Text>
           <Text bold>{editedName}</Text>
         </Box>
@@ -245,16 +243,14 @@ export const ContactSetup: React.FC<ContactSetupProps> = ({
               <Text color={i === selectedRelationship ? "cyan" : "gray"}>
                 {i === selectedRelationship ? "❯ " : "  "}
               </Text>
-              <Text color={i === selectedRelationship ? "white" : "gray"}>
-                {type.label}
-              </Text>
+              <Text color={i === selectedRelationship ? "white" : "gray"}>{type.label}</Text>
               <Text color="gray"> - {type.description}</Text>
             </Box>
           ))}
         </Box>
 
         <Box flexDirection="column" marginTop={1}>
-          <Text color="gray">↑/↓ - Navigate  |  Enter - Select  |  x - Skip  |  Esc - Back</Text>
+          <Text color="gray">↑/↓ - Navigate | Enter - Select | x - Skip | Esc - Back</Text>
         </Box>
 
         {skippedCount > 0 && (

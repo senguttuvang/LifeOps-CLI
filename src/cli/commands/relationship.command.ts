@@ -1,15 +1,9 @@
 import { Args, Command, Options } from "@effect/cli";
 import { Console, Effect } from "effect";
-
+import { type BreakupForecast, ForecastServiceTag, type RiskLevel, type Warning } from "../../domain/forecast";
+import { ForecastRepositoryTag } from "../../domain/forecast/forecast.repository";
 import { AnalysisServiceTag } from "../../domain/relationship/analysis.service";
 import { renderMarkdown } from "../utils/markdown";
-import {
-  type BreakupForecast,
-  type RiskLevel,
-  type Warning,
-  ForecastServiceTag,
-} from "../../domain/forecast";
-import { ForecastRepositoryTag } from "../../domain/forecast/forecast.repository";
 
 // =============================================================================
 // HELPERS
@@ -160,9 +154,7 @@ function renderForecastReport(forecast: BreakupForecast): void {
 const AnalyzeCommand = Command.make(
   "analyze",
   {
-    contact: Args.text({ name: "contact" }).pipe(
-      Args.withDescription("Contact name (e.g., 'Priya') or WhatsApp JID")
-    ),
+    contact: Args.text({ name: "contact" }).pipe(Args.withDescription("Contact name (e.g., 'Priya') or WhatsApp JID")),
   },
   ({ contact }) =>
     Effect.gen(function* (_) {
@@ -192,9 +184,7 @@ const AnalyzeCommand = Command.make(
 const DraftCommand = Command.make(
   "draft",
   {
-    contact: Args.text({ name: "contact" }).pipe(
-      Args.withDescription("Contact name (e.g., 'Priya') or WhatsApp JID")
-    ),
+    contact: Args.text({ name: "contact" }).pipe(Args.withDescription("Contact name (e.g., 'Priya') or WhatsApp JID")),
     intent: Args.text({ name: "intent" }),
   },
   ({ contact, intent }) =>
