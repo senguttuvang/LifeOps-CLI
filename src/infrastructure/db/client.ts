@@ -13,15 +13,28 @@ export class DatabaseService extends Context.Tag("DatabaseService")<
 // Database path - configurable via environment variable
 const DB_PATH = process.env.LIFEOPS_DB_PATH ?? "lifeops.db";
 
-// Define the Live Layer
-export const DatabaseLive = Layer.effect(
+/**
+ * Live Layer with proper resource management
+ *
+ * Uses Effect.acquireRelease to ensure the database connection is closed
+ * when the scope ends, preventing the process from hanging.
+ */
+export const DatabaseLive = Layer.scoped(
   DatabaseService,
-  Effect.sync(() => {
-    const sqlite = new Database(DB_PATH);
-    // Enable WAL mode for better concurrency
-    sqlite.exec("PRAGMA journal_mode = WAL;");
-    return drizzle(sqlite, { schema });
-  }),
+  Effect.acquireRelease(
+    // Acquire: open database connection
+    Effect.sync(() => {
+      const sqlite = new Database(DB_PATH);
+      // Enable WAL mode for better concurrency
+      sqlite.exec("PRAGMA journal_mode = WAL;");
+      return { db: drizzle(sqlite, { schema }), sqlite };
+    }),
+    // Release: close database connection
+    ({ sqlite }) =>
+      Effect.sync(() => {
+        sqlite.close();
+      }),
+  ).pipe(Effect.map(({ db }) => db)),
 );
 
 // Export raw SQLite access for migrations
