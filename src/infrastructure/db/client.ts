@@ -11,7 +11,8 @@ export class DatabaseService extends Context.Tag("DatabaseService")<
 >() {}
 
 // Database path - configurable via environment variable
-const DB_PATH = process.env.LIFEOPS_DB_PATH ?? "lifeops.db";
+// Default location: data/lifeops.db (keeps all data files in one directory)
+const DB_PATH = process.env.LIFEOPS_DB_PATH ?? "data/lifeops.db";
 
 /**
  * Live Layer with proper resource management

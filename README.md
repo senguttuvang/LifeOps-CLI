@@ -188,8 +188,14 @@ cd lifeops-cli && bun install
 # 2. Run the setup wizard (builds WhatsApp CLI, creates config)
 bun run cli setup
 
-# 3. Sync messages (scan QR code when prompted)
-bun run cli sync
+# 3. Authenticate WhatsApp (run directly in terminal for QR code)
+./bin/whatsmeow-cli auth
+
+# 4. Sync messages
+bun run cli sync --all
+
+# 5. Configure your partner (for relationship analysis)
+bun run cli contacts setup
 ```
 
 ### Manual Setup (Alternative)
@@ -206,20 +212,33 @@ cd tools/whatsmeow-cli
 make install-local
 cd ../..
 
-# 3. Set up database and config
+# 3. Set up database
 bunx drizzle-kit push
 cp .env.example .env  # Add your API keys
 
-# 4. Connect WhatsApp (scan QR code with your phone)
-bun run cli sync
+# 4. Authenticate WhatsApp (run directly in terminal for QR code)
+./bin/whatsmeow-cli auth
+# Open WhatsApp → Settings → Linked Devices → Scan QR code
 
-# 5. Verify setup
-bun run cli doctor
+# 5. Sync messages
+bun run cli sync --all
+
+# 6. Configure contacts (mark your partner for relationship analysis)
+bun run cli contacts setup
+
+# 7. Verify setup
+bun run cli health
 ```
 
 ### WhatsApp Authentication
 
-When you run `bun run cli sync` for the first time, a QR code will appear in your terminal:
+**Run the auth command directly in your terminal** (not through `bun run cli sync`):
+
+```bash
+./bin/whatsmeow-cli auth
+```
+
+A QR code will appear:
 
 ![WhatsApp QR Authentication](docs/images/whatsapp-auth-qr.png)
 
@@ -227,13 +246,22 @@ When you run `bun run cli sync` for the first time, a QR code will appear in you
 1. Open WhatsApp on your phone
 2. Go to **Settings → Linked Devices → Link a Device**
 3. Scan the QR code in your terminal
-4. Wait for "Authentication successful!" message
+4. Wait for "Authentication successful!" and history sync to complete
 
-> **Note:** If using Claude Code or other AI assistants, run the auth command directly in your terminal for proper QR rendering:
-> ```bash
-> ./bin/whatsmeow-cli auth
-> ```
-> Or use `--ascii` flag for ASCII-compatible rendering: `./bin/whatsmeow-cli auth --ascii`
+> **Note:** The auth command captures your message history during initial sync. This only happens once per session—subsequent syncs are incremental.
+
+### WhatsApp Session Management
+
+```bash
+# Check auth status and history cache
+./bin/whatsmeow-cli cache status
+
+# Refresh history cache (requires re-auth on phone)
+./bin/whatsmeow-cli cache refresh
+
+# Clear cache and session (full re-authentication needed)
+./bin/whatsmeow-cli cache clear
+```
 
 ### Troubleshooting
 
@@ -264,6 +292,8 @@ bun run cli relationship analyze "919876543210@s.whatsapp.net"
 | `doctor` | System diagnostics | `bun run cli doctor` |
 | `health` | Quick system health check | `bun run cli health` |
 | `sync` | Sync WhatsApp messages to local DB | `bun run cli sync --all` |
+| `contacts setup` | Configure relationships (mark partner) | `bun run cli contacts setup` |
+| `contacts list` | Show configured contacts | `bun run cli contacts list` |
 
 ### Sync Options
 
@@ -319,7 +349,7 @@ Chat IDs use WhatsApp JID format:
 
 Find chat IDs by checking your database after sync:
 ```bash
-sqlite3 lifeops.db "SELECT title, source_conversation_id FROM conversations;"
+sqlite3 data/lifeops.db "SELECT title, external_id FROM conversations;"
 ```
 
 ---

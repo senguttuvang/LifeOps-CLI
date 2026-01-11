@@ -9,13 +9,13 @@ dist/
 bin/
 tools/whatsmeow-cli/bin/
 
-# Database
+# Data directory (all runtime data)
+data/
+
+# Database files (legacy locations, should be in data/)
 *.db
 *.db-wal
 *.db-shm
-
-# Vector store
-data/
 
 # Environment
 .env

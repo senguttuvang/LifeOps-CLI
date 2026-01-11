@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "sqlite",
   dbCredentials: {
-    url: "file:lifeops.db",
+    url: "file:data/lifeops.db",
   },
 });
