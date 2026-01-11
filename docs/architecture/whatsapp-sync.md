@@ -205,9 +205,160 @@ whatsapp-raw/                    # Gitignored temp storage
 4. **Deletable**: User can remove dump after import
 5. **No cloud sync**: LifeOps is privacy-first
 
+## AI/ML Pipeline
+
+After messages are persisted to SQLite, they flow through two parallel processing pipelines:
+
+### Pipeline 1: Behavioral Signal Extraction
+
+Extracts statistical patterns from message history to power style-matching in AI draft generation.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SIGNAL EXTRACTION PIPELINE                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  SQLite Messages ──▶ SignalExtractionService                    │
+│       │                      │                                  │
+│       │                      ▼                                  │
+│       │            ┌─────────────────────┐                      │
+│       │            │  7 Signal Categories │                     │
+│       │            ├─────────────────────┤                      │
+│       │            │ • Response Patterns  │                     │
+│       │            │ • Message Structure  │                     │
+│       │            │ • Expression Style   │                     │
+│       │            │ • Punctuation        │                     │
+│       │            │ • Common Patterns    │                     │
+│       │            │ • Behavioral         │                     │
+│       │            │ • Temporal           │                     │
+│       │            └──────────┬──────────┘                      │
+│       │                       │                                 │
+│       │                       ▼                                 │
+│       └────────────▶ behavior_signals table                     │
+│                      (JSON + confidence scores)                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Processing Limits:**
+- Minimum: 50 messages required for reliable extraction
+- Maximum: 1000 most recent messages processed per user
+
+**Extracted Signals:**
+
+| Category | Signals |
+|----------|---------|
+| Response Patterns | `avgResponseTimeMinutes`, `responseTimeP50`, `responseTimeP95`, `initiationRate` |
+| Message Structure | `avgMessageLength`, `messageLengthStd`, `medianMessageLength`, `avgWordsPerMessage` |
+| Expression Style | `emojiPerMessage`, `emojiVariance`, `topEmojis`, `emojiPosition` |
+| Punctuation | `exclamationRate`, `questionRate`, `periodRate`, `ellipsisRate` |
+| Common Patterns | `commonGreetings`, `commonEndings`, `commonPhrases`, `fillerWords` |
+| Behavioral | `asksFollowupQuestions`, `usesVoiceNotes`, `sendsMultipleMessages` |
+| Temporal | `activeHours`, `weekendVsWeekdayDiff` |
+
+### Pipeline 2: Vector Embeddings (RAG)
+
+Enables semantic search over message history for context retrieval during draft generation.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    RAG INDEXING PIPELINE                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  SQLite Messages ──▶ VectorStoreService                         │
+│       │                      │                                  │
+│       │                      ▼                                  │
+│       │            ┌─────────────────────┐                      │
+│       │            │ OpenAI Embeddings   │                      │
+│       │            │ text-embedding-3-   │                      │
+│       │            │ small               │                      │
+│       │            └──────────┬──────────┘                      │
+│       │                       │                                 │
+│       │                       ▼                                 │
+│       │            ┌─────────────────────┐                      │
+│       │            │ LanceDB             │                      │
+│       │            │ (Local Vector DB)   │                      │
+│       │            └──────────┬──────────┘                      │
+│       │                       │                                 │
+│       └──isIndexed flag───────┘                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Tracking:** The `isIndexed` boolean on `communication_events` tracks which messages have been RAG-indexed, enabling incremental updates.
+
+### Chunking Strategy
+
+**Current Approach:** Message-level processing (no content chunking)
+
+Messages are processed individually rather than chunking longer content. This design choice reflects:
+1. WhatsApp messages are typically short (vs documents)
+2. Each message has distinct metadata (timestamp, sender)
+3. Preserves conversation threading context
+
+**Conversation Segmentation:** 4-hour gaps between messages define conversation boundaries:
+
+```typescript
+const CONVERSATION_GAP_MS = 4 * 60 * 60 * 1000; // 4 hours
+```
+
+This is used for behavioral analysis (counting conversations, measuring initiation rates) rather than storage chunking.
+
+### Signal-Enhanced Draft Generation
+
+The two pipelines merge to power AI draft generation:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              SIGNAL-ENHANCED DRAFT SERVICE                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Load User Signals                                           │
+│     behavior_signals → BehaviorSignals object                   │
+│                                                                 │
+│  2. RAG Context Retrieval                                       │
+│     LanceDB → similar past messages                             │
+│                                                                 │
+│  3. Prompt Building                                             │
+│     SignalEnhancedPromptBuilder combines:                       │
+│     • User's behavioral signals (style fingerprint)             │
+│     • RAG-retrieved examples (context)                          │
+│     • Current conversation thread (input)                       │
+│                                                                 │
+│  4. LLM Generation                                              │
+│     OpenAI → raw draft                                          │
+│                                                                 │
+│  5. Signal Enforcement                                          │
+│     SignalEnforcer post-processes to match:                     │
+│     • Message length distribution                               │
+│     • Emoji frequency and placement                             │
+│     • Punctuation patterns                                      │
+│                                                                 │
+│  6. Quality Scoring                                             │
+│     QualityScorer evaluates adherence                           │
+│                                                                 │
+│  Output: Draft with ~75-80% style match                         │
+│          (vs 60-70% for basic RAG)                              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Key AI/ML Files
+
+| Component | Path |
+|-----------|------|
+| Signal Extraction | `src/domain/signals/signal-extraction.service.ts` |
+| Behavioral Extractors | `src/domain/signals/extractors/behavioral-patterns.ts` |
+| Prompt Builder | `src/domain/signals/prompt-builder.ts` |
+| Signal Enforcer | `src/domain/signals/signal-enforcer.ts` |
+| Quality Scorer | `src/domain/signals/quality-scorer.ts` |
+| Vector Store | `src/infrastructure/rag/vector.store.ts` |
+| Draft Service | `src/domain/whatsapp/auto-draft/signal-enhanced-draft.service.ts` |
+
 ## Future Improvements
 
 1. **Ink-based UI**: Upgrade from readline to React-based terminal UI
 2. **Incremental sync**: Track cursor for subsequent real-time messages
 3. **Media download**: Optional media file download with selection
 4. **Export formats**: Export selected contacts to other formats
+5. **Local embeddings**: Replace OpenAI embeddings with Ollama for full privacy
+6. **Adaptive chunking**: Chunk long messages for better RAG retrieval
