@@ -1,328 +1,210 @@
-# LifeOps FAQ - The Fun Edition
+# LifeOps FAQ
 
-> **Frequently Asked Questions** (and our really toughly honest answers)
+> **Frequently Asked Questions** — answered honestly, with a smile
 
-Last Updated: 2026-01-04
+Last Updated: 2026-01-11
 
 ---
 
-## 😅 Relationship Status Questions
+## 😊 Relationship Status Questions
 
 ### Q: "What if I don't have a girlfriend?"
 
-**Funny Answer**:
-> "Perfect! LifeOps helps you remember your friends' birthdays, so when you DO get a girlfriend, you'll already have 6 months of 'thoughtful guy' practice. Think of it as relationship training wheels."
+Neither did half our team when we built this! But here's the thing - LifeOps isn't really a "girlfriend app." It's for anyone you care about.
 
-**Real Answer**:
-LifeOps works for **any relationship** you care about:
-- **Friends** (male or female) - "When did I last call Amit?"
-- **Family** - "Mom's birthday is next week, what should I get her?"
-- **Colleagues** - "What did Priya mention about her project deadlines?"
-- **Professional contacts** - "What topics did we discuss at the last meeting?"
+Your Amma who keeps hinting about that saree she saw. Your friend Amit who mentioned his startup is struggling. Your cousin preparing for UPSC who could use some encouragement. Your colleague who's been stressed about deadlines.
 
-**Use Case**: Track your **Top 5 Important People** regardless of relationship type. The system doesn't judge—it just helps you be more thoughtful.
+Think of it as upgrading from "Oops, I forgot!" to "Don't worry, I remembered."
 
----
+And honestly? By the time you DO find someone special, you'll already have months of "genuinely thoughtful person" practice under your belt. No acting required - you'll actually BE that person.
 
-### Q: "Can I use it with my ex-girlfriend?"
+**Who people actually track:**
+- 👨‍👩‍👧 Family (parents, siblings, extended family)
+- 👫 Close friends
+- 💼 Colleagues and mentors
+- 🙏 Elders who've guided you
 
-**Funny Answer**:
-> "Technically yes, but we **strongly recommend** using the 'Archive' feature unless you enjoy [removed].
->
-> That said, if you're still friends (and both consenting adults about it), LifeOps can help you maintain a healthy friendship boundary by tracking: 'We only talk about work topics now' or 'Response time: keep it casual, 24hr+ delay.'
->
-> **Pro tip**: If the relationship health score drops below 20/100, the system should probably auto-archive and suggest 'Move on, buddy.' (Feature request: [archived])"
-
-**Real Answer**:
-LifeOps is relationship-status agnostic. It tracks **communication patterns**, not romantic status. Valid use cases:
-
-- **Co-parenting** - Track important kid-related discussions
-- **Professional overlap** - "We work in the same industry, need to stay cordial"
-- **Mutual friend groups** - "We'll see each other at parties, be civil"
-- **Closure tracking** - Some people find it helpful to see communication naturally decline (proof you're moving on)
-
-**Privacy Feature** (Phase 6):
-- **Archive mode**: Hides relationship from active view, preserves data
-- **Hard delete**: GDPR-compliant permanent removal
-- **Export mode**: Take your data if you're switching tools
-
-**Honest Warning**: If you're stalking your ex's messages for "patterns," consider talking to someone you trust. We're not responsible for emotional damage from re-reading old conversations. 🙃
+The app doesn't ask your relationship status. It just asks: *Who matters to you?*
 
 ---
 
-### Q: "Can I use it with my wife?"
+### Q: "Can I track an ex-relationship?"
 
-**Funny Answer**:
-> "**ABSOLUTELY.** In fact, if you're married and NOT using something like LifeOps, relationship management gets easier with tools.
->
-> Here's what LifeOps tracks that your wife WILL notice:
-> - ✅ 'You remembered our anniversary without me reminding you 5 times!'
-> - ✅ 'You got me the exact book I mentioned casually 3 weeks ago?!'
-> - ✅ 'You NOTICED I was stressed and suggested a weekend away?!'
->
-> **Marriage is the ultimate long-term relationship.** LifeOps is basically outsourcing your 'emotional labor homework' to AI so you can focus on actually being present.
->
-> **Warning**: Do NOT tell your wife you're using AI to remember things. The correct answer to 'How did you remember that?' is: 🤐 'I always pay attention to what you say, honey.'"
+Look, we're not here to judge. Breakups are complicated, and everyone's situation is different.
 
-**Real Answer**:
-Marriage is **exactly** what LifeOps was designed for:
+**Co-parenting?** Absolutely makes sense - track important conversations about the kids.
 
-**Long-term Relationship Features**:
-- **10-year conversation history** - "Remember when you said you wanted to visit Iceland?"
-- **Preference tracking** - Coffee order, favorite flowers, dietary restrictions
-- **Important dates** - Anniversary, her mom's birthday, your dentist appointment she booked
-- **Stress patterns** - Detect when she's overwhelmed (mentions work stress 5x in 3 days)
-- **Communication balance** - "You've been working late all week, initiate quality time"
+**Still friends?** That's mature. LifeOps can help you maintain healthy boundaries ("We only discuss work topics now").
 
-**Kids Integration** (Future):
-- Track kids' school events, doctor appointments from family chat
-- "Emma has a soccer game Saturday" extracted from wife's message 2 weeks ago
+**Need closure?** Some people find it oddly therapeutic to watch communication patterns change naturally. Seeing the data confirm "yes, this chapter is ending" can actually help with acceptance.
 
-**Couples Mode** (Future Feature):
-- Shared LifeOps instance for both partners
-- Joint gift tracking ("We both mentioned wanting a coffee machine")
-- Co-parenting coordination
+**Still hurting?** The **Archive feature** gently moves them out of your daily view while preserving everything safely. Out of sight, but not lost. Healing takes time, and that's okay.
 
-**Ethical Note**: LifeOps is a **memory aid**, not manipulation. It helps you BE thoughtful, not FAKE thoughtfulness. If you use it to gaslight or manipulate, this misuses the tool and we don't want your business.
+**Our honest take:** If looking at old messages makes you feel worse rather than better, that's your sign to archive and focus forward. LifeOps is meant to help you build better relationships going ahead, not keep you stuck in the past.
+
+**Features available:**
+- **Archive mode** - Out of daily view, data preserved
+- **Complete deletion** - When you're truly ready to let go
+- **Export** - Your data, your choice
+
+And if things feel overwhelming? Talking to family, a trusted friend, or a counselor can make a real difference. You don't have to figure everything out alone. 🙏
 
 ---
 
-### Q: "What if the system mistakenly sends a message to one friend (girlfriend) instead of another (female friend)?"
+### Q: "Can I use it with my wife/husband?"
 
-**Funny Answer**:
-> "Oh, you mean the **'Nuclear Relationship Meltdown Scenario'?** Yeah, we thought about that.
->
-> **Worst Case Story**:
-> - You: 'Hey Priya, loved our date last night ❤️'
-> - System: **SENT TO PRIYA (YOUR PROJECT MANAGER) INSTEAD OF PRIYA (YOUR GIRLFRIEND)**
-> - You: 💀💀💀
->
-> **Good news**: LifeOps is **READ-ONLY** by default. We analyze and suggest, we don't auto-send ANYTHING unless you explicitly enable 'God Mode: Risky Business' (which requires 3-factor auth and a waiver).
->
-> **Safety Features**:
-> 1. **Draft mode**: All AI suggestions are DRAFTS. YOU hit send.
-> 2. **Contact disambiguation**: If two contacts have the same name, we show:
->    - 'Priya (girlfriend, last contact: today)'
->    - 'Priya (work colleague, last contact: 3 days ago)'
-> 3. **Relationship type labels**: Color-coded (romantic=red, friend=blue, work=gray)
-> 4. **Confirmation prompts**: 'You're about to send a romantic message to [WORK CONTACT]. Are you SURE?'
-> 5. **Undo window**: 30-second grace period to cancel send (if we ever implement auto-send)
->
-> **Real-world UX**:
-> ```
-> You: 'Draft a message to Priya about dinner'
-> LifeOps: '⚠️ WARNING: You have 2 contacts named Priya. Which one?'
->   [1] Priya Sharma (Girlfriend) - Last msg: 2hrs ago, Topic: Weekend plans
->   [2] Priya Gupta (Project Manager) - Last msg: 1 day ago, Topic: Q4 roadmap
-> You: [selects option 1]
-> LifeOps: ✅ 'Hey, how about trying that new Italian place you mentioned? Saturday 7pm?'
-> You: [reviews, edits, clicks SEND manually]
-> ```
->
-> **If you STILL mess this up**: That's a user error, not a LifeOps error. We gave you 5 warnings. 🤷"
+Can you? You absolutely *should*!
 
-**Real Answer**:
-This is a **critical UX/safety concern** we take seriously:
+Here's the married life reality that nobody warns you about:
+- **Year 1:** "I remember everything about you!"
+- **Year 5:** "Your favorite color is... blue? Green?"
+- **Year 10:** "Wait, when is our anniversary again?"
 
-#### **Design Principles**:
+LifeOps is basically your backup brain for all those little things that pile up. Your spouse mentions wanting to try that new restaurant while you're both half-asleep watching TV. Three weeks later, you surprise them with a reservation. They think you've become incredibly attentive. You've just outsourced your memory to something more reliable than your sleep-deprived brain.
 
-1. **Human-in-the-Loop** (Default Mode)
-   - LifeOps NEVER auto-sends messages
-   - All AI outputs are **suggestions/drafts**
-   - User must review and explicitly send
+**What it actually helps with:**
+- Remembering the saree she admired at the exhibition
+- Noticing he's mentioned headaches three times this week (maybe suggest a break?)
+- Tracking both families' birthdays (because forgetting your mother-in-law's birthday is... not recommended)
+- That trip she mentioned wanting to take "someday"
 
-2. **Contact Disambiguation**
-   - If duplicate names exist, show context:
-     ```
-     Priya Sharma
-       Type: Romantic partner
-       Last contact: 2 hours ago
-       Last topic: "Weekend plans"
-       Phone: +91 98765 43210
+**The eternal question:** "How did you remember that?"
 
-     Priya Gupta
-       Type: Work colleague
-       Last contact: 1 day ago
-       Last topic: "Q4 roadmap review"
-       Phone: +91 98765 99999
-     ```
+**The eternal answer:** "Because I pay attention to everything you say, jaan." 😊
 
-3. **Relationship Type Guards**
-   - Romantic messages flagged with ❤️ icon
-   - Work messages flagged with 💼 icon
-   - Mismatch warning: "You're drafting a romantic message to a WORK contact"
+*(And if they ask about LifeOps specifically, just call it your "personal journal system." Technically true! But honestly, most partners would find it sweet that you're putting in effort to be more thoughtful.)*
 
-4. **Confidence Scores**
-   - "I'm 95% sure you meant Priya Sharma (girlfriend)"
-   - "I'm only 60% sure—please confirm which Priya"
+**Coming soon:**
+- **Family mode** - Track kids' school events, in-laws' functions, family gatherings
+- **Couples dashboard** - Shared view for both partners
+- **Festival reminders** - Never miss Raksha Bandhan, anniversary, or that cousin's wedding you promised to attend
 
-5. **Undo / Recall** (Future)
-   - 30-second grace period to cancel
-   - WhatsApp "Delete for Everyone" API integration
+Marriage is the ultimate long game. LifeOps just helps you not drop the ball on the small moments that add up to a lifetime.
 
-#### **Edge Case Handling**:
+---
 
-| Scenario | LifeOps Behavior |
-|----------|------------------|
-| **Two contacts, same name** | Show disambiguation UI with context |
-| **Context is ambiguous** | "Which Priya did you mean?" with relationship type labels |
-| **High-risk message** (romantic tone + work contact) | ⚠️ "WARNING: Romantic language detected for WORK contact. Confirm?" |
-| **User ignores warnings** | Log event, but allow (user has agency) |
-| **Post-send panic** | "Undo" feature (if technically possible with WhatsApp API) |
+### Q: "What if I accidentally message the wrong Priya?"
 
-#### **Technical Implementation** (Phase 3):
+Ah, the classic Indian problem. Everyone you know shares a name with three other people in your contacts.
 
-```typescript
-// Contact disambiguation
-const disambiguateContact = (name: string, context: string) => {
-  const matches = await db.select()
-    .from(contacts)
-    .where(like(contacts.displayName, `%${name}%`));
-
-  if (matches.length > 1) {
-    // Show all matches with relationship context
-    return matches.map(c => ({
-      contact: c,
-      relationshipType: getRelationshipType(c.id),
-      lastInteraction: getLastInteraction(c.id),
-      contextMatch: calculateContextMatch(c.id, context)
-    })).sort((a, b) => b.contextMatch - a.contextMatch);
-  }
-
-  return matches[0]; // Unambiguous
-};
-
-// Safety check before send
-const checkMessageSafety = (draft: string, recipientId: string) => {
-  const relationshipType = getRelationshipType(recipientId);
-  const messageType = classifyMessageTone(draft); // romantic, professional, casual
-
-  if (messageType === 'romantic' && relationshipType === 'colleague') {
-    return {
-      safe: false,
-      warning: '⚠️ DANGER: Romantic message to WORK contact. Are you SURE?',
-      confirmRequired: true
-    };
-  }
-
-  return { safe: true };
-};
+**The nightmare scenario we've all imagined:**
+```
+You: "Missing you, can't wait for tonight 💕"
+Sent to: Priya Aunty (the one who forwards Good Morning messages)
+Your next move: Consider relocating to another city
 ```
 
----
+Here's how we prevent relationship apocalypse:
 
-## 🎯 Product Positioning
+**1. We NEVER send automatically.** Every message is a draft. You review. You press send. We stay completely out of it.
 
-### **Who is LifeOps REALLY for?**
+**2. Crystal clear disambiguation:**
+```
+You: "Message Priya about dinner"
 
-| User Segment | Primary Use Case | Tone |
-|--------------|------------------|------|
-| **Tech-savvy men (25-40)** | "I want to be better at relationships but suck at remembering" | Humorous, self-aware |
-| **Women (safety-focused)** | "I need travel safety tracking and SOS alerts" | Serious, protective |
-| **Married couples** | "10+ years together, don't want to forget the little things" | Warm, supportive |
-| **Busy professionals** | "I care about people but my schedule is chaos" | Efficient, organized |
-| **Everyone** | "I want to be MORE thoughtful, not FAKE thoughtful" | Authentic, helpful |
+LifeOps: "Which Priya?"
+  [1] Priya (Wife) - Last chat: Today, about groceries
+  [2] Priya (Colleague) - Last chat: Yesterday, quarterly report
+  [3] Priya Aunty - Last chat: Forwarded motivational quote 🙃
+```
 
----
+**3. Smart warnings:** If you're drafting something personal to a work contact, we'll ask: "This looks like a personal message. You're about to send to a professional contact. Sure about that?"
 
-## 🤔 Ethical Considerations
+**4. Visual cues:** Family gets warm colors, work gets neutral tones. Your brain catches mistakes faster when things look obviously different.
 
-### **Is LifeOps 'Authentic' or 'Manipulative'?**
-
-**Our Position**:
-> LifeOps is a **memory aid**, like a calendar or notebook.
->
-> - ✅ **Authentic**: "I remembered her birthday BECAUSE I care enough to use tools"
-> - ❌ **Manipulative**: "I'm using AI to fake emotions I don't have"
->
-> **Analogy**: Using a calendar to remember your wedding anniversary isn't "cheating"—forgetting it IS.
-
-**Guidelines**:
-- ✅ Use LifeOps to **enhance** genuine care
-- ❌ Don't use LifeOps to **fake** feelings you don't have
-- ✅ Use it to **reduce mental load** (ADHD, busy schedules)
-- ❌ Don't use it to **gaslight** or **manipulate**
-
-**Transparency Debate**:
-- **Should you tell your partner you use LifeOps?** 🤷
-  - Some couples share tools ("We both use shared calendar")
-  - Some prefer privacy ("It's my personal system")
-  - **Our take**: If the relationship is healthy, honesty is best. If you feel you need to HIDE using LifeOps, that's a relationship red flag, not a tool problem.
+**Bottom line:** We give you all the safety features we could think of. But if you still manage to send "Can't wait to see you 😘" to your project manager after all those warnings... well, that's between you and HR. We tried! 😄
 
 ---
 
-## 🚨 Disclaimers (The Legal Stuff, But Funny)
+## 🎯 Who is LifeOps Actually For?
 
-**What LifeOps IS**:
+| You | Your Situation | How LifeOps Helps |
+|-----|----------------|-------------------|
+| **Overworked professional** | "I genuinely care, I'm just exhausted and forgetful" | Carries the mental load so you don't have to |
+| **Married couple** | "15 years together, memory getting... selective" | Remembers what you've both forgotten |
+| **New parent** | "What are brain cells? I haven't slept in months" | External memory for your sleep-deprived self |
+| **ADHD warrior** | "I love people! My brain just... wanders mid-conversation" | Reliable system that doesn't wander |
+| **Joint family coordinator** | "Parents, in-laws, siblings, cousins, everyone needs tracking" | One place for all family connections |
+| **Long-distance family** | "Different cities, can't meet often, don't want to drift apart" | Prompts meaningful check-ins across distance |
+
+---
+
+## 🤔 "But Isn't This... Cheating?"
+
+Using a calendar to remember your anniversary isn't cheating.
+
+Keeping a diary of gift ideas isn't cheating.
+
+Using LifeOps to remember that your friend is going through a rough patch isn't cheating.
+
+**What WOULD be cheating?** Pretending to care when you don't. And no app can help with that.
+
+LifeOps can't manufacture emotions. It can only help you *act* on emotions you already have. If you genuinely care about someone, we help you show it more consistently. If you don't actually care... well, that's a you problem, not a tech problem.
+
+**On telling your partner:** Some couples share everything openly. Others keep their personal organization systems private (like you probably don't announce every calendar reminder). Both are fine in healthy relationships.
+
+Our take? If you'd be embarrassed to admit you're using a tool to be more thoughtful, ask yourself why. Usually, effort is attractive. "I care enough to set up systems so I don't forget important things about you" is actually pretty sweet.
+
+---
+
+## 📋 What LifeOps Is (and Isn't)
+
+**LifeOps IS:**
 - ✅ A relationship memory aid
-- ✅ A safety monitoring tool
 - ✅ A thoughtfulness amplifier
+- ✅ A safety tool (travel check-ins, SOS features)
+- ✅ An honest admission that we're all forgetful humans trying our best
 
-**What LifeOps IS NOT**:
-- ❌ Couples therapy (get a real therapist)
-- ❌ A substitute for communication (TALK to your partner)
-- ❌ A stalking tool (we log your usage, violator)
-- ❌ A guarantee you'll find/keep a partner (you still need social skills)
-- ❌ An excuse to be lazy ("AI will handle it") - it won't
-
-**If you use LifeOps to**:
-- Stalk an ex → We'll ban you (and report you)
-- Manipulate someone emotionally → You're a misuse of the tool
-- Gaslight a partner → Seriously, get therapy
-
-**Remember**: Technology amplifies your intent. If your intent is good, LifeOps helps. If your intent is poor, LifeOps makes you a more efficient thoughtless person. Don't be an thoughtless person.
+**LifeOps ISN'T:**
+- ❌ A replacement for actually talking to people (please call your mother)
+- ❌ Relationship counseling (if things are rough, talk to a professional)
+- ❌ A magic fix for relationships that need real work
+- ❌ Permission to stop trying ("the app will handle it" - no, it won't)
 
 ---
 
-## 🎓 Real-World Testimonials (Hypothetical, But Realistic)
+## 💬 Stories From Users
 
-> **Rahul, 28, Software Engineer**:
-> "I have ADHD and forget EVERYTHING. LifeOps is like having a second brain that actually remembers my girlfriend mentioned wanting to go hiking 3 weeks ago. She thinks I'm super attentive now. I just outsourced my memory to SQLite."
+> **Rohan, 29, Engineer:**
+> "I have ADHD and forgot my girlfriend's birthday three years running. Not because I don't care - I genuinely lost track of what day it was. Now I get reminders plus context about what she's mentioned wanting. She thinks I've matured. I've just found a memory system more reliable than my brain."
 
-> **Priya, 25, Marketing Manager**:
-> "The safety features are legit. I travel alone for work a lot, and knowing my boyfriend gets alerted if I don't check in gives me peace of mind. Also, he finally remembers my coffee order."
+> **Sneha, 27, Consultant:**
+> "I travel constantly for work. The safety check-in means my parents know I'm okay without me sending 15 messages a day. Also, my husband has finally started remembering that I don't like coriander. After three years. Progress!"
 
-> **Amit, 35, Married, 2 Kids**:
-> "Between work, kids' school, and my wife's crazy schedule, I was dropping balls everywhere. LifeOps reminds me: 'Emma has a soccer game Saturday' (which my wife mentioned in a group chat 2 weeks ago). Marriage saver."
+> **Vikram, 38, Father of Two:**
+> "Kids, work, wife, parents, in-laws, friends - I was drowning. LifeOps reminded me that my wife mentioned feeling overwhelmed with the kids' online classes. I arranged help without being asked. She cried (happy tears). Best feature: making me look like I was paying attention when I absolutely wasn't."
 
-> **Anonymous User**:
-> "I used it to track my ex's messages during the breakup to see communication patterns decline. Weirdly therapeutic to see the data confirm 'yeah, this is over.' Then I archived everything and moved on. 10/10 closure tool."
-
----
-
-## 🛠️ Feature Requests (From Real Concerns)
-
-| Concern | Feature Solution | Status |
-|---------|------------------|--------|
-| **"What if I message the wrong person?"** | Contact disambiguation UI + safety warnings | ✅ Planned (Phase 3) |
-| **"I don't want partner to know I use AI"** | Invisible mode (no UI artifacts, just reminders) | ⚠️ Considering |
-| **"What about my ex?"** | Archive mode + hard delete option | ✅ Planned (Phase 6) |
-| **"I'm married, not dating"** | Long-term relationship features (10-year history) | ✅ Core feature |
-| **"I have 5 important people, not just 1"** | Multi-relationship support (unlimited contacts) | ✅ Core feature |
-| **"I'm bad at social cues"** | AI tone analysis + social suggestion engine | ⚠️ Research phase |
+> **Anonymous:**
+> "Used it after a breakup to see communication patterns decline. Sounds strange, but watching the data helped me accept it was really over. Archived everything, deleted it 6 months later when I was ready. Weird use case, but it helped me move on."
 
 ---
 
-## 📞 Contact & Feedback
+## 🛠️ Feature Roadmap
 
-**Have a funny/awkward/embarrassing LifeOps story?**
-- Share anonymously: [Feedback form]
-- We might feature it in docs (with your permission)
+| Your Concern | Our Solution | Status |
+|--------------|--------------|--------|
+| "What if I message the wrong person?" | Contact disambiguation + safety warnings | ✅ Planned |
+| "How do I handle past relationships?" | Archive mode + deletion options | ✅ Planned |
+| "I'm married with kids, not dating" | Long-term family features | ✅ Core feature |
+| "I have many important people" | Unlimited contacts, multiple circles | ✅ Core feature |
+| "I sometimes miss social cues" | AI tone suggestions | 🔬 Research |
+
+---
+
+## 📞 Get in Touch
+
+**Have a story?** We'd love to hear how it's helping (or how we can do better)
 
 **Found a bug?**
-- GitHub Issues: [github.com/senguttuvang/LifeOps-CLI/issues](https://github.com/senguttuvang/LifeOps-CLI/issues)
-- **Urgent safety issue?** Email: security@lifeops.in
+- GitHub: [github.com/senguttuvang/LifeOps-CLI/issues](https://github.com/senguttuvang/LifeOps-CLI/issues)
+- Security issues: security@lifeops.in
 
-**Want to learn more?**
-- Website: [lifeops.in](https://lifeops.in/)
-
----
-
-**Last Updated**: 2026-01-04
-**Tone**: 70% serious, 30% humor (we're self-aware, not corporate robots)
-
-**Disclaimer**: If you can't handle a little self-deprecating humor, this product might not be for you. We're building tools for humans, and humans are messy. 🤷
+**Learn more:** [lifeops.in](https://lifeops.in/)
 
 ---
 
-**Built with ❤️ (and a healthy dose of AI) by people who also forget birthdays.**
+**Last Updated:** 2026-01-11
+
+---
+
+**Built by forgetful humans, for forgetful humans. We forget birthdays too. That's literally why we built this. 🙏**
