@@ -9,6 +9,7 @@ import { Context, Effect, Layer } from "effect";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
 import { DatabaseService } from "../../infrastructure/db/client";
 import * as schema from "../../infrastructure/db/schema";
+import { conversationParticipants, conversations } from "../../infrastructure/db/schema";
 
 // =============================================================================
 // TYPES
@@ -36,6 +37,23 @@ export interface MessageRecord {
   fromMe: boolean;
 }
 
+export interface ContactWithJid {
+  id: string;
+  displayName: string;
+  preferredName: string | null;
+  type: "person" | "business" | "group";
+  whatsappJid: string | null;
+  messageCount: number;
+  relationshipType: "partner" | "family" | "friend" | "colleague" | "acquaintance" | null;
+}
+
+export interface SaveRelationshipInput {
+  contactId: string;
+  displayName: string;
+  preferredName: string | null;
+  relationshipType: "partner" | "family" | "friend" | "colleague" | "acquaintance";
+}
+
 // =============================================================================
 // SERVICE INTERFACE
 // =============================================================================
@@ -45,6 +63,15 @@ interface ForecastRepository {
    * Find a contact by display name (partial match)
    */
   findContactByName(name: string): Effect.Effect<ContactRecord | null>;
+
+  /**
+   * Resolve a human-readable name to a WhatsApp chat ID (JID)
+   *
+   * Flow: displayName → contact_id → conversation_participants → conversations.sourceConversationId
+   *
+   * Returns null if name not found or no WhatsApp conversation exists
+   */
+  resolveChatIdByName(name: string): Effect.Effect<string | null>;
 
   /**
    * Get messages for a contact within a time window
@@ -58,6 +85,22 @@ interface ForecastRepository {
    * Get all relationships marked as 'partner' type
    */
   getPartnerRelationships(): Effect.Effect<RelationshipRecord[]>;
+
+  /**
+   * Get all contacts with their WhatsApp JIDs and message counts
+   * Used for contact setup flow
+   */
+  getContactsForSetup(): Effect.Effect<ContactWithJid[]>;
+
+  /**
+   * Save or update a relationship for a contact
+   */
+  saveRelationship(input: SaveRelationshipInput): Effect.Effect<void>;
+
+  /**
+   * Update contact's preferred name
+   */
+  updateContactName(contactId: string, preferredName: string | null): Effect.Effect<void>;
 }
 
 // =============================================================================
@@ -96,6 +139,69 @@ const make = Effect.gen(function* () {
         if (results.length === 0) return null;
 
         return results[0] as ContactRecord;
+      }),
+
+    resolveChatIdByName: (name: string) =>
+      Effect.sync(() => {
+        // Strategy 1: For 1:1 chats, the conversation title often matches the contact name
+        // This is the most common case and works without conversation_participants
+        const directMatch = db
+          .select({
+            sourceConversationId: conversations.sourceConversationId,
+          })
+          .from(conversations)
+          .where(
+            and(
+              sql`lower(${conversations.title}) LIKE lower(${"%" + name + "%"})`,
+              eq(conversations.source, "whatsapp"),
+              eq(conversations.conversationType, "1:1")
+            )
+          )
+          .limit(1)
+          .all();
+
+        if (directMatch.length > 0) {
+          return directMatch[0].sourceConversationId;
+        }
+
+        // Strategy 2: Fallback - search via contacts table + conversation_participants (for groups)
+        const contactResults = db
+          .select({
+            id: schema.contacts.id,
+          })
+          .from(schema.contacts)
+          .where(
+            sql`lower(${schema.contacts.displayName}) LIKE lower(${"%" + name + "%"})`
+          )
+          .limit(1)
+          .all();
+
+        if (contactResults.length === 0) return null;
+
+        const contactId = contactResults[0].id;
+
+        // Find conversations via participant mapping
+        const conversationResults = db
+          .select({
+            sourceConversationId: conversations.sourceConversationId,
+          })
+          .from(conversationParticipants)
+          .innerJoin(
+            conversations,
+            eq(conversationParticipants.conversationId, conversations.id)
+          )
+          .where(
+            and(
+              eq(conversationParticipants.contactId, contactId),
+              eq(conversations.source, "whatsapp")
+            )
+          )
+          .limit(1)
+          .all();
+
+        if (conversationResults.length === 0) return null;
+
+        return conversationResults[0].sourceConversationId;
       }),
 
     getMessagesForContact: (contactId: string, days: number) =>
@@ -181,6 +287,137 @@ const make = Effect.gen(function* () {
           .all();
 
         return results as RelationshipRecord[];
+      }),
+
+    getContactsForSetup: () =>
+      Effect.sync(() => {
+        // Get all contacts with their WhatsApp JIDs and message counts
+        // Exclude groups, only get individuals
+        const results = db
+          .select({
+            id: schema.contacts.id,
+            displayName: schema.contacts.displayName,
+            preferredName: schema.contacts.preferredName,
+            type: schema.contacts.type,
+          })
+          .from(schema.contacts)
+          .where(eq(schema.contacts.type, "person"))
+          .all();
+
+        // Enrich with WhatsApp JIDs and message counts
+        const enriched: ContactWithJid[] = results.map((contact) => {
+          // Get WhatsApp JID from conversation
+          const convResult = db
+            .select({
+              sourceConversationId: conversations.sourceConversationId,
+            })
+            .from(conversations)
+            .where(
+              and(
+                sql`lower(${conversations.title}) = lower(${contact.displayName})`,
+                eq(conversations.source, "whatsapp"),
+                eq(conversations.conversationType, "1:1")
+              )
+            )
+            .limit(1)
+            .all();
+
+          // Count messages for this contact's conversations
+          let messageCount = 0;
+          if (convResult.length > 0) {
+            const countResult = db
+              .select({ count: sql<number>`count(*)` })
+              .from(schema.interactions)
+              .innerJoin(
+                conversations,
+                eq(schema.interactions.conversationId, conversations.id)
+              )
+              .where(
+                eq(conversations.sourceConversationId, convResult[0].sourceConversationId)
+              )
+              .all();
+            messageCount = countResult[0]?.count || 0;
+          }
+
+          // Get existing relationship type if any
+          const relResult = db
+            .select({ relationshipType: schema.relationships.relationshipType })
+            .from(schema.relationships)
+            .where(eq(schema.relationships.contactId, contact.id))
+            .limit(1)
+            .all();
+
+          return {
+            id: contact.id,
+            displayName: contact.displayName,
+            preferredName: contact.preferredName,
+            type: contact.type as "person" | "business" | "group",
+            whatsappJid: convResult[0]?.sourceConversationId || null,
+            messageCount,
+            relationshipType: (relResult[0]?.relationshipType as ContactWithJid["relationshipType"]) || null,
+          };
+        });
+
+        // Sort by message count descending (most active first)
+        return enriched.sort((a, b) => b.messageCount - a.messageCount);
+      }),
+
+    saveRelationship: (input: SaveRelationshipInput) =>
+      Effect.sync(() => {
+        const { randomUUID } = require("node:crypto");
+
+        // Check if relationship already exists
+        const existing = db
+          .select({ id: schema.relationships.id })
+          .from(schema.relationships)
+          .where(eq(schema.relationships.contactId, input.contactId))
+          .limit(1)
+          .all();
+
+        if (existing.length > 0) {
+          // Update existing
+          db.update(schema.relationships)
+            .set({
+              relationshipType: input.relationshipType,
+              updatedAt: new Date(),
+            })
+            .where(eq(schema.relationships.id, existing[0].id))
+            .run();
+        } else {
+          // Insert new
+          db.insert(schema.relationships)
+            .values({
+              id: randomUUID(),
+              contactId: input.contactId,
+              relationshipType: input.relationshipType,
+              strengthScore: 50, // Default score
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            })
+            .run();
+        }
+
+        // Also update preferred name if provided
+        if (input.preferredName) {
+          db.update(schema.contacts)
+            .set({
+              preferredName: input.preferredName,
+              updatedAt: new Date(),
+            })
+            .where(eq(schema.contacts.id, input.contactId))
+            .run();
+        }
+      }),
+
+    updateContactName: (contactId: string, preferredName: string | null) =>
+      Effect.sync(() => {
+        db.update(schema.contacts)
+          .set({
+            preferredName,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.contacts.id, contactId))
+          .run();
       }),
   });
 });

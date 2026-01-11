@@ -74,6 +74,8 @@
     "effect": "^3.19.14",
     "ink": "^6.6.0",
     "ink-spinner": "^5.0.0",
+    "marked": "^17.0.1",
+    "marked-terminal": "^7.3.0",
     "openai": "^6.15.0",
     "react": "^19.2.3"
   },
@@ -81,6 +83,7 @@
     "@effect/eslint-plugin": "^0.3.2",
     "@eslint/js": "^9.39.2",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/marked-terminal": "^6.1.1",
     "@types/react": "^19.2.8",
     "@typescript-eslint/eslint-plugin": "^8.52.0",
     "@typescript-eslint/parser": "^8.52.0",

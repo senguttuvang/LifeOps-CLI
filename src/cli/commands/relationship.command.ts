@@ -2,6 +2,7 @@ import { Args, Command, Options } from "@effect/cli";
 import { Console, Effect } from "effect";
 
 import { AnalysisServiceTag } from "../../domain/relationship/analysis.service";
+import { renderMarkdown } from "../utils/markdown";
 import {
   type BreakupForecast,
   type RiskLevel,
@@ -9,6 +10,40 @@ import {
   ForecastServiceTag,
 } from "../../domain/forecast";
 import { ForecastRepositoryTag } from "../../domain/forecast/forecast.repository";
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+/**
+ * Resolve a contact identifier to a WhatsApp chat ID
+ *
+ * Accepts either:
+ * - Human-readable name: "Priya" → resolved via contact lookup
+ * - Raw WhatsApp JID: "919876543210@s.whatsapp.net" → used directly
+ *
+ * @returns The resolved chat ID or the original if it looks like a JID
+ */
+const resolveChatId = (input: string) =>
+  Effect.gen(function* () {
+    // If it already looks like a WhatsApp JID, use it directly
+    if (input.includes("@s.whatsapp.net") || input.includes("@g.us")) {
+      return input;
+    }
+
+    // Otherwise, try to resolve by name
+    const repo = yield* ForecastRepositoryTag;
+    const resolved = yield* repo.resolveChatIdByName(input);
+
+    if (resolved) {
+      yield* Console.log(`✓ Resolved "${input}" → ${resolved}`);
+      return resolved;
+    }
+
+    // If not found, treat it as a direct chatId (user knows what they're doing)
+    yield* Console.log(`⚠ Name "${input}" not found. Treating as raw chat ID.`);
+    return input;
+  });
 
 // =============================================================================
 // HEALTH REPORT FORMATTING
@@ -107,10 +142,15 @@ function renderForecastReport(forecast: BreakupForecast): void {
 const AnalyzeCommand = Command.make(
   "analyze",
   {
-    chatId: Args.text({ name: "chatId" }),
+    contact: Args.text({ name: "contact" }).pipe(
+      Args.withDescription("Contact name (e.g., 'Priya') or WhatsApp JID")
+    ),
   },
-  ({ chatId }) =>
+  ({ contact }) =>
     Effect.gen(function* (_) {
+      // Resolve name to WhatsApp chat ID
+      const chatId = yield* _(resolveChatId(contact));
+
       const analysis = yield* _(AnalysisServiceTag);
       yield* _(Console.log(`Indexing chat: ${chatId}...`));
       yield* _(analysis.indexChat(chatId));
@@ -119,9 +159,14 @@ const AnalyzeCommand = Command.make(
 
       const result = yield* _(analysis.analyze(chatId));
 
-      yield* _(Console.log("\n--- Analysis Report ---\n"));
-      yield* _(Console.log(result));
-      yield* _(Console.log("\n-----------------------\n"));
+      yield* _(Console.log("\n" + "─".repeat(60)));
+      yield* _(Console.log("  💕 Relationship Analysis Report"));
+      yield* _(Console.log("─".repeat(60) + "\n"));
+
+      // Render markdown with colors and formatting
+      console.log(renderMarkdown(result));
+
+      yield* _(Console.log("\n" + "─".repeat(60) + "\n"));
     }),
 );
 
@@ -129,19 +174,29 @@ const AnalyzeCommand = Command.make(
 const DraftCommand = Command.make(
   "draft",
   {
-    chatId: Args.text({ name: "chatId" }),
+    contact: Args.text({ name: "contact" }).pipe(
+      Args.withDescription("Contact name (e.g., 'Priya') or WhatsApp JID")
+    ),
     intent: Args.text({ name: "intent" }),
   },
-  ({ chatId, intent }) =>
+  ({ contact, intent }) =>
     Effect.gen(function* (_) {
+      // Resolve name to WhatsApp chat ID
+      const chatId = yield* _(resolveChatId(contact));
+
       const analysis = yield* _(AnalysisServiceTag);
-      yield* _(Console.log(`Drafting response for chat: ${chatId} with intent: "${intent}"...`));
+      yield* _(Console.log(`Drafting response for ${contact} with intent: "${intent}"...`));
 
       const result = yield* _(analysis.draftResponse(chatId, intent));
 
-      yield* _(Console.log("\n--- Draft Response ---\n"));
-      yield* _(Console.log(result));
-      yield* _(Console.log("\n----------------------\n"));
+      yield* _(Console.log("\n" + "─".repeat(60)));
+      yield* _(Console.log("  ✍️  Suggested Response"));
+      yield* _(Console.log("─".repeat(60) + "\n"));
+
+      // Render markdown with colors and formatting
+      console.log(renderMarkdown(result));
+
+      yield* _(Console.log("\n" + "─".repeat(60) + "\n"));
     }),
 );
 
