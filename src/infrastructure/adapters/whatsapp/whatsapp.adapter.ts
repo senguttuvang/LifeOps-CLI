@@ -188,10 +188,13 @@ export class WhatsAppAdapter {
       // Collect JIDs from messages
       for (const msg of whatsappData.messages) {
         jidSet.add(msg.senderJid);
-        // Use chat name if sender has no name (fallback)
+        // Only set name if we don't have one yet (don't use chat name as fallback)
+        // Chat name fallback is wrong for broadcasts - a message from "status@broadcast"
+        // chat should use the sender's phone number, not "status@broadcast" as display name
         if (!jidToName.has(msg.senderJid)) {
-          const chat = whatsappData.chats.find((c) => c.jid === msg.chatJid);
-          jidToName.set(msg.senderJid, chat?.name);
+          // For group messages, sender JID is different from chat JID
+          // For direct messages, sender JID equals chat JID (already captured above)
+          // Don't set anything - extractNameFromJid will handle it later
         }
       }
 
